@@ -224,6 +224,7 @@ func generate_initial_world() -> void:
 				sprite.texture = load("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
 				sprite.position = block_layer.map_to_local(cell)
 				sprite.visible = false
+				sprite.z_index = 1
 				edge_layer.add_child(sprite)
 				
 				var front_sprite = Sprite2D.new()
@@ -231,6 +232,7 @@ func generate_initial_world() -> void:
 				front_sprite.position = front_layer.map_to_local(Vector2i(cell.x, cell.y + 1))
 				front_sprite.position.y -= 16
 				front_sprite.visible = false
+				front_sprite.z_index = 1
 				front_layer.add_child(front_sprite)
 				
 				gem_blocks[cell] = { "top": sprite, "front": front_sprite }
