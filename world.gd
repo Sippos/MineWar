@@ -274,14 +274,13 @@ func has_gem(cell: Vector2i) -> bool:
 var current_wave_number = 1
 
 func _process(delta: float) -> void:
-	income_timer -= delta
-	if income_timer <= 0:
-		income_timer = 3.0
-		var hud = get_node_or_null("HUD")
-		if hud and hud.has_method("add_gold") and income > 0:
-			hud.add_gold(income)
-
 	if is_vs_mode:
+		income_timer -= delta
+		if income_timer <= 0:
+			income_timer = 3.0
+			var hud = get_node_or_null("HUD")
+			if hud and hud.has_method("add_gold") and income > 0:
+				hud.add_gold(income)
 		return
 	var enemies_alive = get_tree().get_nodes_in_group("enemies").size()
 	
