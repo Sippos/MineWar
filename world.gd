@@ -366,14 +366,14 @@ func get_random_enemy_type(wave: int) -> int:
 
 func spawn_wave() -> void:
 	var target_cell = get_farthest_open_cell()
-	var spawn_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
+	var spawn_pos = block_layer.to_global(block_layer.map_to_local(target_cell)) + Vector2(0, 32)
 	var is_boss = (current_wave_number % 10 == 0)
 	
 	var spawn_count = 1 if is_boss else enemies_per_wave
 	
 	for i in range(spawn_count):
 		var enemy = ENEMY_SCENE.instantiate()
-		var offset = Vector2(randf_range(-25, 25), randf_range(-25, 25))
+		var offset = Vector2(randf_range(-10, 10), 0)
 		if is_boss:
 			offset = Vector2.ZERO # Spawn boss directly in the center
 		enemy.global_position = spawn_pos + offset

@@ -86,7 +86,7 @@ func recalculate_path():
 		var id_path = world.astar.get_id_path(start_cell, target_base_cell)
 		path.clear()
 		for id in id_path:
-			path.append(tile_map.to_global(tile_map.map_to_local(id)))
+			path.append(tile_map.to_global(tile_map.map_to_local(id)) + Vector2(0, 32))
 		current_path_index = 0
 
 func _physics_process(delta: float):
@@ -126,7 +126,7 @@ func _physics_process(delta: float):
 		var dir = (target_pos - global_position).normalized()
 		var dist = global_position.distance_to(target_pos)
 		
-		if dist < 5.0:
+		if dist < 15.0:
 			current_path_index += 1
 		else:
 			velocity = dir * speed
