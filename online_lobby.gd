@@ -53,7 +53,7 @@ func _handle_signaling_message(msg: Dictionary):
 		if is_host:
 			Global.rtc_peer.create_server()
 		else:
-			Global.rtc_peer.create_client(1)
+			Global.rtc_peer.create_client(2)
 		multiplayer.multiplayer_peer = Global.rtc_peer
 			
 	elif msg.type == "peer_connected":
