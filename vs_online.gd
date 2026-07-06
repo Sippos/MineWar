@@ -35,7 +35,7 @@ func _on_local_send_enemy(enemy_type: int):
 func receive_enemy(enemy_type: int):
 	var e = level.ENEMY_SCENE.instantiate()
 	var target_cell = level.get_farthest_open_cell()
-	e.global_position = level.block_layer.to_global(level.block_layer.map_to_local(target_cell)) + Vector2(0, 32)
+	e.global_position = level.block_layer.to_global(level.block_layer.map_to_local(target_cell))
 	level.add_child(e)
 	if e.has_method("initialize"):
 		e.initialize(1, false, enemy_type)

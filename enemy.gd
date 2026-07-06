@@ -86,7 +86,7 @@ func recalculate_path():
 		var id_path = world.astar.get_id_path(start_cell, target_base_cell)
 		path.clear()
 		for id in id_path:
-			path.append(tile_map.to_global(tile_map.map_to_local(id)) + Vector2(0, 32))
+			path.append(tile_map.to_global(tile_map.map_to_local(id)))
 		current_path_index = 0
 
 func _physics_process(delta: float):

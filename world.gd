@@ -366,7 +366,7 @@ func get_random_enemy_type(wave: int) -> int:
 
 func spawn_wave() -> void:
 	var target_cell = get_farthest_open_cell()
-	var spawn_pos = block_layer.to_global(block_layer.map_to_local(target_cell)) + Vector2(0, 32)
+	var spawn_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 	var is_boss = (current_wave_number % 10 == 0)
 	
 	var spawn_count = 1 if is_boss else enemies_per_wave
