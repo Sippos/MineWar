@@ -156,4 +156,25 @@ func _on_minimap_draw() -> void:
 func on_game_over() -> void:
 	respawn_label.text = "GAME OVER! Base Destroyed!"
 	respawn_label.visible = true
+	
+	if not has_node("GameOverMenuButton"):
+		var btn = Button.new()
+		btn.name = "GameOverMenuButton"
+		btn.text = "Back to Main Menu"
+		btn.process_mode = Node.PROCESS_MODE_ALWAYS
+		btn.add_theme_font_size_override("font_size", 32)
+		btn.custom_minimum_size = Vector2(300, 60)
+		
+		var viewport_size = get_viewport().get_visible_rect().size
+		btn.position = Vector2((viewport_size.x - 300) / 2, viewport_size.y / 2 + 50)
+		
+		btn.pressed.connect(func():
+			get_tree().paused = false
+			if multiplayer.multiplayer_peer:
+				multiplayer.multiplayer_peer.close()
+				multiplayer.multiplayer_peer = null
+			get_tree().change_scene_to_file("res://menu.tscn")
+		)
+		add_child(btn)
+	
 	get_tree().paused = true
