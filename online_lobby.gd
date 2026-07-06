@@ -1,122 +1,130 @@
 extends Control
 
-const PORT = 8080
+const SIGNALING_SERVER_URL = "wss://chivalrous-scalloped-scabiosa.glitch.me" # Replace with your Glitch URL later!
 
-@onready var host_btn = $VBoxContainer/HostBtn
-@onready var join_btn = $VBoxContainer/JoinBtn
-@onready var ip_input = $VBoxContainer/IPInput
+@onready var connect_btn = $VBoxContainer/ConnectBtn
+@onready var room_input = $VBoxContainer/RoomInput
 @onready var status_label = $VBoxContainer/StatusLabel
+@onready var back_btn = $VBoxContainer/BackBtn
 
-var peer: WebSocketMultiplayerPeer
+var ws: WebSocketPeer
+var rtc_peer: WebRTCMultiplayerPeer
+var rtc_conn: WebRTCPeerConnection
+var is_host = false
 
 func _ready():
-	host_btn.pressed.connect(_on_host_pressed)
-	join_btn.pressed.connect(_on_join_pressed)
-	
-	var back_btn = Button.new()
-	back_btn.text = "Back to Main Menu"
-	back_btn.custom_minimum_size = Vector2(0, 40)
+	connect_btn.pressed.connect(_on_connect_pressed)
 	back_btn.pressed.connect(_on_back_pressed)
-	$VBoxContainer.add_child(back_btn)
+	ws = WebSocketPeer.new()
 	
-	host_btn.call_deferred("grab_focus")
+func _process(delta):
+	ws.poll()
+	var state = ws.get_ready_state()
 	
-	var http = HTTPRequest.new()
-	http.name = "IPRequest"
-	add_child(http)
-	http.request_completed.connect(_on_ip_fetched)
-	http.request("https://api.ipify.org")
-	
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.connection_failed.connect(_on_connection_failed)
+	if state == WebSocketPeer.STATE_OPEN:
+		while ws.get_available_packet_count():
+			var packet = ws.get_packet()
+			var msg = JSON.parse_string(packet.get_string_from_utf8())
+			_handle_signaling_message(msg)
 
-func _process(_delta):
-	if peer:
-		peer.poll()
-
-
-var public_ip = ""
-
-func _on_ip_fetched(result, response_code, headers, body):
-	if response_code == 200:
-		public_ip = body.get_string_from_utf8()
-
-func _on_host_pressed():
-	peer = WebSocketMultiplayerPeer.new()
-	var error = peer.create_server(PORT)
-	if error == OK:
-		multiplayer.multiplayer_peer = peer
-		var local_ip = "127.0.0.1"
-		for interface_data in IP.get_local_interfaces():
-			if interface_data.has("addresses"):
-				for addr in interface_data["addresses"]:
-					if addr.begins_with("192.") or addr.begins_with("10.") or addr.begins_with("172."):
-						local_ip = addr
+func _on_connect_pressed():
+	var room = room_input.text.strip_edges()
+	if room == "":
+		status_label.text = "Please enter a Room Code"
+		return
 		
-		var msg = "Hosting on port %d.
-" % PORT
-		if public_ip != "":
-			msg += "Public IP (Internet): %s
-" % public_ip
-		msg += "Local IP (LAN): %s
-" % local_ip
-		msg += "Waiting for player to join..."
+	status_label.text = "Connecting to signaling server..."
+	var err = ws.connect_to_url(SIGNALING_SERVER_URL)
+	if err != OK:
+		status_label.text = "Failed to connect to signaling server"
+		return
 		
-		status_label.text = msg
-		host_btn.disabled = true
-		join_btn.disabled = true
+	connect_btn.disabled = true
+	# Wait for WebSocket to open, then send join
+	set_process(true)
+	await get_tree().create_timer(1.0).timeout
+	if ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		ws.send_text(JSON.stringify({ "type": "join", "room": room }))
+
+func _handle_signaling_message(msg: Dictionary):
+	if msg.type == "joined":
+		is_host = (msg.role == "host")
+		status_label.text = "Joined as " + msg.role.capitalize() + ". Waiting for opponent..."
+		
+		rtc_peer = WebRTCMultiplayerPeer.new()
+		if is_host:
+			rtc_peer.create_server()
+		else:
+			rtc_peer.create_client(1)
+		multiplayer.multiplayer_peer = rtc_peer
+			
+	elif msg.type == "peer_connected":
+		status_label.text = "Opponent found! Establishing P2P connection..."
+		_create_rtc_connection(2) # 1 is host, 2 is client
+		
+		# Host creates offer
+		rtc_conn.create_offer()
+		
+	elif msg.type == "offer":
+		status_label.text = "Opponent found! Establishing P2P connection..."
+		_create_rtc_connection(1)
+		rtc_conn.set_remote_description("offer", msg.sdp)
+		# After receiving offer, client must create an answer
+		rtc_conn.create_answer()
+		
+	elif msg.type == "answer":
+		rtc_conn.set_remote_description("answer", msg.sdp)
+		
+	elif msg.type == "candidate":
+		rtc_conn.add_ice_candidate(msg.media, msg.index, msg.name)
+		
+	elif msg.type == "error":
+		status_label.text = "Error: " + msg.message
+		connect_btn.disabled = false
+		
+	elif msg.type == "peer_disconnected":
+		status_label.text = "Opponent disconnected"
+		get_tree().change_scene_to_file("res://menu.tscn")
+
+func _create_rtc_connection(id: int):
+	rtc_conn = WebRTCPeerConnection.new()
+	rtc_conn.initialize({
+		"iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] } ]
+	})
+	rtc_conn.session_description_created.connect(_on_session_description_created)
+	rtc_conn.ice_candidate_created.connect(_on_ice_candidate_created)
+	rtc_peer.add_peer(rtc_conn, id)
+	
+	if is_host:
+		rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
 	else:
-		status_label.text = "Error hosting server!"
+		rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
 
-func _on_join_pressed():
-	var ip = ip_input.text
-	if ip == "":
-		ip = "127.0.0.1"
-		
-	peer = WebSocketMultiplayerPeer.new()
-	var error = peer.create_client("ws://" + ip + ":" + str(PORT))
-	if error == OK:
-		multiplayer.multiplayer_peer = peer
-		status_label.text = "Connecting to " + ip + "..."
-		host_btn.disabled = true
-		join_btn.disabled = true
-	else:
-		status_label.text = "Error creating client!"
+func _on_session_description_created(type: String, sdp: String):
+	rtc_conn.set_local_description(type, sdp)
+	ws.send_text(JSON.stringify({ "type": type, "sdp": sdp }))
 
-func _on_peer_connected(id):
-	status_label.text = "Player %d connected!" % id
-	if multiplayer.is_server():
-		# Start game on both sides!
+func _on_ice_candidate_created(media: String, index: int, name: String):
+	ws.send_text(JSON.stringify({ "type": "candidate", "media": media, "index": index, "name": name }))
+
+func _on_rtc_peer_connected(id: int):
+	status_label.text = "P2P Connected! Starting game..."
+	ws.close() # We don't need signaling server anymore!
+	
+	if is_host:
 		var seed_val = randi()
 		rpc("start_game", seed_val)
 
-func _on_peer_disconnected(id):
-	status_label.text = "Player %d disconnected." % id
-	# Go back to menu if disconnected mid-game
-	get_tree().change_scene_to_file("res://menu.tscn")
-
-func _on_connected_to_server():
-	status_label.text = "Connected! Waiting for host to start..."
-
-func _on_connection_failed():
-	status_label.text = "Connection failed."
-	multiplayer.multiplayer_peer = null
-	host_btn.disabled = false
-	join_btn.disabled = false
-
 @rpc("authority", "call_local", "reliable")
 func start_game(world_seed: int):
-	# Switch to vs_online.tscn
 	var online_scene = load("res://vs_online.tscn").instantiate()
 	online_scene.world_seed = world_seed
 	get_tree().root.add_child(online_scene)
 	get_tree().current_scene = online_scene
-	self.queue_free() # Destroy the lobby
+	self.queue_free()
 
 func _on_back_pressed():
-	if peer:
-		peer.close()
+	if ws: ws.close()
+	if rtc_peer: rtc_peer.close()
 	multiplayer.multiplayer_peer = null
 	get_tree().change_scene_to_file("res://menu.tscn")
