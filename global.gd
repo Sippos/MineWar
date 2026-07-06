@@ -1,5 +1,8 @@
 extends Node
 
+var rtc_peer: WebRTCMultiplayerPeer
+var rtc_conn: WebRTCPeerConnection
+
 func _ready() -> void:
 	# Global UI controls for menus
 	var ui_joy_buttons = {

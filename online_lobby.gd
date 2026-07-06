@@ -8,8 +8,6 @@ const SIGNALING_SERVER_URL = "wss://minewar.onrender.com"
 @onready var back_btn = $VBoxContainer/BackBtn
 
 var ws: WebSocketPeer
-var rtc_peer: WebRTCMultiplayerPeer
-var rtc_conn: WebRTCPeerConnection
 var is_host = false
 
 func _ready():
@@ -51,57 +49,58 @@ func _handle_signaling_message(msg: Dictionary):
 		is_host = (msg.role == "host")
 		status_label.text = "Joined as " + msg.role.capitalize() + ". Waiting for opponent..."
 		
-		rtc_peer = WebRTCMultiplayerPeer.new()
+		Global.rtc_peer = WebRTCMultiplayerPeer.new()
 		if is_host:
-			rtc_peer.create_server()
+			Global.rtc_peer.create_server()
 		else:
-			rtc_peer.create_client(1)
-		multiplayer.multiplayer_peer = rtc_peer
+			Global.rtc_peer.create_client(1)
+		multiplayer.multiplayer_peer = Global.rtc_peer
 			
 	elif msg.type == "peer_connected":
 		status_label.text = "Opponent found! Establishing P2P connection..."
 		_create_rtc_connection(2) # 1 is host, 2 is client
 		
 		# Host creates offer
-		rtc_conn.create_offer()
+		Global.rtc_conn.create_offer()
 		
 	elif msg.type == "offer":
 		status_label.text = "Opponent found! Establishing P2P connection..."
 		_create_rtc_connection(1)
-		rtc_conn.set_remote_description("offer", msg.sdp)
+		Global.rtc_conn.set_remote_description("offer", msg.sdp)
 		# After receiving offer, client must create an answer
-		rtc_conn.create_answer()
+		Global.rtc_conn.create_answer()
 		
 	elif msg.type == "answer":
-		rtc_conn.set_remote_description("answer", msg.sdp)
+		Global.rtc_conn.set_remote_description("answer", msg.sdp)
 		
 	elif msg.type == "candidate":
-		rtc_conn.add_ice_candidate(msg.media, msg.index, msg.name)
+		Global.rtc_conn.add_ice_candidate(msg.media, msg.index, msg.name)
 		
 	elif msg.type == "error":
 		status_label.text = "Error: " + msg.message
 		connect_btn.disabled = false
 		
 	elif msg.type == "peer_disconnected":
-		status_label.text = "Opponent disconnected"
-		get_tree().change_scene_to_file("res://menu.tscn")
+		if Global.rtc_peer == null or Global.rtc_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+			status_label.text = "Opponent disconnected"
+			get_tree().change_scene_to_file("res://menu.tscn")
 
 func _create_rtc_connection(id: int):
-	rtc_conn = WebRTCPeerConnection.new()
-	rtc_conn.initialize({
+	Global.rtc_conn = WebRTCPeerConnection.new()
+	Global.rtc_conn.initialize({
 		"iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] } ]
 	})
-	rtc_conn.session_description_created.connect(_on_session_description_created)
-	rtc_conn.ice_candidate_created.connect(_on_ice_candidate_created)
-	rtc_peer.add_peer(rtc_conn, id)
+	Global.rtc_conn.session_description_created.connect(_on_session_description_created)
+	Global.rtc_conn.ice_candidate_created.connect(_on_ice_candidate_created)
+	Global.rtc_peer.add_peer(Global.rtc_conn, id)
 	
 	if is_host:
-		rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
+		Global.rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
 	else:
-		rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
+		Global.rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
 
 func _on_session_description_created(type: String, sdp: String):
-	rtc_conn.set_local_description(type, sdp)
+	Global.rtc_conn.set_local_description(type, sdp)
 	ws.send_text(JSON.stringify({ "type": type, "sdp": sdp }))
 
 func _on_ice_candidate_created(media: String, index: int, name: String):
@@ -125,6 +124,6 @@ func start_game(world_seed: int):
 
 func _on_back_pressed():
 	if ws: ws.close()
-	if rtc_peer: rtc_peer.close()
+	if Global.rtc_peer: Global.rtc_peer.close()
 	multiplayer.multiplayer_peer = null
 	get_tree().change_scene_to_file("res://menu.tscn")
