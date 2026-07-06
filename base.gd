@@ -18,24 +18,32 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if player_in_zone:
-		heal_timer += delta
-		if heal_timer >= 1.0:
-			heal_timer = 0.0
-			var player = get_parent().get_node_or_null("Player")
-			if player and not player.is_dead and player.health < player.max_health:
-				player.health = min(player.health + 5, player.max_health)
-				var hud = get_parent().get_node_or_null("HUD")
-				if hud and hud.has_method("update_player_health"):
-					hud.update_player_health(player.health, player.max_health)
+		var player = get_parent().get_node_or_null("Player")
+		if player:
+			# Heal player
+			heal_timer += delta
+			if heal_timer >= 1.0:
+				heal_timer = 0.0
+				if not player.is_dead and player.health < player.max_health:
+					player.health = min(player.health + 5, player.max_health)
+					var hud = get_parent().get_node_or_null("HUD")
+					if hud and hud.has_method("update_player_health"):
+						hud.update_player_health(player.health, player.max_health)
+			
+			# Auto deposit gems continuously
+			if player.has_method("deposit_gems"):
+				var deposited = player.deposit_gems()
+				if deposited > 0:
+					gems_deposited.emit(deposited)
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.name == "Player":
 		player_in_zone = true
 		prompt.visible = true
-		if body.has_method("deposit_gems"):
-			var deposited = body.deposit_gems()
-			if deposited > 0:
-				gems_deposited.emit(deposited)
+	elif body.is_in_group("gems"):
+		# If a gem is thrown or pushed into the base directly!
+		body.queue_free()
+		gems_deposited.emit(1)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.name == "Player":

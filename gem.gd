@@ -3,6 +3,7 @@ extends RigidBody2D
 var tethered_to = null
 
 func _ready() -> void:
+	add_to_group("gems")
 	var area = get_node_or_null("PickupArea")
 	if area:
 		if not area.body_exited.is_connected(_on_pickup_area_body_exited):
