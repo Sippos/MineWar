@@ -1,6 +1,6 @@
 extends Control
 
-const SIGNALING_SERVER_URL = "wss://chivalrous-scalloped-scabiosa.glitch.me" # Replace with your Glitch URL later!
+const SIGNALING_SERVER_URL = "wss://minewar.onrender.com"
 
 @onready var connect_btn = $VBoxContainer/ConnectBtn
 @onready var room_input = $VBoxContainer/RoomInput

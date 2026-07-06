@@ -21,7 +21,7 @@ func _ready() -> void:
 		hud2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
 
 func _on_p1_send_enemy(enemy_type: int) -> void:
-	level1.income += 1
+	level1.income += enemy_type + 1
 	var e = level2.ENEMY_SCENE.instantiate()
 	# spawn on level2
 	var target_cell = level2.get_farthest_open_cell()
@@ -31,7 +31,7 @@ func _on_p1_send_enemy(enemy_type: int) -> void:
 		e.initialize(1, false, enemy_type)
 
 func _on_p2_send_enemy(enemy_type: int) -> void:
-	level2.income += 1
+	level2.income += enemy_type + 1
 	var e = level1.ENEMY_SCENE.instantiate()
 	var target_cell = level1.get_farthest_open_cell()
 	e.global_position = level1.block_layer.to_global(level1.block_layer.map_to_local(target_cell))

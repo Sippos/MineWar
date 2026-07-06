@@ -27,7 +27,7 @@ func _ready():
 		base.game_over.connect(_on_base_destroyed)
 
 func _on_local_send_enemy(enemy_type: int):
-	level.income += 1
+	level.income += enemy_type + 1
 	# Send to opponent
 	rpc("receive_enemy", enemy_type)
 
