@@ -1,0 +1,228 @@
+[gd_scene format=3 uid="uid://huduid"]
+
+[ext_resource type="Script" path="res://hud.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://GoldCoin.png" id="2_goldcoin"]
+[ext_resource type="Texture2D" path="res://Healthbar.png" id="3_healthbar"]
+[ext_resource type="Texture2D" path="res://StatRessources.png" id="4_gems"]
+[ext_resource type="Texture2D" path="res://Strenght.png" id="5_str"]
+[ext_resource type="Texture2D" path="res://Agility.png" id="6_agi"]
+[ext_resource type="Texture2D" path="res://Int.png" id="7_int"]
+[ext_resource type="Texture2D" path="res://HealthBarRed.png" id="8_health_red"]
+[ext_resource type="Texture2D" path="res://HealthBarPurple.png" id="9_health_purple"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_script")
+
+[node name="GemIcon" type="TextureRect" parent="."]
+offset_left = 20.0
+offset_top = 15.0
+offset_right = 60.0
+offset_bottom = 55.0
+texture = ExtResource("4_gems")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="."]
+offset_left = 65.0
+offset_top = 15.0
+offset_right = 175.0
+offset_bottom = 55.0
+theme_override_font_sizes/font_size = 24
+text = "0"
+
+[node name="WaveLabel" type="Label" parent="."]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "Wave 1 - Next in 20.0s"
+horizontal_alignment = 1
+
+[node name="WaveBar" type="TextureProgressBar" parent="."]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -105.0
+offset_top = 60.0
+offset_right = 315.0
+offset_bottom = 156.0
+grow_horizontal = 2
+scale = Vector2(0.5, 0.5)
+value = 50.0
+texture_over = ExtResource("3_healthbar")
+texture_progress = ExtResource("9_health_purple")
+texture_progress_offset = Vector2(64, 30)
+
+[node name="BaseHealthBar" type="TextureProgressBar" parent="."]
+visible = false
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 440.0
+offset_bottom = 236.0
+scale = Vector2(0.5, 0.5)
+value = 100.0
+texture_over = ExtResource("3_healthbar")
+texture_progress = ExtResource("8_health_red")
+texture_progress_offset = Vector2(64, 30)
+
+[node name="StatsContainer" type="HBoxContainer" parent="."]
+visible = false
+offset_left = 20.0
+offset_top = 70.0
+offset_right = 300.0
+offset_bottom = 110.0
+scale = Vector2(0.7, 0.7)
+theme_override_constants/separation = 10
+
+[node name="StrIcon" type="TextureRect" parent="StatsContainer"]
+layout_mode = 2
+texture = ExtResource("5_str")
+stretch_mode = 5
+
+[node name="StrLabel" type="Label" parent="StatsContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "1"
+
+[node name="AgiIcon" type="TextureRect" parent="StatsContainer"]
+layout_mode = 2
+texture = ExtResource("6_agi")
+stretch_mode = 5
+
+[node name="AgiLabel" type="Label" parent="StatsContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "1"
+
+[node name="IntIcon" type="TextureRect" parent="StatsContainer"]
+layout_mode = 2
+texture = ExtResource("7_int")
+stretch_mode = 5
+
+[node name="IntLabel" type="Label" parent="StatsContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "1"
+
+[node name="GoldIcon" type="TextureRect" parent="."]
+offset_left = 120.0
+offset_top = 15.0
+offset_right = 160.0
+offset_bottom = 55.0
+texture = ExtResource("2_goldcoin")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GoldLabel" type="Label" parent="."]
+offset_left = 165.0
+offset_top = 15.0
+offset_right = 275.0
+offset_bottom = 55.0
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "0"
+
+[node name="PlayerLabel" type="Label" parent="."]
+visible = false
+offset_left = 30.0
+offset_top = 190.0
+offset_right = 130.0
+offset_bottom = 216.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Player"
+
+[node name="PlayerHealthBar" type="TextureProgressBar" parent="."]
+visible = false
+offset_left = 20.0
+offset_top = 210.0
+offset_right = 440.0
+offset_bottom = 306.0
+scale = Vector2(0.5, 0.5)
+value = 30.0
+texture_over = ExtResource("3_healthbar")
+texture_progress = ExtResource("8_health_red")
+texture_progress_offset = Vector2(64, 30)
+
+[node name="Minimap" type="ColorRect" parent="."]
+visible = false
+offset_left = 800.0
+offset_top = 20.0
+offset_right = 1000.0
+offset_bottom = 220.0
+color = Color(0, 0, 0, 0.5)
+
+[node name="RespawnLabel" type="Label" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -50.0
+offset_right = 200.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 48
+text = "Respawning in 5..."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="XPBar" type="TextureProgressBar" parent="."]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -105.0
+offset_top = -60.0
+offset_right = 315.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.5, 0.5)
+value = 0.0
+texture_over = ExtResource("3_healthbar")
+texture_progress = ExtResource("9_health_purple")
+texture_progress_offset = Vector2(64, 30)
+
+[node name="XPLabel" type="Label" parent="."]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -105.0
+offset_top = -60.0
+offset_right = 105.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Lvl 1: 0 / 100 XP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BaseLabel" type="Label" parent="."]
+visible = false
+offset_left = 30.0
+offset_top = 120.0
+offset_right = 130.0
+offset_bottom = 146.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Base"

@@ -1,0 +1,10 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+export_presets.cfg
+
+# Mac
+.DS_Store
+
+# Python scripts generated
+__pycache__/
