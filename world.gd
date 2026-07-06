@@ -2,8 +2,8 @@ extends Node2D
 
 @export var player_id: int = 1
 @export var is_vs_mode: bool = false
-var income: int = 0
-var income_timer: float = 10.0
+var income: int = 1
+var income_timer: float = 3.0
 
 
 @onready var bg_layer: TileMapLayer = $BackgroundLayer
@@ -277,10 +277,10 @@ func _process(delta: float) -> void:
 	if is_vs_mode:
 		income_timer -= delta
 		if income_timer <= 0:
-			income_timer = 10.0
+			income_timer = 3.0
 			var hud = get_node_or_null("HUD")
-			if hud and hud.has_method("add_gems") and income > 0:
-				hud.add_gems(income)
+			if hud and hud.has_method("add_gold") and income > 0:
+				hud.add_gold(income)
 		return
 	var enemies_alive = get_tree().get_nodes_in_group("enemies").size()
 	

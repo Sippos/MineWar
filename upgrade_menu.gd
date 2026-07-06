@@ -52,6 +52,7 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 10)
 	
 	var tex_rect = TextureRect.new()
 	var tex = load(tex_path)
@@ -69,24 +70,28 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.add_child(tex_rect)
 	
 	var lbl_name = Label.new()
-	lbl_name.text = " " + enemy_name + "   "
+	lbl_name.text = enemy_name
+	lbl_name.custom_minimum_size = Vector2(60, 0)
+	lbl_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lbl_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl_name)
 	
 	var cost_icon = TextureRect.new()
-	cost_icon.texture = load("res://StatRessources.png")
+	cost_icon.texture = load("res://GoldCoin.png")
 	cost_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	cost_icon.custom_minimum_size = Vector2(16, 16)
 	cost_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(cost_icon)
 	
 	var lbl_cost = Label.new()
-	lbl_cost.text = str(cost) + "   ->   "
+	lbl_cost.text = str(cost) + " ->"
+	lbl_cost.custom_minimum_size = Vector2(40, 0)
+	lbl_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lbl_cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl_cost)
 	
 	var inc_icon = TextureRect.new()
-	inc_icon.texture = load("res://StatRessources.png")
+	inc_icon.texture = load("res://GoldCoin.png")
 	inc_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	inc_icon.custom_minimum_size = Vector2(16, 16)
 	inc_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -94,6 +99,8 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	
 	var lbl_inc = Label.new()
 	lbl_inc.text = "+" + str(income)
+	lbl_inc.custom_minimum_size = Vector2(25, 0)
+	lbl_inc.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lbl_inc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl_inc)
 	
@@ -101,10 +108,8 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	return btn
 
 func _create_vs_panels():
-	if has_node("VSPromptPanel"):
-		get_node("VSPromptPanel").queue_free()
-	if has_node("VSSendPanel"):
-		get_node("VSSendPanel").queue_free()
+	if vs_prompt_panel != null and is_instance_valid(vs_prompt_panel):
+		return
 		
 	vs_prompt_panel = Panel.new()
 	vs_prompt_panel.name = "VSPromptPanel"
@@ -338,26 +343,26 @@ func _on_heal_player_pressed():
 		hud.update_player_health(player.health, player.max_health)
 
 func _on_send_rat():
-	if hud.total_gems >= 5:
-		hud.add_gems(-5)
+	if hud.total_gold >= 5:
+		hud.add_gold(-5)
 		emit_signal("send_enemy", 0) # 0 = Rat
 
 func _on_send_spider():
-	if hud.total_gems >= 10:
-		hud.add_gems(-10)
+	if hud.total_gold >= 10:
+		hud.add_gold(-10)
 		emit_signal("send_enemy", 1) # 1 = Spider
 
 func _on_send_bat():
-	if hud.total_gems >= 15:
-		hud.add_gems(-15)
+	if hud.total_gold >= 15:
+		hud.add_gold(-15)
 		emit_signal("send_enemy", 2) # 2 = Bat
 
 func _on_send_trogg():
-	if hud.total_gems >= 20:
-		hud.add_gems(-20)
+	if hud.total_gold >= 20:
+		hud.add_gold(-20)
 		emit_signal("send_enemy", 3) # 3 = Trogg
 
 func _on_send_orc():
-	if hud.total_gems >= 25:
-		hud.add_gems(-25)
+	if hud.total_gold >= 25:
+		hud.add_gold(-25)
 		emit_signal("send_enemy", 4) # 4 = Orc
