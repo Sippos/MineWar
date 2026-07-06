@@ -65,6 +65,7 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 			atlas.region = Rect2(0, 0, fw, fh)
 		tex_rect.texture = atlas
 	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tex_rect.custom_minimum_size = Vector2(32, 32)
 	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(tex_rect)
@@ -77,8 +78,9 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.add_child(lbl_name)
 	
 	var cost_icon = TextureRect.new()
-	cost_icon.texture = load("res://GoldCoin.png")
+	cost_icon.texture = load("res://StatRessources.png")
 	cost_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	cost_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	cost_icon.custom_minimum_size = Vector2(16, 16)
 	cost_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(cost_icon)
@@ -91,8 +93,9 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.add_child(lbl_cost)
 	
 	var inc_icon = TextureRect.new()
-	inc_icon.texture = load("res://GoldCoin.png")
+	inc_icon.texture = load("res://StatRessources.png")
 	inc_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	inc_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	inc_icon.custom_minimum_size = Vector2(16, 16)
 	inc_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(inc_icon)
@@ -111,8 +114,18 @@ func _create_vs_panels():
 	if vs_prompt_panel != null and is_instance_valid(vs_prompt_panel):
 		return
 		
+	var opaque_stylebox = StyleBoxFlat.new()
+	opaque_stylebox.bg_color = Color(0.15, 0.15, 0.15, 1.0)
+	opaque_stylebox.set_border_width_all(2)
+	opaque_stylebox.border_color = Color(0.3, 0.3, 0.3, 1.0)
+	opaque_stylebox.corner_radius_top_left = 4
+	opaque_stylebox.corner_radius_top_right = 4
+	opaque_stylebox.corner_radius_bottom_left = 4
+	opaque_stylebox.corner_radius_bottom_right = 4
+		
 	vs_prompt_panel = Panel.new()
 	vs_prompt_panel.name = "VSPromptPanel"
+	vs_prompt_panel.add_theme_stylebox_override("panel", opaque_stylebox)
 	vs_prompt_panel.anchor_left = 0.5
 	vs_prompt_panel.anchor_top = 0.5
 	vs_prompt_panel.anchor_right = 0.5
@@ -154,6 +167,7 @@ func _create_vs_panels():
 	
 	vs_send_panel = Panel.new()
 	vs_send_panel.name = "VSSendPanel"
+	vs_send_panel.add_theme_stylebox_override("panel", opaque_stylebox)
 	vs_send_panel.anchor_left = 0.5
 	vs_send_panel.anchor_top = 0.5
 	vs_send_panel.anchor_right = 0.5
@@ -343,26 +357,26 @@ func _on_heal_player_pressed():
 		hud.update_player_health(player.health, player.max_health)
 
 func _on_send_rat():
-	if hud.total_gold >= 5:
-		hud.add_gold(-5)
+	if hud.total_gems >= 5:
+		hud.add_gems(-5)
 		emit_signal("send_enemy", 0) # 0 = Rat
 
 func _on_send_spider():
-	if hud.total_gold >= 10:
-		hud.add_gold(-10)
+	if hud.total_gems >= 10:
+		hud.add_gems(-10)
 		emit_signal("send_enemy", 1) # 1 = Spider
 
 func _on_send_bat():
-	if hud.total_gold >= 15:
-		hud.add_gold(-15)
+	if hud.total_gems >= 15:
+		hud.add_gems(-15)
 		emit_signal("send_enemy", 2) # 2 = Bat
 
 func _on_send_trogg():
-	if hud.total_gold >= 20:
-		hud.add_gold(-20)
+	if hud.total_gems >= 20:
+		hud.add_gems(-20)
 		emit_signal("send_enemy", 3) # 3 = Trogg
 
 func _on_send_orc():
-	if hud.total_gold >= 25:
-		hud.add_gold(-25)
+	if hud.total_gems >= 25:
+		hud.add_gems(-25)
 		emit_signal("send_enemy", 4) # 4 = Orc
