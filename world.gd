@@ -30,6 +30,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_tree().root.add_child(pause_menu)
 
 func _ready() -> void:
+	$Player.player_id = player_id
 	_add_wasd_input()
 	
 	astar = AStarGrid2D.new()

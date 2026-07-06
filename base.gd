@@ -43,7 +43,7 @@ func _on_body_exited(body: Node2D) -> void:
 		prompt.visible = false
 
 func _input(event: InputEvent) -> void:
-	if player_in_zone and event.is_action_pressed("p%d_interact" % get_parent().player_id):
+	if player_in_zone and event.is_action_pressed("p%d_interact" % get_parent().get("player_id", 1)):
 		upgrade_requested.emit()
 
 func take_damage(amount: int) -> void:

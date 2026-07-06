@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+var player_id: int = 1
+
 var agility = 1
 var strength = 1
 var intelligence = 1
@@ -79,13 +81,13 @@ func remove_nearby_gem(gem) -> void:
 	nearby_gems.erase(gem)
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("p%d_grab" % get_parent().player_id):
+	if event.is_action_pressed("p%d_grab" % player_id):
 		for gem in nearby_gems:
 			if is_instance_valid(gem) and not carried_gems.has(gem):
 				if gem.has_method("tether_to"):
 					gem.tether_to(self)
 				carried_gems.append(gem)
-	elif event.is_action_pressed("p%d_drop" % get_parent().player_id):
+	elif event.is_action_pressed("p%d_drop" % player_id):
 		for gem in carried_gems:
 			if is_instance_valid(gem) and gem.has_method("untether"):
 				gem.untether()
@@ -165,7 +167,7 @@ func _physics_process(delta: float) -> void:
 	if stomp_cooldown_timer > 0.0:
 		stomp_cooldown_timer -= delta
 		
-	if Input.is_action_just_pressed("p%d_stomp" % get_parent().player_id) and stomp_level > 0 and stomp_cooldown_timer <= 0.0:
+	if Input.is_action_just_pressed("p%d_stomp" % player_id) and stomp_level > 0 and stomp_cooldown_timer <= 0.0:
 		perform_stomp()
 
 	if is_dead:
@@ -183,8 +185,8 @@ func _physics_process(delta: float) -> void:
 
 	var direction = Vector2.ZERO
 	if can_move:
-		direction.x = Input.get_axis("p%d_left" % get_parent().player_id, "p%d_right" % get_parent().player_id)
-		direction.y = Input.get_axis("p%d_up" % get_parent().player_id, "p%d_down" % get_parent().player_id)
+		direction.x = Input.get_axis("p%d_left" % player_id, "p%d_right" % player_id)
+		direction.y = Input.get_axis("p%d_up" % player_id, "p%d_down" % player_id)
 	
 	if direction.length() > 0:
 		direction = direction.normalized()
@@ -269,10 +271,10 @@ func _physics_process(delta: float) -> void:
 
 func handle_digging(delta: float) -> void:
 	var input_dir = Vector2.ZERO
-	if Input.is_action_pressed("p%d_right" % get_parent().player_id): input_dir.x += 1
-	elif Input.is_action_pressed("p%d_left" % get_parent().player_id): input_dir.x -= 1
-	elif Input.is_action_pressed("p%d_down" % get_parent().player_id): input_dir.y += 1
-	elif Input.is_action_pressed("p%d_up" % get_parent().player_id): input_dir.y -= 1
+	if Input.is_action_pressed("p%d_right" % player_id): input_dir.x += 1
+	elif Input.is_action_pressed("p%d_left" % player_id): input_dir.x -= 1
+	elif Input.is_action_pressed("p%d_down" % player_id): input_dir.y += 1
+	elif Input.is_action_pressed("p%d_up" % player_id): input_dir.y -= 1
 	
 	var active_ray: RayCast2D = null
 	
