@@ -230,7 +230,8 @@ func generate_initial_world() -> void:
 				var front_sprite = Sprite2D.new()
 				front_sprite.texture = load("res://Stat_Ressources_Overlay_Front.png")
 				front_sprite.position = front_layer.map_to_local(Vector2i(cell.x, cell.y + 1))
-				front_sprite.position.y -= 16
+				front_sprite.position.y += 33 # Ensure it sorts AFTER the front wall cell
+				front_sprite.offset.y = -49 # Visually shift it back up to its intended position
 				front_sprite.visible = false
 				front_layer.add_child(front_sprite)
 				

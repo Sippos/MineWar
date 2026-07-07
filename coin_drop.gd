@@ -5,6 +5,7 @@ var gold_value = 10
 var can_pickup = false
 
 func _ready() -> void:
+	$Sprite2D.position.y = -24
 	var tween = create_tween()
 	scale = Vector2.ZERO
 	tween.tween_property(self, "scale", Vector2(0.4, 0.4), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
