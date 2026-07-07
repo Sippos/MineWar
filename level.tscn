@@ -24,6 +24,7 @@
 [ext_resource type="Texture2D" path="res://Easy_Brick-Front.png" id="tex_front_easy"]
 [ext_resource type="Texture2D" path="res://Medium-Brick-Front.png" id="tex_front_med"]
 [ext_resource type="Texture2D" path="res://Hard-Brick-Front.png" id="tex_front_hard"]
+[ext_resource type="Texture2D" path="res://rail_atlas_placeholder.png" id="tex_rail"]
 
 [sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_tile"]
 polygon = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
@@ -186,6 +187,14 @@ texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 0:0/0/texture_origin = Vector2i(0, 32)
 
+
+[sub_resource type="TileSetAtlasSource" id="Source_rail"]
+texture = ExtResource("tex_rail")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
 [sub_resource type="TileSet" id="TileSet_main"]
 tile_size = Vector2i(64, 64)
 physics_layer_0/collision_layer = 1
@@ -204,6 +213,7 @@ sources/14 = SubResource("Source_front_dmg2")
 sources/10 = SubResource("Source_front_easy")
 sources/11 = SubResource("Source_front_med")
 sources/12 = SubResource("Source_front_hard")
+sources/15 = SubResource("Source_rail")
 
 [sub_resource type="Gradient" id="Gradient_light"]
 offsets = PackedFloat32Array(0, 0.7, 1)
@@ -251,6 +261,10 @@ tile_set = SubResource("TileSet_main")
 
 [node name="BlockLayer" type="TileMapLayer" parent="."]
 y_sort_enabled = true
+tile_set = SubResource("TileSet_main")
+
+[node name="RailLayer" type="TileMapLayer" parent="."]
+z_index = -1
 tile_set = SubResource("TileSet_main")
 
 [node name="FrontWallLayer" type="TileMapLayer" parent="."]

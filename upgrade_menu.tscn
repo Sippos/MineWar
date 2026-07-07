@@ -189,6 +189,27 @@ text = "Upgrade Spikes (Lvl 0) - 20 Gold"
 layout_mode = 2
 text = "Swap Hero (Free)"
 
+[node name="FactionTitle" parent="Panel/VBoxContainer/ScrollContainer/MainContent" type="Label"]
+layout_mode = 2
+text = "-- Faction Updates --"
+horizontal_alignment = 1
+
+[node name="Faction_Branch" parent="Panel/VBoxContainer/ScrollContainer/MainContent" type="HBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BuyRail" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch" type="Button"]
+layout_mode = 2
+text = "Buy Rail (10 Gold)"
+
+[node name="BuyMinecart" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch" type="Button"]
+layout_mode = 2
+text = "Buy Minecart (50 Gold)"
+
+[node name="BuyPeon" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch" type="Button"]
+layout_mode = 2
+text = "Buy Peon (30 Gold)"
+
 [node name="CloseContainer" type="CenterContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
@@ -211,3 +232,7 @@ text = "Close"
 [connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/UpgradeSpikes" to="." method="_on_upgrade_spikes_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero" to="." method="_on_swap_hero_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/CloseContainer/Close" to="." method="_on_close_pressed"]
+
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyRail" to="." method="_on_buy_rail_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyMinecart" to="." method="_on_buy_minecart_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyPeon" to="." method="_on_buy_peon_pressed"]

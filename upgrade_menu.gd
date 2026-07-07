@@ -35,6 +35,14 @@ func update_button_texts():
 	$Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/UpgradeSpikes.text = "Upgrade Spikes (Lvl %d) - 20 Gold" % spikes_level
 	
 	$Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero.text = "Swap Hero (Current: %s)" % Global.current_hero
+	var is_dwarf = (Global.current_hero == "Dwarf")
+	var is_shaman = (Global.current_hero == "Shaman")
+	
+	$Panel/VBoxContainer/ScrollContainer/MainContent/FactionTitle.visible = is_dwarf or is_shaman
+	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch.visible = is_dwarf or is_shaman
+	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyRail.visible = is_dwarf
+	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyMinecart.visible = is_dwarf
+	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyPeon.visible = is_shaman
 
 var vs_prompt_panel: Panel
 var vs_send_panel: Panel
@@ -375,3 +383,24 @@ func _on_send_orc():
 	if hud.total_gems >= 25:
 		hud.add_gems(-25)
 		emit_signal("send_enemy", 4) # 4 = Orc
+
+func _on_buy_rail_pressed():
+	if hud.total_gold >= 10:
+		hud.add_gold(-10)
+		var base = get_parent().get_node_or_null("Base")
+		if base and base.has_method("spawn_rail"):
+			base.spawn_rail()
+
+func _on_buy_minecart_pressed():
+	if hud.total_gold >= 50:
+		hud.add_gold(-50)
+		var base = get_parent().get_node_or_null("Base")
+		if base and base.has_method("spawn_minecart"):
+			base.spawn_minecart()
+
+func _on_buy_peon_pressed():
+	if hud.total_gold >= 30:
+		hud.add_gold(-30)
+		var base = get_parent().get_node_or_null("Base")
+		if base and base.has_method("spawn_peon"):
+			base.spawn_peon()

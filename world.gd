@@ -424,3 +424,26 @@ func update_astar_weight(cell: Vector2i) -> void:
 		astar.set_point_weight_scale(cell, 1.0)
 	else:
 		astar.set_point_weight_scale(cell, 50.0)
+
+func update_rail_autotile(cell: Vector2i) -> void:
+	if not has_node("RailLayer"): return
+	var rail_layer = get_node("RailLayer")
+	
+	if rail_layer.get_cell_source_id(cell) == -1: return
+	
+	var up = rail_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) != -1
+	var down = rail_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) != -1
+	var left = rail_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) != -1
+	var right = rail_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) != -1
+	
+	var atlas_coords = Vector2i(0, 0)
+	if up and down and left and right:
+		atlas_coords = Vector2i(0, 1) # Intersection
+	elif (left or right) and not (up or down):
+		atlas_coords = Vector2i(1, 0) # Horizontal
+	elif (up or down) and not (left or right):
+		atlas_coords = Vector2i(0, 0) # Vertical
+	else:
+		atlas_coords = Vector2i(0, 1) # Intersection as fallback
+		
+	rail_layer.set_cell(cell, 15, atlas_coords)

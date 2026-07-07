@@ -63,3 +63,22 @@ func take_damage(amount: int) -> void:
 	if health <= 0:
 		game_over.emit()
 
+
+func spawn_rail():
+	var item = preload("res://rail_item.tscn").instantiate()
+	item.global_position = global_position
+	get_parent().call_deferred("add_child", item)
+
+func spawn_peon():
+	var peon = preload("res://peon.tscn").instantiate()
+	peon.global_position = global_position
+	get_parent().call_deferred("add_child", peon)
+
+func spawn_minecart():
+	var existing = get_parent().get_node_or_null("Minecart")
+	if existing:
+		existing.queue_free()
+	var cart = preload("res://minecart.tscn").instantiate()
+	cart.name = "Minecart"
+	cart.global_position = global_position
+	get_parent().call_deferred("add_child", cart)
