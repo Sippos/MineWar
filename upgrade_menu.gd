@@ -1,5 +1,6 @@
 extends CanvasLayer
 
+signal send_enemy(type: int)
 @onready var hud = get_parent().get_node("HUD")
 @onready var player = get_parent().get_node("Player")
 @onready var panel = $Panel
@@ -219,9 +220,6 @@ func _create_vs_panels():
 	
 	vs_send_panel.add_child(vbox2)
 	add_child(vs_send_panel)
-	
-	if not has_user_signal("send_enemy"):
-		add_user_signal("send_enemy")
 
 func _on_vs_upgrades_pressed():
 	vs_prompt_panel.visible = false
@@ -362,27 +360,32 @@ func _on_heal_player_pressed():
 func _on_send_rat():
 	if hud.total_gems >= 5:
 		hud.add_gems(-5)
-		print("Emitting send_enemy 0"); emit_signal("send_enemy", 0) # 0 = Rat
+		emit_signal("send_enemy", 0) # 0 = Rat
+		hide_menu()
 
 func _on_send_spider():
 	if hud.total_gems >= 10:
 		hud.add_gems(-10)
 		emit_signal("send_enemy", 1) # 1 = Spider
+		hide_menu()
 
 func _on_send_bat():
 	if hud.total_gems >= 15:
 		hud.add_gems(-15)
 		emit_signal("send_enemy", 2) # 2 = Bat
+		hide_menu()
 
 func _on_send_trogg():
 	if hud.total_gems >= 20:
 		hud.add_gems(-20)
 		emit_signal("send_enemy", 3) # 3 = Trogg
+		hide_menu()
 
 func _on_send_orc():
 	if hud.total_gems >= 25:
 		hud.add_gems(-25)
 		emit_signal("send_enemy", 4) # 4 = Orc
+		hide_menu()
 
 func _on_buy_rail_pressed():
 	if hud.total_gold >= 10:

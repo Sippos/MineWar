@@ -17,8 +17,6 @@ func _ready():
 	# Hook up send_enemy
 	var upg_menu = level.get_node_or_null("UpgradeMenu")
 	if upg_menu:
-		if not upg_menu.has_user_signal("send_enemy"):
-			upg_menu.add_user_signal("send_enemy")
 		upg_menu.connect("send_enemy", Callable(self, "_on_local_send_enemy"))
 		
 	# Hook up game over

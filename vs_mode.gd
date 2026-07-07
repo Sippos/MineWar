@@ -12,12 +12,10 @@ func _ready() -> void:
 	# Connect sending enemies
 	var hud1 = level1.get_node_or_null("UpgradeMenu")
 	if hud1:
-		hud1.add_user_signal("send_enemy")
 		hud1.connect("send_enemy", Callable(self, "_on_p1_send_enemy"))
 		
 	var hud2 = level2.get_node_or_null("UpgradeMenu")
 	if hud2:
-		hud2.add_user_signal("send_enemy")
 		hud2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
 
 func _on_p1_send_enemy(enemy_type: int) -> void:
