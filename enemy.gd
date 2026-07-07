@@ -35,7 +35,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 	var base_speed = 70.0
 	var base_xp = 5
 	var base_gold = 3
-	var tex_path = "res://rat_walk_pixelart_spritesheet.png"
+	var tex_path = "res://character_sprites/rat_walk_pixelart_spritesheet.png"
 	
 	if is_boss:
 		base_hp = 500
@@ -43,24 +43,24 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 		base_speed = 60.0
 		base_xp = 250
 		base_gold = 150
-		tex_path = "res://mech_walk_pixelart_spritesheet.png"
+		tex_path = "res://character_sprites/mech_walk_pixelart_spritesheet.png"
 	else:
 		match enemy_type:
 			EnemyType.RAT:
 				base_hp = 20; base_dmg = 2; base_speed = 70.0; base_xp = 5; base_gold = 3
-				tex_path = "res://rat_walk_pixelart_spritesheet.png"
+				tex_path = "res://character_sprites/rat_walk_pixelart_spritesheet.png"
 			EnemyType.SPIDER:
 				base_hp = 35; base_dmg = 4; base_speed = 75.0; base_xp = 10; base_gold = 6
-				tex_path = "res://spider_walk_spritesheet.png"
+				tex_path = "res://character_sprites/spider_walk_spritesheet.png"
 			EnemyType.BAT:
 				base_hp = 25; base_dmg = 5; base_speed = 95.0; base_xp = 12; base_gold = 8
-				tex_path = "res://bat_fly_spritesheet.png"
+				tex_path = "res://character_sprites/bat_fly_spritesheet.png"
 			EnemyType.TROGG:
 				base_hp = 60; base_dmg = 7; base_speed = 50.0; base_xp = 15; base_gold = 12
-				tex_path = "res://trogg_walk_spritesheet.png"
+				tex_path = "res://character_sprites/trogg_walk_spritesheet.png"
 			EnemyType.ORC:
 				base_hp = 80; base_dmg = 10; base_speed = 60.0; base_xp = 25; base_gold = 20
-				tex_path = "res://orc_walk_pixelart_spritesheet.png"
+				tex_path = "res://character_sprites/orc_walk_pixelart_spritesheet.png"
 				
 	# Scale by wave
 	health = int(base_hp * (1.0 + wave_number * 0.2))

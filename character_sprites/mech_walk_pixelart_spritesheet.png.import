@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwd2vfpajscyk"
-path="res://.godot/imported/orc_walk_pixelart_spritesheet.png-7b62654d3df7bdfa12777ee6ce63a331.ctex"
+uid="uid://33e0o66rvw2m"
+path="res://.godot/imported/mech_walk_pixelart_spritesheet.png-fdb382c32cf7ca411ac76bfe93b5b8e2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://orc_walk_pixelart_spritesheet.png"
-dest_files=["res://.godot/imported/orc_walk_pixelart_spritesheet.png-7b62654d3df7bdfa12777ee6ce63a331.ctex"]
+source_file="res://character_sprites/mech_walk_pixelart_spritesheet.png"
+dest_files=["res://.godot/imported/mech_walk_pixelart_spritesheet.png-fdb382c32cf7ca411ac76bfe93b5b8e2.ctex"]
 
 [params]
 

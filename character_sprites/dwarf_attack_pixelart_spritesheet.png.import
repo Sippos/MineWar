@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://33e0o66rvw2m"
-path="res://.godot/imported/mech_walk_pixelart_spritesheet.png-1cb166e9506dbb1f605c8bd594ff607c.ctex"
+uid="uid://d1ntl8l73l7xs"
+path="res://.godot/imported/dwarf_attack_pixelart_spritesheet.png-b304ca6826952eba3a7561f40dc60703.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://mech_walk_pixelart_spritesheet.png"
-dest_files=["res://.godot/imported/mech_walk_pixelart_spritesheet.png-1cb166e9506dbb1f605c8bd594ff607c.ctex"]
+source_file="res://character_sprites/dwarf_attack_pixelart_spritesheet.png"
+dest_files=["res://.godot/imported/dwarf_attack_pixelart_spritesheet.png-b304ca6826952eba3a7561f40dc60703.ctex"]
 
 [params]
 

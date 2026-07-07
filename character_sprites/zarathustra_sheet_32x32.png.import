@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://deh6k7p2uvee"
-path="res://.godot/imported/dwarf_walk_highres_spritesheet.png-c865b77100cc5b22a4d7550ca93974ac.ctex"
+uid="uid://cffdusvyrvawd"
+path="res://.godot/imported/zarathustra_sheet_32x32.png-8804cad3a6f3e3cdeb4fa57db498dd6f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://dwarf_walk_highres_spritesheet.png"
-dest_files=["res://.godot/imported/dwarf_walk_highres_spritesheet.png-c865b77100cc5b22a4d7550ca93974ac.ctex"]
+source_file="res://character_sprites/zarathustra_sheet_32x32.png"
+dest_files=["res://.godot/imported/zarathustra_sheet_32x32.png-8804cad3a6f3e3cdeb4fa57db498dd6f.ctex"]
 
 [params]
 

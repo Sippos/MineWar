@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cffdusvyrvawd"
-path="res://.godot/imported/zarathustra_sheet_32x32.png-a7af96c8a6ba11301ab48e2a94e9bdaf.ctex"
+uid="uid://dmhu5yuadkt0o"
+path="res://.godot/imported/peon_placeholder.png-02acfe7277411cda8ad074f37c43d898.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://zarathustra_sheet_32x32.png"
-dest_files=["res://.godot/imported/zarathustra_sheet_32x32.png-a7af96c8a6ba11301ab48e2a94e9bdaf.ctex"]
+source_file="res://character_sprites/peon_placeholder.png"
+dest_files=["res://.godot/imported/peon_placeholder.png-02acfe7277411cda8ad074f37c43d898.ctex"]
 
 [params]
 

@@ -1,0 +1,253 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://upgrade_menu.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://GoldCoinPile.png" id="2_goldpile"]
+[ext_resource type="Texture2D" path="res://Healthbar.png" id="4_healthbar"]
+[ext_resource type="Texture2D" path="res://Strenght.png" id="5_str"]
+[ext_resource type="Texture2D" path="res://Agility.png" id="6_agi"]
+[ext_resource type="Texture2D" path="res://Int.png" id="7_int"]
+
+[node name="UpgradeMenuFree" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 50
+offset_right = 250
+offset_bottom = 90
+theme_override_font_sizes/font_size = 24
+text = "Base Upgrades"
+
+[node name="GoldPileIcon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 100
+offset_right = 250
+offset_bottom = 140
+texture = ExtResource("2_goldpile")
+stretch_mode = 5
+
+[node name="BranchTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 150
+offset_right = 250
+offset_bottom = 190
+text = "-- HUD Tree --"
+horizontal_alignment = 1
+
+[node name="RootIcon" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 200
+offset_right = 250
+offset_bottom = 240
+texture = ExtResource("4_healthbar")
+stretch_mode = 5
+
+[node name="UnlockHealthbar" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 250
+offset_right = 250
+offset_bottom = 290
+text = "Player HP (10 Gold)"
+
+[node name="UnlockBaseHealth" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 300
+offset_right = 250
+offset_bottom = 340
+text = "Base HP (10 Gold)"
+
+[node name="UnlockWaveTimer" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 350
+offset_right = 250
+offset_bottom = 390
+text = "Wave Timer (10 Gold)"
+
+[node name="UnlockXP" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 400
+offset_right = 250
+offset_bottom = 440
+text = "XP Bar (10 Gold)"
+
+[node name="UnlockStats" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 450
+offset_right = 250
+offset_bottom = 490
+text = "Show Stats (10 Gold)"
+
+[node name="UnlockMinimap" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 500
+offset_right = 250
+offset_bottom = 540
+text = "Unlock Minimap (20 Gold)"
+
+[node name="UpgradeMinimap" type="Button" parent="."]
+layout_mode = 0
+offset_left = 50
+offset_top = 550
+offset_right = 250
+offset_bottom = 590
+text = "Mini: Enemies (50 G)"
+
+[node name="BranchTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 50
+offset_right = 500
+offset_bottom = 90
+text = "-- Health Updates --"
+horizontal_alignment = 1
+
+[node name="UpgradeMaxHealth" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 100
+offset_right = 500
+offset_bottom = 140
+text = "+20 HP (15 Gold)"
+icon = ExtResource("4_healthbar")
+expand_icon = true
+
+[node name="HealPlayer" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 150
+offset_right = 500
+offset_bottom = 190
+text = "Heal +20 HP (10 Gold)"
+icon = ExtResource("4_healthbar")
+expand_icon = true
+
+[node name="StatsTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 200
+offset_right = 500
+offset_bottom = 240
+text = "-- Stat Updates --"
+horizontal_alignment = 1
+
+[node name="UpgradeStrength" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 250
+offset_right = 500
+offset_bottom = 290
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
+text = "10 Gems"
+icon = ExtResource("5_str")
+expand_icon = true
+
+[node name="UpgradeAgility" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 300
+offset_right = 500
+offset_bottom = 340
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
+text = "10 Gems"
+icon = ExtResource("6_agi")
+expand_icon = true
+
+[node name="UpgradeIntelligence" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 350
+offset_right = 500
+offset_bottom = 390
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
+text = "10 Gems"
+icon = ExtResource("7_int")
+expand_icon = true
+
+[node name="MiscTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 400
+offset_right = 500
+offset_bottom = 440
+text = "-- Misc Updates --"
+horizontal_alignment = 1
+
+[node name="UpgradeSpikes" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 450
+offset_right = 500
+offset_bottom = 490
+text = "Upgrade Spikes (Lvl 0) - 20 Gold"
+
+[node name="SwapHero" type="Button" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 500
+offset_right = 500
+offset_bottom = 540
+text = "Swap Hero (Free)"
+
+[node name="FactionTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 300
+offset_top = 550
+offset_right = 500
+offset_bottom = 590
+text = "-- Faction Updates --"
+horizontal_alignment = 1
+
+[node name="BuyRail" type="Button" parent="."]
+layout_mode = 0
+offset_left = 550
+offset_top = 50
+offset_right = 750
+offset_bottom = 90
+text = "Buy Rail (10 Gold)"
+
+[node name="BuyMinecart" type="Button" parent="."]
+layout_mode = 0
+offset_left = 550
+offset_top = 100
+offset_right = 750
+offset_bottom = 140
+text = "Buy Minecart (50 Gold)"
+
+[node name="BuyPeon" type="Button" parent="."]
+layout_mode = 0
+offset_left = 550
+offset_top = 150
+offset_right = 750
+offset_bottom = 190
+text = "Buy Peon (30 Gold)"
+
+[node name="Close" type="Button" parent="."]
+layout_mode = 0
+offset_left = 550
+offset_top = 200
+offset_right = 750
+offset_bottom = 240
+text = "Close"
+
+

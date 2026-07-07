@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c4u0ofapdfa3a"
-path="res://.godot/imported/trogg_walk_spritesheet.png-fe50f10db172ef89950832e423a89c27.ctex"
+uid="uid://e3drm4c2832g"
+path="res://.godot/imported/shaman_walk_spritesheet_25d.png-564d0bcfcff418fbda7a6c8425216713.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://trogg_walk_spritesheet.png"
-dest_files=["res://.godot/imported/trogg_walk_spritesheet.png-fe50f10db172ef89950832e423a89c27.ctex"]
+source_file="res://character_sprites/shaman_walk_spritesheet_25d.png"
+dest_files=["res://.godot/imported/shaman_walk_spritesheet_25d.png-564d0bcfcff418fbda7a6c8425216713.ctex"]
 
 [params]
 

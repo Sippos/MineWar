@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d4mdgys4srcc"
-path="res://.godot/imported/spider_walk_spritesheet.png-276d105eff3073c43ca6367bfef7ecbd.ctex"
+uid="uid://bam0duexp355n"
+path="res://.godot/imported/MineTrails.png-9c8ee3e6ef5d57786d25c879597a47c6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://spider_walk_spritesheet.png"
-dest_files=["res://.godot/imported/spider_walk_spritesheet.png-276d105eff3073c43ca6367bfef7ecbd.ctex"]
+source_file="res://MineTrails.png"
+dest_files=["res://.godot/imported/MineTrails.png-9c8ee3e6ef5d57786d25c879597a47c6.ctex"]
 
 [params]
 

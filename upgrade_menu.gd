@@ -193,23 +193,23 @@ func _create_vs_panels():
 	lbl2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox2.add_child(lbl2)
 	
-	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://rat_walk_pixelart_spritesheet.png")
+	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://character_sprites/rat_walk_pixelart_spritesheet.png")
 	btn_rat.pressed.connect(Callable(self, "_on_send_rat"))
 	vbox2.add_child(btn_rat)
 	
-	var btn_spider = _create_enemy_button("Spider", 10, 2, "res://spider_walk_spritesheet.png")
+	var btn_spider = _create_enemy_button("Spider", 10, 2, "res://character_sprites/spider_walk_spritesheet.png")
 	btn_spider.pressed.connect(Callable(self, "_on_send_spider"))
 	vbox2.add_child(btn_spider)
 	
-	var btn_bat = _create_enemy_button("Bat", 15, 3, "res://bat_fly_spritesheet.png")
+	var btn_bat = _create_enemy_button("Bat", 15, 3, "res://character_sprites/bat_fly_spritesheet.png")
 	btn_bat.pressed.connect(Callable(self, "_on_send_bat"))
 	vbox2.add_child(btn_bat)
 	
-	var btn_trogg = _create_enemy_button("Trogg", 20, 4, "res://trogg_walk_spritesheet.png")
+	var btn_trogg = _create_enemy_button("Trogg", 20, 4, "res://character_sprites/trogg_walk_spritesheet.png")
 	btn_trogg.pressed.connect(Callable(self, "_on_send_trogg"))
 	vbox2.add_child(btn_trogg)
 	
-	var btn_orc = _create_enemy_button("Orc", 25, 5, "res://orc_walk_pixelart_spritesheet.png")
+	var btn_orc = _create_enemy_button("Orc", 25, 5, "res://character_sprites/orc_walk_pixelart_spritesheet.png")
 	btn_orc.pressed.connect(Callable(self, "_on_send_orc"))
 	vbox2.add_child(btn_orc)
 	

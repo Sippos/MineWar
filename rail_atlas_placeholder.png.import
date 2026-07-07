@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dmwmb3w6lyxhd"
-path="res://.godot/imported/rat_walk_pixelart_spritesheet.png-d23d4690846dd6cc8931be33799fe6da.ctex"
+uid="uid://railatlas"
+path="res://.godot/imported/rail_atlas_placeholder.png-d02e24e5b103f568c47bbc63bd3703d2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://rat_walk_pixelart_spritesheet.png"
-dest_files=["res://.godot/imported/rat_walk_pixelart_spritesheet.png-d23d4690846dd6cc8931be33799fe6da.ctex"]
+source_file="res://rail_atlas_placeholder.png"
+dest_files=["res://.godot/imported/rail_atlas_placeholder.png-d02e24e5b103f568c47bbc63bd3703d2.ctex"]
 
 [params]
 

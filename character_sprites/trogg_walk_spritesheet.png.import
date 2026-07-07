@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d1ntl8l73l7xs"
-path="res://.godot/imported/dwarf_attack_pixelart_spritesheet.png-0cb49cc50ade4d4cdd657986737d3285.ctex"
+uid="uid://c4u0ofapdfa3a"
+path="res://.godot/imported/trogg_walk_spritesheet.png-cfe99d5513ebfa0325286e41495fb4c5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://dwarf_attack_pixelart_spritesheet.png"
-dest_files=["res://.godot/imported/dwarf_attack_pixelart_spritesheet.png-0cb49cc50ade4d4cdd657986737d3285.ctex"]
+source_file="res://character_sprites/trogg_walk_spritesheet.png"
+dest_files=["res://.godot/imported/trogg_walk_spritesheet.png-cfe99d5513ebfa0325286e41495fb4c5.ctex"]
 
 [params]
 

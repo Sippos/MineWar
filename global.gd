@@ -33,28 +33,28 @@ var hero_p2 = "Dwarf"
 
 var hero_data = {
 	"Dwarf": {
-		"walk": "res://dwarf_walk_highres_spritesheet.png",
-		"attack": "res://dwarf_attack_pixelart_spritesheet.png"
+		"walk": "res://character_sprites/dwarf_walk_highres_spritesheet.png",
+		"attack": "res://character_sprites/dwarf_attack_pixelart_spritesheet.png"
 	},
 	"Mech": {
-		"walk": "res://mech_walk_pixelart_spritesheet.png",
-		"attack": "res://mech_walk_pixelart_spritesheet.png"
+		"walk": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
+		"attack": "res://character_sprites/mech_walk_pixelart_spritesheet.png"
 	},
 	"Shaman": {
-		"walk": "res://shaman_walk_spritesheet_25d.png",
-		"attack": "res://shaman_walk_spritesheet_25d.png"
+		"walk": "res://character_sprites/shaman_walk_spritesheet_25d.png",
+		"attack": "res://character_sprites/shaman_walk_spritesheet_25d.png"
 	}
 }
 
 var seen_monsters = []
 
 var monster_data = {
-	"Rat": "res://rat_walk_pixelart_spritesheet.png",
-	"Orc": "res://orc_walk_pixelart_spritesheet.png",
-	"Mech": "res://mech_walk_pixelart_spritesheet.png",
-	"Spider": "res://spider_walk_spritesheet.png",
-	"Bat": "res://bat_fly_spritesheet.png",
-	"Trogg": "res://trogg_walk_spritesheet.png"
+	"Rat": "res://character_sprites/rat_walk_pixelart_spritesheet.png",
+	"Orc": "res://character_sprites/orc_walk_pixelart_spritesheet.png",
+	"Mech": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
+	"Spider": "res://character_sprites/spider_walk_spritesheet.png",
+	"Bat": "res://character_sprites/bat_fly_spritesheet.png",
+	"Trogg": "res://character_sprites/trogg_walk_spritesheet.png"
 }
 
 func unlock_hero(hero_name: String) -> void:
