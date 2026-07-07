@@ -10,9 +10,9 @@ func _ready() -> void:
 	tween.tween_property(self, "scale", Vector2(0.4, 0.4), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	var hop_tween = create_tween()
-	var start_y = position.y
-	hop_tween.tween_property(self, "position:y", start_y - 30, 0.2).set_ease(Tween.EASE_OUT)
-	hop_tween.tween_property(self, "position:y", start_y, 0.2).set_ease(Tween.EASE_IN)
+	var start_y = $Sprite2D.position.y
+	hop_tween.tween_property($Sprite2D, "position:y", start_y - 30, 0.2).set_ease(Tween.EASE_OUT)
+	hop_tween.tween_property($Sprite2D, "position:y", start_y, 0.2).set_ease(Tween.EASE_IN)
 	
 	await get_tree().create_timer(0.4).timeout
 	can_pickup = true

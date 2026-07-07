@@ -88,10 +88,10 @@ func _input(event: InputEvent) -> void:
 					gem.tether_to(self)
 				carried_gems.append(gem)
 	elif event.is_action_pressed("p%d_drop" % player_id):
-		for gem in carried_gems:
+		if carried_gems.size() > 0:
+			var gem = carried_gems.pop_back()
 			if is_instance_valid(gem) and gem.has_method("untether"):
 				gem.untether()
-		carried_gems.clear()
 
 func deposit_gems() -> int:
 	var count = carried_gems.size()
@@ -225,17 +225,21 @@ func _physics_process(delta: float) -> void:
 	var enemy_hit = null
 	if direction.length() > 0:
 		var enemies = get_tree().get_nodes_in_group("enemies")
+		var p_center = global_position + Vector2(0, -24)
 		for enemy in enemies:
 			if not is_instance_valid(enemy):
 				continue
-			if global_position.distance_to(enemy.global_position) < 55.0:
-				var dir_to_enemy = global_position.direction_to(enemy.global_position)
+			var e_center = enemy.global_position + Vector2(0, 8)
+			if p_center.distance_to(e_center) < 70.0:
+				var dir_to_enemy = p_center.direction_to(e_center)
 				if direction.normalized().dot(dir_to_enemy) > 0.3:
 					enemy_hit = enemy
 					break
 
 	if enemy_hit:
-		if global_position.distance_to(enemy_hit.global_position) < 42.0:
+		var p_center = global_position + Vector2(0, -24)
+		var e_center = enemy_hit.global_position + Vector2(0, 8)
+		if p_center.distance_to(e_center) < 42.0:
 			velocity = Vector2.ZERO # Stop moving into the enemy to prevent jitter
 
 	move_and_slide()
