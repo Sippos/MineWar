@@ -300,8 +300,8 @@ zoom = Vector2(1.5, 1.5)
 [node name="PointLight2D" type="PointLight2D" parent="Player"]
 position = Vector2(0, -24)
 texture = SubResource("GradientTexture2D_light")
-texture_scale = 6.0
-energy = 1.8
+texture_scale = 1.2
+energy = 1.2
 shadow_enabled = true
 shadow_color = Color(0, 0, 0, 1)
 
