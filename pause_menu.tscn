@@ -56,6 +56,13 @@ layout_mode = 2
 size_flags_vertical = 0
 text = "Resume"
 
+
+[node name="ButtonControls" type="Button" parent="Panel/VBoxContainer" unique_id=210382970]
+custom_minimum_size = Vector2(0, 65)
+layout_mode = 2
+size_flags_vertical = 0
+text = "Controls & Settings"
+
 [node name="ButtonMainMenu" type="Button" parent="Panel/VBoxContainer" unique_id=1844546451]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
@@ -63,4 +70,5 @@ size_flags_vertical = 0
 text = "Main Menu"
 
 [connection signal="pressed" from="Panel/VBoxContainer/ButtonResume" to="." method="_on_button_resume_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ButtonControls" to="." method="_on_button_controls_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/ButtonMainMenu" to="." method="_on_button_main_menu_pressed"]

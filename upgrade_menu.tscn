@@ -63,12 +63,12 @@ theme_override_constants/separation = 20
 
 [node name="TopSection" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=1659529232]
 layout_mode = 2
+alignment = 1
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
 [node name="HUD_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection" unique_id=2048885829]
 layout_mode = 2
-size_flags_horizontal = 3
 
 [node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch" unique_id=111689093]
 layout_mode = 2
@@ -92,42 +92,34 @@ columns = 2
 
 [node name="UnlockHealthbar" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1215438252]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Player HP (10 Gold)"
 
 [node name="UnlockBaseHealth" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=632419253]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Base HP (10 Gold)"
 
 [node name="UnlockWaveTimer" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=417660384]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Wave Timer (10 Gold)"
 
 [node name="UnlockXP" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=630885684]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "XP Bar (10 Gold)"
 
 [node name="UnlockStats" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=434824149]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Show Stats (10 Gold)"
 
 [node name="UnlockMinimap" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=924513700]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Unlock Minimap (20 Gold)"
 
 [node name="UpgradeMinimap" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1893646801]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Mini: Enemies (50 G)"
 
 [node name="Health_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection" unique_id=1138071500]
 layout_mode = 2
-size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
 [node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch" unique_id=784958163]
@@ -154,24 +146,22 @@ horizontal_alignment = 1
 
 [node name="Stats_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=551311599]
 layout_mode = 2
+alignment = 1
 
 [node name="UpgradeStrength" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=392600263]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("5_str")
 expand_icon = true
 
 [node name="UpgradeAgility" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=86074682]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("6_agi")
 expand_icon = true
 
 [node name="UpgradeIntelligence" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=1400375980]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("7_int")
 expand_icon = true
@@ -183,22 +173,20 @@ horizontal_alignment = 1
 
 [node name="Misc_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=1034878514]
 layout_mode = 2
+alignment = 1
 
 [node name="UpgradeSpikes" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch" unique_id=1010392277]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Upgrade Spikes (Lvl 0) - 20 Gold"
 
 [node name="SwapHero" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch" unique_id=1452095055]
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Swap Hero (Free)"
 
-[node name="ControlsButton" type="Button" parent="Panel/VBoxContainer" unique_id=210382969]
+[node name="CloseContainer" type="CenterContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
-text = "Controls & Settings"
 
-[node name="Close" type="Button" parent="Panel/VBoxContainer" unique_id=1359797741]
+[node name="Close" type="Button" parent="Panel/VBoxContainer/CloseContainer" unique_id=1359797741]
 layout_mode = 2
 text = "Close"
 
@@ -216,4 +204,4 @@ text = "Close"
 [connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeIntelligence" to="." method="_on_upgrade_intelligence_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/UpgradeSpikes" to="." method="_on_upgrade_spikes_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero" to="." method="_on_swap_hero_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/Close" to="." method="_on_close_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/CloseContainer/Close" to="." method="_on_close_pressed"]

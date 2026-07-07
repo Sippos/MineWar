@@ -13,14 +13,9 @@ var minimap_unlocked = false
 var minimap_upgraded = false
 
 func _ready():
-	$Panel/VBoxContainer/ControlsButton.pressed.connect(_on_controls_pressed)
-	$Panel/VBoxContainer/Close.pressed.connect(_on_close_pressed)
+	$Panel/VBoxContainer/CloseContainer/Close.pressed.connect(_on_close_pressed)
 	hide_menu()
 
-func _on_controls_pressed():
-	var controls = preload("res://controls_menu.tscn").instantiate()
-	add_child(controls)
-	controls.tree_exited.connect(func(): $Panel/VBoxContainer/ControlsButton.grab_focus())
 
 func get_upgrade_cost(stat_level: int) -> int:
 	return (stat_level * 2) - 1
