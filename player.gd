@@ -80,19 +80,6 @@ func add_nearby_gem(gem) -> void:
 func remove_nearby_gem(gem) -> void:
 	nearby_gems.erase(gem)
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("p%d_grab" % player_id):
-		for gem in nearby_gems:
-			if is_instance_valid(gem) and not carried_gems.has(gem):
-				if gem.has_method("tether_to"):
-					gem.tether_to(self)
-				carried_gems.append(gem)
-	elif event.is_action_pressed("p%d_drop" % player_id):
-		if carried_gems.size() > 0:
-			var gem = carried_gems.pop_back()
-			if is_instance_valid(gem) and gem.has_method("untether"):
-				gem.untether()
-
 func deposit_gems() -> int:
 	var count = carried_gems.size()
 	for gem in carried_gems:
@@ -161,6 +148,18 @@ func respawn() -> void:
 var can_move = true
 
 func _physics_process(delta: float) -> void:
+
+	if Input.is_action_just_pressed("p%d_grab" % player_id):
+		for gem in nearby_gems:
+			if is_instance_valid(gem) and not carried_gems.has(gem):
+				if gem.has_method("tether_to"):
+					gem.tether_to(self)
+				carried_gems.append(gem)
+	elif Input.is_action_just_pressed("p%d_drop" % player_id):
+		if carried_gems.size() > 0:
+			var gem = carried_gems.pop_back()
+			if is_instance_valid(gem) and gem.has_method("untether"):
+				gem.untether()
 	if invulnerability_timer > 0.0:
 		invulnerability_timer -= delta
 		
