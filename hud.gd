@@ -24,7 +24,11 @@ func _ready():
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
 		
-	if OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios"):
+	var is_mobile = OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+	if OS.has_feature("web"):
+		is_mobile = is_mobile or JavaScriptBridge.eval("/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)")
+		
+	if is_mobile:
 		var mobile_controls_scene = load("res://mobile_controls.tscn")
 		if mobile_controls_scene:
 			var mobile_controls = mobile_controls_scene.instantiate()
