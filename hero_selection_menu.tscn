@@ -1,0 +1,129 @@
+[gd_scene load_steps=2 format=3 uid="uid://hero_sel_menu_001"]
+
+[ext_resource type="Script" path="res://hero_selection_menu.gd" id="1_script"]
+
+[node name="HeroSelectionMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -200.0
+offset_right = 300.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Label" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Select Hero"
+horizontal_alignment = 1
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 40
+
+[node name="P1Container" type="VBoxContainer" parent="Panel/VBox/HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="Panel/VBox/HBox/P1Container"]
+layout_mode = 2
+text = "Player 1"
+horizontal_alignment = 1
+
+[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P1Container"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P1Container/SpriteContainer"]
+position = Vector2(64, 64)
+hframes = 8
+vframes = 8
+
+[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P1Container"]
+layout_mode = 2
+text = "Dwarf"
+horizontal_alignment = 1
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBox/HBox/P1Container"]
+layout_mode = 2
+alignment = 1
+
+[node name="PrevBtn" type="Button" parent="Panel/VBox/HBox/P1Container/HBox"]
+layout_mode = 2
+text = "<"
+
+[node name="NextBtn" type="Button" parent="Panel/VBox/HBox/P1Container/HBox"]
+layout_mode = 2
+text = ">"
+
+[node name="P2Container" type="VBoxContainer" parent="Panel/VBox/HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="Panel/VBox/HBox/P2Container"]
+layout_mode = 2
+text = "Player 2"
+horizontal_alignment = 1
+
+[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P2Container"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P2Container/SpriteContainer"]
+position = Vector2(64, 64)
+hframes = 8
+vframes = 8
+
+[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P2Container"]
+layout_mode = 2
+text = "Dwarf"
+horizontal_alignment = 1
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBox/HBox/P2Container"]
+layout_mode = 2
+alignment = 1
+
+[node name="PrevBtn" type="Button" parent="Panel/VBox/HBox/P2Container/HBox"]
+layout_mode = 2
+text = "<"
+
+[node name="NextBtn" type="Button" parent="Panel/VBox/HBox/P2Container/HBox"]
+layout_mode = 2
+text = ">"
+
+[node name="StartBtn" type="Button" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(200, 50)
+text = "Start"
+
+[node name="BackBtn" type="Button" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(200, 50)
+text = "Back"

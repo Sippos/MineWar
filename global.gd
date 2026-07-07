@@ -23,9 +23,13 @@ func _ready() -> void:
 	if not InputMap.has_action("pause"): InputMap.add_action("pause")
 	var esc_event = InputEventKey.new(); esc_event.physical_keycode = KEY_ESCAPE; InputMap.action_add_event("pause", esc_event)
 	var start_event = InputEventJoypadButton.new(); start_event.button_index = JOY_BUTTON_START; InputMap.action_add_event("pause", start_event)
+	
+	load_game()
 
 var unlocked_heroes = ["Dwarf"]
 var current_hero = "Dwarf"
+var hero_p1 = "Dwarf"
+var hero_p2 = "Dwarf"
 
 var hero_data = {
 	"Dwarf": {
@@ -35,6 +39,10 @@ var hero_data = {
 	"Mech": {
 		"walk": "res://mech_walk_pixelart_spritesheet.png",
 		"attack": "res://mech_walk_pixelart_spritesheet.png"
+	},
+	"Shaman": {
+		"walk": "res://shaman_walk_spritesheet_25d.png",
+		"attack": "res://shaman_walk_spritesheet_25d.png"
 	}
 }
 
@@ -53,11 +61,27 @@ func unlock_hero(hero_name: String) -> void:
 	if not unlocked_heroes.has(hero_name):
 		unlocked_heroes.append(hero_name)
 		print("Unlocked Hero: ", hero_name)
+		save_game()
 
 func get_next_hero() -> String:
 	var index = unlocked_heroes.find(current_hero)
 	var next_index = (index + 1) % unlocked_heroes.size()
 	return unlocked_heroes[next_index]
+
+func save_game() -> void:
+	var file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+	if file:
+		file.store_var(unlocked_heroes)
+		file.close()
+
+func load_game() -> void:
+	if FileAccess.file_exists("user://savegame.save"):
+		var file = FileAccess.open("user://savegame.save", FileAccess.READ)
+		if file:
+			var loaded = file.get_var()
+			if typeof(loaded) == TYPE_ARRAY:
+				unlocked_heroes = loaded
+			file.close()
 
 func mark_monster_seen(monster_name: String) -> void:
 	if not seen_monsters.has(monster_name):

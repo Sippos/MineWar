@@ -9,16 +9,22 @@ func _ready() -> void:
 	$VBoxContainer/SinglePlayerButton.call_deferred("grab_focus")
 
 func _on_single_player_pressed() -> void:
-	get_tree().change_scene_to_file("res://main.tscn")
+	var h = preload("res://hero_selection_menu.tscn").instantiate()
+	h.setup(0) # Mode.SINGLE_PLAYER
+	add_child(h)
 
 func _on_lexikon_pressed() -> void:
 	get_tree().change_scene_to_file("res://lexikon.tscn")
 
 func _on_vs_mode_pressed() -> void:
-	get_tree().change_scene_to_file("res://vs_mode.tscn")
+	var h = preload("res://hero_selection_menu.tscn").instantiate()
+	h.setup(1) # Mode.VS_LOCAL
+	add_child(h)
 
 func _on_vs_online_pressed() -> void:
-	get_tree().change_scene_to_file("res://online_lobby.tscn")
+	var h = preload("res://hero_selection_menu.tscn").instantiate()
+	h.setup(2) # Mode.VS_ONLINE
+	add_child(h)
 
 func _on_controls_pressed() -> void:
 	var controls = preload("res://controls_menu.tscn").instantiate()

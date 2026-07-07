@@ -1,6 +1,10 @@
 extends CharacterBody2D
 
-var player_id: int = 1
+var player_id: int = 1 :
+	set(val):
+		player_id = val
+		update_hero_sprites()
+
 
 var agility = 1
 var strength = 1
@@ -61,11 +65,17 @@ func _ready() -> void:
 	update_hero_sprites()
 
 func update_hero_sprites() -> void:
-	if Global.hero_data.has(Global.current_hero):
-		var data = Global.hero_data[Global.current_hero]
+	var h_name = Global.hero_p1
+	if player_id == 2:
+		h_name = Global.hero_p2
+		
+	if Global.hero_data.has(h_name):
+		var data = Global.hero_data[h_name]
 		tex_walk = load(data["walk"])
 		tex_attack = load(data["attack"])
-		$Sprite2D.texture = tex_walk
+		if has_node("Sprite2D"):
+			$Sprite2D.texture = tex_walk
+
 
 func get_weight_penalty() -> float:
 	var p = float(carried_gems.size()) * 0.15
