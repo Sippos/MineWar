@@ -14,7 +14,7 @@ var minimap_unlocked = false
 var minimap_upgraded = false
 
 func _ready():
-	$Panel/VBoxContainer/CloseContainer/Close.pressed.connect(_on_close_pressed)
+	$Panel/Close.pressed.connect(_on_close_pressed)
 	hide_menu()
 
 
@@ -23,27 +23,26 @@ func get_upgrade_cost(stat_level: int) -> int:
 
 func update_button_texts():
 	var str_cost = get_upgrade_cost(player.strength)
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeStrength.text = "%d Gems" % str_cost
+	$Panel/UpgradeStrength.text = "%d Gems" % str_cost
 	
 	var agi_cost = get_upgrade_cost(player.agility)
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeAgility.text = "%d Gems" % agi_cost
+	$Panel/UpgradeAgility.text = "%d Gems" % agi_cost
 	
 	var int_cost = get_upgrade_cost(player.intelligence)
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeIntelligence.text = "%d Gems" % int_cost
+	$Panel/UpgradeIntelligence.text = "%d Gems" % int_cost
 	
 	var base = get_parent().get_node_or_null("Base")
 	var spikes_level = base.spikes_level if base else 0
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/UpgradeSpikes.text = "Upgrade Spikes (Lvl %d) - 20 Gold" % spikes_level
+	$Panel/UpgradeSpikes.text = "Upgrade Spikes (Lvl %d) - 20 Gold" % spikes_level
 	
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero.text = "Swap Hero (Current: %s)" % Global.current_hero
+	$Panel/SwapHero.text = "Swap Hero (Current: %s)" % Global.current_hero
 	var is_dwarf = (Global.current_hero == "Dwarf")
 	var is_shaman = (Global.current_hero == "Shaman")
 	
-	$Panel/VBoxContainer/ScrollContainer/MainContent/FactionTitle.visible = is_dwarf or is_shaman
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch.visible = is_dwarf or is_shaman
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyRail.visible = is_dwarf
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyMinecart.visible = is_dwarf
-	$Panel/VBoxContainer/ScrollContainer/MainContent/Faction_Branch/BuyPeon.visible = is_shaman
+	$Panel/FactionTitle.visible = is_dwarf or is_shaman
+	$Panel/BuyRail.visible = is_dwarf
+	$Panel/BuyMinecart.visible = is_dwarf
+	$Panel/BuyPeon.visible = is_shaman
 
 var vs_prompt_panel: Panel
 var vs_send_panel: Panel
@@ -246,7 +245,7 @@ func show_menu():
 		vs_prompt_panel.get_child(0).get_child(1).call_deferred("grab_focus")
 	else:
 		panel.visible = true
-		$Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero.call_deferred("grab_focus")
+		$Panel/SwapHero.call_deferred("grab_focus")
 
 func hide_menu():
 	panel.visible = false
@@ -262,49 +261,49 @@ func _on_unlock_healthbar_pressed():
 		hud.add_gold(-10)
 		healthbar_unlocked = true
 		hud.unlock_healthbar()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockHealthbar.disabled = true
+		$Panel/UnlockHealthbar.disabled = true
 
 func _on_unlock_base_health_pressed():
 	if not base_health_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		base_health_unlocked = true
 		hud.unlock_base_healthbar()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockBaseHealth.disabled = true
+		$Panel/UnlockBaseHealth.disabled = true
 
 func _on_unlock_stats_pressed():
 	if not stats_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		stats_unlocked = true
 		hud.unlock_stats()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockStats.disabled = true
+		$Panel/UnlockStats.disabled = true
 
 func _on_unlock_wave_timer_pressed():
 	if not wave_timer_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		wave_timer_unlocked = true
 		hud.unlock_wave_timer()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockWaveTimer.disabled = true
+		$Panel/UnlockWaveTimer.disabled = true
 
 func _on_unlock_xp_pressed():
 	if not xp_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		xp_unlocked = true
 		hud.unlock_xp()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockXP.disabled = true
+		$Panel/UnlockXP.disabled = true
 
 func _on_unlock_minimap_pressed():
 	if not minimap_unlocked and hud.total_gold >= 20:
 		hud.add_gold(-20)
 		minimap_unlocked = true
 		hud.unlock_minimap()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockMinimap.disabled = true
+		$Panel/UnlockMinimap.disabled = true
 
 func _on_upgrade_minimap_pressed():
 	if minimap_unlocked and not minimap_upgraded and hud.total_gold >= 50:
 		hud.add_gold(-50)
 		minimap_upgraded = true
 		hud.upgrade_minimap_enemies()
-		$Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UpgradeMinimap.disabled = true
+		$Panel/UpgradeMinimap.disabled = true
 
 func _on_upgrade_max_health_pressed():
 	if hud.total_gold >= 15:
