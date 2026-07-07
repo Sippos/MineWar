@@ -16,18 +16,6 @@ func _ready() -> void:
 	collision_mask |= 4 # Add layer 3 (enemies)
 	prompt.visible = false
 	
-	var p_id = get_parent().get("player_id")
-	if p_id == null:
-		p_id = 1
-		
-	var h_name = Global.hero_p1
-	if p_id == 2:
-		h_name = Global.hero_p2
-		
-	if h_name == "Shaman":
-		$Sprite2D.texture = load("res://ShamanBase.png")
-	elif h_name == "Dwarf":
-		$Sprite2D.texture = load("res://DwarfBase.png")
 
 func _process(delta: float) -> void:
 	if player_in_zone:
