@@ -1,0 +1,49 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="Texture2D" path="res://Button.png" id="1_l7yju"]
+[ext_resource type="Texture2D" path="res://MenuPanel.png" id="2_ap137"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_icku4"]
+texture = ExtResource("1_l7yju")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_mp206"]
+texture = ExtResource("1_l7yju")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vp42j"]
+texture = ExtResource("1_l7yju")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_3m3sy"]
+texture = ExtResource("1_l7yju")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.6, 0.6, 0.6, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_0lf1r"]
+texture = ExtResource("2_ap137")
+texture_margin_left = 32.0
+texture_margin_top = 32.0
+texture_margin_right = 32.0
+texture_margin_bottom = 32.0
+
+[resource]
+Button/styles/focus = SubResource("StyleBoxTexture_icku4")
+Button/styles/hover = SubResource("StyleBoxTexture_mp206")
+Button/styles/normal = SubResource("StyleBoxTexture_vp42j")
+Button/styles/pressed = SubResource("StyleBoxTexture_3m3sy")
+Panel/styles/panel = SubResource("StyleBoxTexture_0lf1r")

@@ -4,7 +4,7 @@ func _ready() -> void:
 	$VBoxContainer/VSOnlineButton.pressed.connect(_on_vs_online_pressed)
 	$VBoxContainer/VSModeButton.pressed.connect(_on_vs_mode_pressed)
 	$VBoxContainer/SinglePlayerButton.pressed.connect(_on_single_player_pressed)
-	$VBoxContainer/LexikonButton.pressed.connect(_on_lexikon_pressed)
+	$LexikonButton.pressed.connect(_on_lexikon_pressed)
 	$VBoxContainer/ControlsButton.pressed.connect(_on_controls_pressed)
 	$VBoxContainer/SinglePlayerButton.call_deferred("grab_focus")
 

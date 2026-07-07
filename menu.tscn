@@ -1,8 +1,10 @@
-[gd_scene format=3 uid="uid://menu12345678"]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://menu.gd" id="1_menu"]
+[ext_resource type="Texture2D" path="res://MainMenuBackground.png" id="2_mae5d"]
+[ext_resource type="Texture2D" path="res://Beastary.png" id="3_4hy44"]
 
-[node name="Menu" type="Control"]
+[node name="Menu" type="Control" unique_id=449305670]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,16 +13,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=793951751]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.121569, 0.121569, 0.121569, 1)
+texture = ExtResource("2_mae5d")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1336272445]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -35,38 +37,47 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=1785329174]
 layout_mode = 2
 theme_override_font_sizes/font_size = 48
 text = "Mining Game"
 horizontal_alignment = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=1068356480]
 layout_mode = 2
 theme_override_constants/margin_top = 20
 
-[node name="SinglePlayerButton" type="Button" parent="VBoxContainer"]
+[node name="SinglePlayerButton" type="Button" parent="VBoxContainer" unique_id=1083051520]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Single Player"
 
-[node name="VSModeButton" type="Button" parent="VBoxContainer"]
+[node name="VSModeButton" type="Button" parent="VBoxContainer" unique_id=2007448836]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "VS Mode (Local Split-Screen)"
 
-
-[node name="VSOnlineButton" type="Button" parent="VBoxContainer"]
+[node name="VSOnlineButton" type="Button" parent="VBoxContainer" unique_id=1604464901]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "VS Mode (Online)"
 
-[node name="LexikonButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-text = "Lexikon"
-
-[node name="ControlsButton" type="Button" parent="VBoxContainer"]
+[node name="ControlsButton" type="Button" parent="VBoxContainer" unique_id=1909268599]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Controls & Settings"
+
+[node name="LexikonButton" type="TextureButton" parent="." unique_id=1243396486]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -140.0
+offset_right = -12.0
+offset_bottom = -12.0
+texture_normal = ExtResource("3_4hy44")
+ignore_texture_size = true
+stretch_mode = 5
