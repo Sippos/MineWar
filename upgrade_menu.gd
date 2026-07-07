@@ -358,32 +358,32 @@ func _on_heal_player_pressed():
 		hud.update_player_health(player.health, player.max_health)
 
 func _on_send_rat():
-	if hud.total_gems >= 5:
-		hud.add_gems(-5)
+	if hud.total_gold >= 5:
+		hud.add_gold(-5)
 		emit_signal("send_enemy", 0) # 0 = Rat
 		hide_menu()
 
 func _on_send_spider():
-	if hud.total_gems >= 10:
-		hud.add_gems(-10)
+	if hud.total_gold >= 10:
+		hud.add_gold(-10)
 		emit_signal("send_enemy", 1) # 1 = Spider
 		hide_menu()
 
 func _on_send_bat():
-	if hud.total_gems >= 15:
-		hud.add_gems(-15)
+	if hud.total_gold >= 15:
+		hud.add_gold(-15)
 		emit_signal("send_enemy", 2) # 2 = Bat
 		hide_menu()
 
 func _on_send_trogg():
-	if hud.total_gems >= 20:
-		hud.add_gems(-20)
+	if hud.total_gold >= 20:
+		hud.add_gold(-20)
 		emit_signal("send_enemy", 3) # 3 = Trogg
 		hide_menu()
 
 func _on_send_orc():
-	if hud.total_gems >= 25:
-		hud.add_gems(-25)
+	if hud.total_gold >= 25:
+		hud.add_gold(-25)
 		emit_signal("send_enemy", 4) # 4 = Orc
 		hide_menu()
 
