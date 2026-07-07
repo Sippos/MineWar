@@ -191,7 +191,7 @@ func _physics_process(delta: float) -> void:
 
 	if is_dead:
 		respawn_timer -= delta
-		var hud = get_parent().get_node_or_null("HUD")
+		hud = get_parent().get_node_or_null("HUD")
 		if hud and hud.has_method("update_respawn_timer"):
 			hud.update_respawn_timer(respawn_timer)
 		

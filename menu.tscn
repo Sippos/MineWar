@@ -18,6 +18,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("2_mae5d")
 expand_mode = 1
 stretch_mode = 6
@@ -29,9 +31,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -100.0
+offset_left = -200.0
 offset_top = -100.0
-offset_right = 100.0
+offset_right = 200.0
 offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -48,22 +50,22 @@ layout_mode = 2
 theme_override_constants/margin_top = 20
 
 [node name="SinglePlayerButton" type="Button" parent="VBoxContainer" unique_id=1083051520]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(400, 65)
 layout_mode = 2
 text = "Single Player"
 
 [node name="VSModeButton" type="Button" parent="VBoxContainer" unique_id=2007448836]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(400, 65)
 layout_mode = 2
 text = "VS Mode (Local Split-Screen)"
 
 [node name="VSOnlineButton" type="Button" parent="VBoxContainer" unique_id=1604464901]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(400, 65)
 layout_mode = 2
 text = "VS Mode (Online)"
 
 [node name="ControlsButton" type="Button" parent="VBoxContainer" unique_id=1909268599]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(400, 65)
 layout_mode = 2
 text = "Controls & Settings"
 
@@ -74,10 +76,12 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -140.0
-offset_top = -140.0
-offset_right = -12.0
-offset_bottom = -12.0
+offset_left = -200.0
+offset_top = -200.0
+offset_right = -72.0
+offset_bottom = -72.0
+grow_horizontal = 0
+grow_vertical = 0
 texture_normal = ExtResource("3_4hy44")
 ignore_texture_size = true
 stretch_mode = 5
