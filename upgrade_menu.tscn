@@ -1,5 +1,7 @@
 [gd_scene format=3]
 
+[ext_resource type="Script" path="res://upgrade_menu.gd" id="1_script"]
+
 [ext_resource type="Texture2D" path="res://GoldCoinPile.png" id="2_goldpile"]
 [ext_resource type="Texture2D" path="res://Healthbar.png" id="4_healthbar"]
 [ext_resource type="Texture2D" path="res://Strenght.png" id="5_str"]
@@ -7,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://Int.png" id="7_int"]
 
 [node name="UpgradeMenu" type="CanvasLayer" unique_id=1532591821]
+script = ExtResource("1_script")
 
 [node name="Panel" type="Panel" parent="." unique_id=956109666]
 visible = false
