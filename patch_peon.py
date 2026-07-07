@@ -1,4 +1,34 @@
-extends CharacterBody2D
+import os
+
+peon_tscn = """[gd_scene load_steps=4 format=3 uid="uid://peonuid"]
+
+[ext_resource type="Script" path="res://peon.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://peon_walk_spritesheet_25d.png" id="2_tex"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_peon"]
+size = Vector2(32, 32)
+
+[node name="Peon" type="CharacterBody2D"]
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -16)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_tex")
+hframes = 8
+vframes = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_peon")
+"""
+
+with open("peon.tscn", "w") as f:
+    f.write(peon_tscn)
+
+
+peon_gd = """extends CharacterBody2D
 
 var state = "IDLE"
 var target_gem = null
@@ -135,3 +165,8 @@ func move_along_path(delta):
 		move_and_slide()
 	else:
 		velocity = Vector2.ZERO
+"""
+
+with open("peon.gd", "w") as f:
+    f.write(peon_gd)
+print("Updated peon")

@@ -1,6 +1,11 @@
 extends Node2D
 
-@export var player_id: int = 1
+@export var player_id: int = 1:
+	set(val):
+		player_id = val
+		if has_node("Player"):
+			$Player.player_id = val
+
 @export var is_vs_mode: bool = false
 var income: int = 1
 var income_timer: float = 3.0

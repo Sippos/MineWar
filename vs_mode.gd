@@ -21,6 +21,7 @@ func _ready() -> void:
 		hud2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
 
 func _on_p1_send_enemy(enemy_type: int) -> void:
+	print("p1 sending enemy type ", enemy_type)
 	level1.income += enemy_type + 1
 	var e = level2.ENEMY_SCENE.instantiate()
 	# spawn on level2

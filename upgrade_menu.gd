@@ -362,7 +362,7 @@ func _on_heal_player_pressed():
 func _on_send_rat():
 	if hud.total_gems >= 5:
 		hud.add_gems(-5)
-		emit_signal("send_enemy", 0) # 0 = Rat
+		print("Emitting send_enemy 0"); emit_signal("send_enemy", 0) # 0 = Rat
 
 func _on_send_spider():
 	if hud.total_gems >= 10:
