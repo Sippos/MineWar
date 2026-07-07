@@ -39,7 +39,7 @@ func _ready() -> void:
 	_add_wasd_input()
 	
 	astar = AStarGrid2D.new()
-	astar.region = Rect2i(-30, -5, 60, 60)
+	astar.region = Rect2i(-30, -15, 60, 60)
 	astar.cell_size = Vector2(64, 64)
 	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	astar.update()
@@ -207,24 +207,25 @@ func generate_initial_world() -> void:
 	noise.frequency = 0.1
 	
 	for x in range(-width / 2, width / 2):
-		for y in range(0, depth):
+		for y in range(-10, depth):
 			var cell = Vector2i(x, y)
 			
-			var depth_factor = y / float(depth)
-			var n_val = noise.get_noise_2d(x, y)
-			var score = depth_factor + n_val * 0.5
-			
 			var block_type = 1
-			if score > 0.8:
-				block_type = 3
-			elif score > 0.4:
-				block_type = 2
+			if y >= 0:
+				var depth_factor = y / float(depth)
+				var n_val = noise.get_noise_2d(x, y)
+				var score = depth_factor + n_val * 0.5
 				
+				if score > 0.8:
+					block_type = 3
+				elif score > 0.4:
+					block_type = 2
+					
 			block_layer.set_cell(cell, block_type, Vector2i(0, 0))
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 				
-			if randf() < 0.10:
+			if y >= 0 and randf() < 0.10:
 				var sprite = Sprite2D.new()
 				sprite.texture = load("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
 				sprite.position = block_layer.map_to_local(cell)
@@ -244,21 +245,23 @@ func generate_initial_world() -> void:
 				
 	# Now that all blocks are placed, calculate masks and front walls
 	for x in range(-width / 2, width / 2):
-		for y in range(0, depth):
+		for y in range(-10, depth):
 			update_fog_mask(Vector2i(x, y))
 			update_front_wall(Vector2i(x, y))
 	
-	# Ensure surface is walkable
+
 	for x in range(-width / 2, width / 2):
-		var cell = Vector2i(x, -1)
-		if astar.is_in_bounds(cell.x, cell.y):
-			astar.set_point_solid(cell, false)
-			
-	for x in range(-width / 2, width / 2):
-		for y in range(-5, depth):
+		for y in range(-10, depth):
 			update_astar_weight(Vector2i(x, y))
 			
-	# Small clearing for the base
+	# Area around the base
+	for x in range(-8, 9):
+		for y in range(-8, 0):
+			var cell = Vector2i(x, y)
+			if astar.is_in_bounds(cell.x, cell.y):
+				on_cell_dug(cell)
+
+	# Small clearing for the entrance funnel
 	for x in range(-2, 3):
 		for y in range(0, 2):
 			var cell = Vector2i(x, y)
@@ -333,8 +336,8 @@ func get_farthest_open_cell() -> Vector2i:
 		]
 		
 		for n in neighbors:
-			# Only traverse within the playable area (x: -20 to 19, y: -1 to 29)
-			if n.x >= -20 and n.x < 20 and n.y >= -1 and n.y < 30:
+			# Only traverse within the playable area
+			if n.x >= -20 and n.x < 20 and n.y >= -10 and n.y < 30:
 				if not astar.is_point_solid(n) and not visited.has(n):
 					visited[n] = dist + 1
 					queue.append(n)

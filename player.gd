@@ -317,8 +317,8 @@ func handle_digging(delta: float) -> void:
 			var cell = tile_map.local_to_map(tile_map.to_local(point))
 			
 			if tile_map.get_cell_source_id(cell) != -1:
-				# Prevent digging the top 2 layers to force a single entrance funnel
-				if cell.y <= 1 and cell.x != 0:
+				# Prevent digging the top 2 layers to force a single entrance funnel, and prevent digging above the surface
+				if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
 					_stop_digging()
 					return
 					
