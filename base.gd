@@ -15,6 +15,23 @@ var heal_timer = 0.0
 func _ready() -> void:
 	collision_mask |= 4 # Add layer 3 (enemies)
 	prompt.visible = false
+
+	var p_id = get_parent().get("player_id")
+	if p_id == null:
+		p_id = 1
+		
+	var h_name = Global.hero_p1
+	if p_id == 2:
+		h_name = Global.hero_p2
+		
+	if h_name == "Shaman" and FileAccess.file_exists("res://ShamanBase.png"):
+		$Sprite2D.texture = load("res://ShamanBase.png")
+		$Sprite2D.modulate = Color(1, 1, 1, 1)
+		$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
+	elif h_name == "Dwarf" and FileAccess.file_exists("res://DwarfBase.png"):
+		$Sprite2D.texture = load("res://DwarfBase.png")
+		$Sprite2D.modulate = Color(1, 1, 1, 1)
+		$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
 	
 
 func _process(delta: float) -> void:
