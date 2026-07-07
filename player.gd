@@ -58,6 +58,21 @@ func _ready() -> void:
 	ray_down = RayCast2D.new(); ray_down.position = Vector2(0, -24); ray_down.target_position = Vector2(0, 34); ray_down.collision_mask = 5; add_child(ray_down)
 	ray_up = RayCast2D.new(); ray_up.position = Vector2(0, -24); ray_up.target_position = Vector2(0, -34); ray_up.collision_mask = 5; add_child(ray_up)
 	
+	# Ambient dust particles
+	var ambient_particles = CPUParticles2D.new()
+	ambient_particles.name = "AmbientDust"
+	ambient_particles.amount = 40
+	ambient_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	ambient_particles.emission_sphere_radius = 120.0
+	ambient_particles.gravity = Vector2(0, -5)
+	ambient_particles.scale_amount_min = 1.0
+	ambient_particles.scale_amount_max = 3.0
+	ambient_particles.color = Color(1.0, 0.9, 0.7, 0.3)
+	ambient_particles.lifetime = 2.0
+	ambient_particles.position = Vector2(0, -24)
+	ambient_particles.z_index = 5
+	add_child(ambient_particles)
+	
 	update_hero_sprites()
 
 func update_hero_sprites() -> void:
@@ -165,6 +180,11 @@ func _physics_process(delta: float) -> void:
 		
 	if stomp_cooldown_timer > 0.0:
 		stomp_cooldown_timer -= delta
+		
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("update_stomp_cooldown"):
+		var max_cooldown = max(1.0, 5.0 - stomp_level * 0.5)
+		hud.update_stomp_cooldown(stomp_level, stomp_cooldown_timer, max_cooldown)
 		
 	if Input.is_action_just_pressed("p%d_stomp" % player_id) and stomp_level > 0 and stomp_cooldown_timer <= 0.0:
 		perform_stomp()
@@ -413,6 +433,32 @@ func perform_stomp() -> void:
 		sprite.modulate = Color(1, 1, 0)
 		tween.tween_property(sprite, "scale", current_sprite_scale, 0.2)
 		tween.parallel().tween_property(sprite, "modulate", Color(1, 1, 1), 0.2)
+		
+	# Stomp particle effect
+	var burst = CPUParticles2D.new()
+	burst.emitting = false
+	burst.one_shot = true
+	burst.amount = 50
+	burst.lifetime = 0.6
+	burst.explosiveness = 0.95
+	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	burst.emission_sphere_radius = 20.0
+	burst.spread = 180.0
+	burst.gravity = Vector2(0, 0)
+	burst.initial_velocity_min = 150.0
+	burst.initial_velocity_max = 280.0
+	burst.damping_min = 300.0
+	burst.damping_max = 400.0
+	burst.scale_amount_min = 3.0
+	burst.scale_amount_max = 7.0
+	burst.color = Color(0.6, 0.5, 0.4, 0.9) # Dust/Dirt color
+	burst.global_position = global_position
+	burst.z_index = 0
+	get_parent().call_deferred("add_child", burst)
+	burst.call_deferred("set_emitting", true)
+	
+	var t = get_tree().create_timer(1.0)
+	t.timeout.connect(burst.queue_free)
 	
 	var enemies = get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:

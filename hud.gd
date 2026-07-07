@@ -17,6 +17,9 @@ var total_gems = 0
 var total_gold = 0
 var minimap_shows_enemies = false
 
+var stomp_container: Control
+var stomp_progress: TextureProgressBar
+
 func _ready():
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
@@ -27,6 +30,49 @@ func _ready():
 		if mobile_controls_scene:
 			var mobile_controls = mobile_controls_scene.instantiate()
 			add_child(mobile_controls)
+			
+	_setup_stomp_ui()
+
+func _setup_stomp_ui() -> void:
+	stomp_container = Control.new()
+	stomp_container.name = "StompContainer"
+	stomp_container.visible = false
+	stomp_container.set_anchors_preset(PRESET_BOTTOM_RIGHT)
+	stomp_container.offset_left = -80
+	stomp_container.offset_top = -80
+	stomp_container.offset_right = -30
+	stomp_container.offset_bottom = -30
+	
+	var stomp_icon = ColorRect.new()
+	stomp_icon.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_icon.color = Color(0.2, 0.2, 0.2, 0.8)
+	
+	var stomp_label = Label.new()
+	stomp_label.text = "STOMP"
+	stomp_label.add_theme_font_size_override("font_size", 12)
+	stomp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stomp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	stomp_label.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_icon.add_child(stomp_label)
+	
+	stomp_progress = TextureProgressBar.new()
+	stomp_progress.name = "StompProgress"
+	stomp_progress.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_progress.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
+	var bg_tex = GradientTexture2D.new()
+	bg_tex.width = 50
+	bg_tex.height = 50
+	bg_tex.fill_from = Vector2(0,0)
+	bg_tex.fill_to = Vector2(0,0)
+	var grad = Gradient.new()
+	grad.colors = PackedColorArray([Color(0,0,0,0.65), Color(0,0,0,0.65)])
+	bg_tex.gradient = grad
+	stomp_progress.texture_progress = bg_tex
+	stomp_progress.step = 0.01
+	
+	stomp_icon.add_child(stomp_progress)
+	stomp_container.add_child(stomp_icon)
+	add_child(stomp_container)
 
 func _process(delta):
 	if minimap and minimap.visible:
@@ -83,6 +129,15 @@ func update_xp(level: int, current_xp: int, max_xp: int) -> void:
 	if xp_bar:
 		xp_bar.max_value = max_xp
 		xp_bar.value = current_xp
+
+func update_stomp_cooldown(stomp_level: int, current_cooldown: float, max_cooldown: float) -> void:
+	if stomp_level > 0:
+		if stomp_container and not stomp_container.visible:
+			stomp_container.visible = true
+		
+		if stomp_progress:
+			stomp_progress.max_value = max_cooldown
+			stomp_progress.value = current_cooldown
 
 func unlock_minimap() -> void:
 	minimap.visible = true
