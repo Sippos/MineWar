@@ -53,7 +53,7 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="MainContent" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer"] unique_id=1339539780]
+[node name="MainContent" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer" unique_id=1339539780]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
