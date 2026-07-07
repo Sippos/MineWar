@@ -58,21 +58,6 @@ func _ready() -> void:
 	ray_down = RayCast2D.new(); ray_down.position = Vector2(0, -24); ray_down.target_position = Vector2(0, 34); ray_down.collision_mask = 5; add_child(ray_down)
 	ray_up = RayCast2D.new(); ray_up.position = Vector2(0, -24); ray_up.target_position = Vector2(0, -34); ray_up.collision_mask = 5; add_child(ray_up)
 	
-	# Ambient dust particles
-	var ambient_particles = CPUParticles2D.new()
-	ambient_particles.name = "AmbientDust"
-	ambient_particles.amount = 40
-	ambient_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	ambient_particles.emission_sphere_radius = 120.0
-	ambient_particles.gravity = Vector2(0, -5)
-	ambient_particles.scale_amount_min = 1.0
-	ambient_particles.scale_amount_max = 3.0
-	ambient_particles.color = Color(1.0, 0.9, 0.7, 0.3)
-	ambient_particles.lifetime = 2.0
-	ambient_particles.position = Vector2(0, -24)
-	ambient_particles.z_index = 5
-	add_child(ambient_particles)
-	
 	update_hero_sprites()
 
 func update_hero_sprites() -> void:
