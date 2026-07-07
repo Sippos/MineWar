@@ -37,14 +37,14 @@ func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
 	stomp_container.name = "StompContainer"
 	stomp_container.visible = false
-	stomp_container.set_anchors_preset(PRESET_BOTTOM_RIGHT)
+	stomp_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	stomp_container.offset_left = -80
 	stomp_container.offset_top = -80
 	stomp_container.offset_right = -30
 	stomp_container.offset_bottom = -30
 	
 	var stomp_icon = ColorRect.new()
-	stomp_icon.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stomp_icon.color = Color(0.2, 0.2, 0.2, 0.8)
 	
 	var stomp_label = Label.new()
@@ -52,12 +52,12 @@ func _setup_stomp_ui() -> void:
 	stomp_label.add_theme_font_size_override("font_size", 12)
 	stomp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stomp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	stomp_label.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stomp_icon.add_child(stomp_label)
 	
 	stomp_progress = TextureProgressBar.new()
 	stomp_progress.name = "StompProgress"
-	stomp_progress.set_anchors_preset(PRESET_FULL_RECT)
+	stomp_progress.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stomp_progress.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
 	var bg_tex = GradientTexture2D.new()
 	bg_tex.width = 50

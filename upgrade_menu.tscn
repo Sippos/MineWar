@@ -9,6 +9,7 @@
 [node name="UpgradeMenu" type="CanvasLayer" unique_id=1532591821]
 
 [node name="Panel" type="Panel" parent="." unique_id=956109666]
+visible = false
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -48,140 +49,144 @@ layout_mode = 2
 texture = ExtResource("2_goldpile")
 stretch_mode = 5
 
-[node name="MainContent" type="VBoxContainer" parent="Panel/VBoxContainer" unique_id=1339539780]
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MainContent" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer"] unique_id=1339539780]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
-[node name="TopSection" type="HBoxContainer" parent="Panel/VBoxContainer/MainContent" unique_id=1659529232]
+[node name="TopSection" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=1659529232]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
-[node name="HUD_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/MainContent/TopSection" unique_id=2048885829]
+[node name="HUD_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection" unique_id=2048885829]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch" unique_id=111689093]
+[node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch" unique_id=111689093]
 layout_mode = 2
 text = "-- HUD Tree --"
 horizontal_alignment = 1
 
-[node name="RootIconContainer" type="CenterContainer" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch" unique_id=2013852989]
+[node name="RootIconContainer" type="CenterContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch" unique_id=2013852989]
 layout_mode = 2
 
-[node name="RootIcon" type="TextureRect" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/RootIconContainer" unique_id=1731019223]
+[node name="RootIcon" type="TextureRect" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/RootIconContainer" unique_id=1731019223]
 layout_mode = 2
 texture = ExtResource("4_healthbar")
 stretch_mode = 5
 
-[node name="TreeBranches" type="GridContainer" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch" unique_id=780868963]
+[node name="TreeBranches" type="GridContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch" unique_id=780868963]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 2
 
-[node name="UnlockHealthbar" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1215438252]
+[node name="UnlockHealthbar" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1215438252]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Player HP (10 Gold)"
 
-[node name="UnlockBaseHealth" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=632419253]
+[node name="UnlockBaseHealth" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=632419253]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Base HP (10 Gold)"
 
-[node name="UnlockWaveTimer" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=417660384]
+[node name="UnlockWaveTimer" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=417660384]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Wave Timer (10 Gold)"
 
-[node name="UnlockXP" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=630885684]
+[node name="UnlockXP" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=630885684]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "XP Bar (10 Gold)"
 
-[node name="UnlockStats" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=434824149]
+[node name="UnlockStats" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=434824149]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Show Stats (10 Gold)"
 
-[node name="UnlockMinimap" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=924513700]
+[node name="UnlockMinimap" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=924513700]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Unlock Minimap (20 Gold)"
 
-[node name="UpgradeMinimap" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1893646801]
+[node name="UpgradeMinimap" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches" unique_id=1893646801]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Mini: Enemies (50 G)"
 
-[node name="Health_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/MainContent/TopSection" unique_id=1138071500]
+[node name="Health_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection" unique_id=1138071500]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/MainContent/TopSection/Health_Branch" unique_id=784958163]
+[node name="BranchTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch" unique_id=784958163]
 layout_mode = 2
 text = "-- Health Updates --"
 horizontal_alignment = 1
 
-[node name="UpgradeMaxHealth" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/Health_Branch" unique_id=888362416]
+[node name="UpgradeMaxHealth" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch" unique_id=888362416]
 layout_mode = 2
 text = "+20 HP (15 Gold)"
 icon = ExtResource("4_healthbar")
 expand_icon = true
 
-[node name="HealPlayer" type="Button" parent="Panel/VBoxContainer/MainContent/TopSection/Health_Branch" unique_id=1645909163]
+[node name="HealPlayer" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch" unique_id=1645909163]
 layout_mode = 2
 text = "Heal +20 HP (10 Gold)"
 icon = ExtResource("4_healthbar")
 expand_icon = true
 
-[node name="StatsTitle" type="Label" parent="Panel/VBoxContainer/MainContent" unique_id=959802904]
+[node name="StatsTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=959802904]
 layout_mode = 2
 text = "-- Stat Updates --"
 horizontal_alignment = 1
 
-[node name="Stats_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/MainContent" unique_id=551311599]
+[node name="Stats_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=551311599]
 layout_mode = 2
 
-[node name="UpgradeStrength" type="Button" parent="Panel/VBoxContainer/MainContent/Stats_Branch" unique_id=392600263]
+[node name="UpgradeStrength" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=392600263]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("5_str")
 expand_icon = true
 
-[node name="UpgradeAgility" type="Button" parent="Panel/VBoxContainer/MainContent/Stats_Branch" unique_id=86074682]
+[node name="UpgradeAgility" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=86074682]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("6_agi")
 expand_icon = true
 
-[node name="UpgradeIntelligence" type="Button" parent="Panel/VBoxContainer/MainContent/Stats_Branch" unique_id=1400375980]
+[node name="UpgradeIntelligence" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=1400375980]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "10 Gems"
 icon = ExtResource("7_int")
 expand_icon = true
 
-[node name="MiscTitle" type="Label" parent="Panel/VBoxContainer/MainContent" unique_id=861126471]
+[node name="MiscTitle" type="Label" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=861126471]
 layout_mode = 2
 text = "-- Misc Updates --"
 horizontal_alignment = 1
 
-[node name="Misc_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/MainContent" unique_id=1034878514]
+[node name="Misc_Branch" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=1034878514]
 layout_mode = 2
 
-[node name="UpgradeSpikes" type="Button" parent="Panel/VBoxContainer/MainContent/Misc_Branch" unique_id=1010392277]
+[node name="UpgradeSpikes" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch" unique_id=1010392277]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Upgrade Spikes (Lvl 0) - 20 Gold"
 
-[node name="SwapHero" type="Button" parent="Panel/VBoxContainer/MainContent/Misc_Branch" unique_id=1452095055]
+[node name="SwapHero" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch" unique_id=1452095055]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Swap Hero (Free)"
@@ -194,18 +199,18 @@ text = "Controls & Settings"
 layout_mode = 2
 text = "Close"
 
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockHealthbar" to="." method="_on_unlock_healthbar_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockBaseHealth" to="." method="_on_unlock_base_health_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockWaveTimer" to="." method="_on_unlock_wave_timer_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockXP" to="." method="_on_unlock_xp_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockStats" to="." method="_on_unlock_stats_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockMinimap" to="." method="_on_unlock_minimap_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UpgradeMinimap" to="." method="_on_upgrade_minimap_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/Health_Branch/UpgradeMaxHealth" to="." method="_on_upgrade_max_health_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/TopSection/Health_Branch/HealPlayer" to="." method="_on_heal_player_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/Stats_Branch/UpgradeStrength" to="." method="_on_upgrade_strength_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/Stats_Branch/UpgradeAgility" to="." method="_on_upgrade_agility_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/Stats_Branch/UpgradeIntelligence" to="." method="_on_upgrade_intelligence_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/Misc_Branch/UpgradeSpikes" to="." method="_on_upgrade_spikes_pressed"]
-[connection signal="pressed" from="Panel/VBoxContainer/MainContent/Misc_Branch/SwapHero" to="." method="_on_swap_hero_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockHealthbar" to="." method="_on_unlock_healthbar_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockBaseHealth" to="." method="_on_unlock_base_health_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockWaveTimer" to="." method="_on_unlock_wave_timer_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockXP" to="." method="_on_unlock_xp_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockStats" to="." method="_on_unlock_stats_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UnlockMinimap" to="." method="_on_unlock_minimap_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch/TreeBranches/UpgradeMinimap" to="." method="_on_upgrade_minimap_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch/UpgradeMaxHealth" to="." method="_on_upgrade_max_health_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/Health_Branch/HealPlayer" to="." method="_on_heal_player_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeStrength" to="." method="_on_upgrade_strength_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeAgility" to="." method="_on_upgrade_agility_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch/UpgradeIntelligence" to="." method="_on_upgrade_intelligence_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/UpgradeSpikes" to="." method="_on_upgrade_spikes_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ScrollContainer/MainContent/Misc_Branch/SwapHero" to="." method="_on_swap_hero_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/Close" to="." method="_on_close_pressed"]
