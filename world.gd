@@ -255,8 +255,8 @@ func generate_initial_world() -> void:
 			update_astar_weight(Vector2i(x, y))
 			
 	# Area around the base
-	for x in range(-8, 9):
-		for y in range(-8, 0):
+	for x in range(-5, 6):
+		for y in range(-4, 0):
 			var cell = Vector2i(x, y)
 			if astar.is_in_bounds(cell.x, cell.y):
 				on_cell_dug(cell)
