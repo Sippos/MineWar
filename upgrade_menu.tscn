@@ -58,13 +58,11 @@ size_flags_vertical = 3
 
 [node name="MainContent" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer" unique_id=1339539780]
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_constants/separation = 20
 
 [node name="TopSection" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent" unique_id=1659529232]
 layout_mode = 2
 alignment = 1
-size_flags_vertical = 3
 theme_override_constants/separation = 20
 
 [node name="HUD_Branch" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection" unique_id=2048885829]
@@ -85,7 +83,6 @@ stretch_mode = 5
 
 [node name="TreeBranches" type="GridContainer" parent="Panel/VBoxContainer/ScrollContainer/MainContent/TopSection/HUD_Branch" unique_id=780868963]
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 2
@@ -150,18 +147,27 @@ alignment = 1
 
 [node name="UpgradeStrength" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=392600263]
 layout_mode = 2
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
 text = "10 Gems"
 icon = ExtResource("5_str")
 expand_icon = true
 
 [node name="UpgradeAgility" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=86074682]
 layout_mode = 2
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
 text = "10 Gems"
 icon = ExtResource("6_agi")
 expand_icon = true
 
 [node name="UpgradeIntelligence" type="Button" parent="Panel/VBoxContainer/ScrollContainer/MainContent/Stats_Branch" unique_id=1400375980]
 layout_mode = 2
+custom_minimum_size = Vector2(120, 80)
+icon_alignment = 1
+vertical_icon_alignment = 0
 text = "10 Gems"
 icon = ExtResource("7_int")
 expand_icon = true
