@@ -24,8 +24,7 @@ func _ready():
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
 		
-	var emulate_touch = ProjectSettings.get_setting("input_devices/pointing/emulate_touch_from_mouse", false)
-	if OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios") or emulate_touch:
+	if OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios"):
 		var mobile_controls_scene = load("res://mobile_controls.tscn")
 		if mobile_controls_scene:
 			var mobile_controls = mobile_controls_scene.instantiate()
