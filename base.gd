@@ -24,32 +24,18 @@ func _ready() -> void:
 	if p_id == 2:
 		h_name = Global.hero_p2
 		
-	if h_name == "Shaman" and ResourceLoader.exists("res://ShamanBase.png"):
-		var img = Image.new()
-		var err = img.load("res://ShamanBase.png")
-		if err == OK:
-			$Sprite2D.texture = ImageTexture.create_from_image(img)
+	if h_name == "Shaman":
+		var tex = load("res://ShamanBase.png")
+		if tex:
+			$Sprite2D.texture = tex
 			$Sprite2D.modulate = Color(1, 1, 1, 1)
-			$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
-		else:
-			var tex = load("res://ShamanBase.png")
-			if tex:
-				$Sprite2D.texture = tex
-				$Sprite2D.modulate = Color(1, 1, 1, 1)
-				$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
-	elif h_name == "Dwarf" and ResourceLoader.exists("res://DwarfBase.png"):
-		var img = Image.new()
-		var err = img.load("res://DwarfBase.png")
-		if err == OK:
-			$Sprite2D.texture = ImageTexture.create_from_image(img)
+			$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
+	elif h_name == "Dwarf":
+		var tex = load("res://DwarfBase.png")
+		if tex:
+			$Sprite2D.texture = tex
 			$Sprite2D.modulate = Color(1, 1, 1, 1)
-			$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
-		else:
-			var tex = load("res://DwarfBase.png")
-			if tex:
-				$Sprite2D.texture = tex
-				$Sprite2D.modulate = Color(1, 1, 1, 1)
-				$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
+			$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
 	
 
 func _process(delta: float) -> void:
