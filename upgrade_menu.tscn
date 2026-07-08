@@ -11,7 +11,6 @@
 [ext_resource type="Texture2D" uid="uid://cwq2ecylosvfk" path="res://HealthBarPurple.png" id="7_nv8yg"]
 
 [node name="UpgradeMenu" type="CanvasLayer"]
-process_mode = 3
 script = ExtResource("1_script")
 
 [node name="Panel" type="Control" parent="."]
