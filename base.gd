@@ -24,7 +24,7 @@ func _ready() -> void:
 	if p_id == 2:
 		h_name = Global.hero_p2
 		
-	if h_name == "Shaman" and FileAccess.file_exists("res://ShamanBase.png"):
+	if h_name == "Shaman" and ResourceLoader.exists("res://ShamanBase.png"):
 		var img = Image.new()
 		var err = img.load("res://ShamanBase.png")
 		if err == OK:
@@ -37,7 +37,7 @@ func _ready() -> void:
 				$Sprite2D.texture = tex
 				$Sprite2D.modulate = Color(1, 1, 1, 1)
 				$Sprite2D.scale = Vector2(128.0 / $Sprite2D.texture.get_width(), 128.0 / $Sprite2D.texture.get_height())
-	elif h_name == "Dwarf" and FileAccess.file_exists("res://DwarfBase.png"):
+	elif h_name == "Dwarf" and ResourceLoader.exists("res://DwarfBase.png"):
 		var img = Image.new()
 		var err = img.load("res://DwarfBase.png")
 		if err == OK:
