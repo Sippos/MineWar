@@ -25,7 +25,7 @@ func _ready() -> void:
 		h_name = Global.hero_p2
 		
 	if h_name == "Shaman":
-		var tex = load("res://ShamanBase.png")
+		var tex = load("res://ShamanBase.png") if ResourceLoader.exists("res://ShamanBase.png") else load("res://ShamanaBase.png")
 		if tex:
 			$Sprite2D.texture = tex
 			$Sprite2D.modulate = Color(1, 1, 1, 1)

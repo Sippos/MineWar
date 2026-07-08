@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b4q4firriech2"]
+[gd_scene format=3]
 
 [ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://MenuPanel.png" id="1_nuldh"]
 [ext_resource type="Texture2D" uid="uid://otbqbgm08ok3" path="res://GoldCoinPile.png" id="2_goldpile"]
