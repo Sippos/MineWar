@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://MenuPanel.png" id="2_menu_panel"]
 [ext_resource type="Texture2D" path="res://GoldCoinPile.png" id="3_gold"]
 [ext_resource type="Texture2D" path="res://Healthbar.png" id="4_healthbar"]
-[ext_resource type="Texture2D" path="res://HealthBarPurple.png" id="5_base_health"]
+[ext_resource type="Texture2D" path="res://HealthBarPurple.png" id="5_purple_bar"]
 [ext_resource type="Texture2D" path="res://Strenght.png" id="6_str"]
 [ext_resource type="Texture2D" path="res://Agility.png" id="7_agi"]
 [ext_resource type="Texture2D" path="res://Int.png" id="8_int"]
@@ -31,7 +31,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0, 0, 0, 0.42)
+color = Color(0, 0, 0, 0.35)
 
 [node name="Window" type="Control" parent="Panel"]
 layout_mode = 1
@@ -64,20 +64,20 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 78.0
-offset_top = 38.0
-offset_right = -78.0
+offset_left = 74.0
+offset_top = 36.0
+offset_right = -74.0
 offset_bottom = -42.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Panel/Window/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="Panel/Window/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.933333, 1, 0.419608, 1)
+theme_override_colors/font_color = Color(0.933333, 1, 0.219608, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
@@ -87,7 +87,7 @@ horizontal_alignment = 1
 [node name="Body" type="HBoxContainer" parent="Panel/Window/Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="FactionColumn" type="VBoxContainer" parent="Panel/Window/Margin/VBox/Body"]
 layout_mode = 2
@@ -97,46 +97,123 @@ theme_override_constants/separation = 10
 [node name="FactionTitle" type="Label" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.65, 1)
-theme_override_font_sizes/font_size = 20
-text = "Faction"
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 19
+text = "Dwarf Faction"
 horizontal_alignment = 1
 
-[node name="SwapHero" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+[node name="BuyRailRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Swap Hero"
+theme_override_constants/separation = 8
 
-[node name="BuyRail" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+[node name="BuyRail" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyRailRow"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Buy Rail"
-icon = ExtResource("3_gold")
-expand_icon = true
 
-[node name="BuyMinecart" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyRailRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyRailRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyRailRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
+
+[node name="BuyMinecartRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BuyMinecart" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyMinecartRow"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Buy Minecart"
-icon = ExtResource("3_gold")
-expand_icon = true
 
-[node name="BuyPeon" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyMinecartRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyMinecartRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyMinecartRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "50"
+vertical_alignment = 1
+
+[node name="BuyPeonRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BuyPeon" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyPeonRow"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Buy Peon"
-icon = ExtResource("3_gold")
-expand_icon = true
 
-[node name="UpgradeSpikes" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyPeonRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyPeonRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/FactionColumn/BuyPeonRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "30"
+vertical_alignment = 1
+
+[node name="UpgradeSpikesRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeSpikes" type="Button" parent="Panel/Window/Margin/VBox/Body/FactionColumn/UpgradeSpikesRow"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
-text = "Spikes"
-icon = ExtResource("3_gold")
-expand_icon = true
+size_flags_horizontal = 3
+text = "Spikes Lv.0"
 
-[node name="SpacerFaction" type="Control" parent="Panel/Window/Margin/VBox/Body/FactionColumn"]
-custom_minimum_size = Vector2(0, 80)
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/FactionColumn/UpgradeSpikesRow"]
 layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/FactionColumn/UpgradeSpikesRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/FactionColumn/UpgradeSpikesRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "20"
+vertical_alignment = 1
 
 [node name="HUDColumn" type="VBoxContainer" parent="Panel/Window/Margin/VBox/Body"]
 layout_mode = 2
@@ -146,65 +223,247 @@ theme_override_constants/separation = 8
 [node name="HUDTitle" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.65, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 19
 text = "HUD / Health"
 horizontal_alignment = 1
 
-[node name="UnlockHealthbar" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="UnlockHealthbarRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockHealthbar" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockHealthbarRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Player HP"
 icon = ExtResource("4_healthbar")
 expand_icon = true
 
-[node name="UnlockBaseHealth" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockHealthbarRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockHealthbarRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockHealthbarRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
+
+[node name="UnlockBaseHealthRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockBaseHealth" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockBaseHealthRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Base HP"
-icon = ExtResource("5_base_health")
+icon = ExtResource("4_healthbar")
 expand_icon = true
 
-[node name="UnlockWaveTimer" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockBaseHealthRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockBaseHealthRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockBaseHealthRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
+
+[node name="UnlockWaveTimerRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockWaveTimer" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockWaveTimerRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Wave Timer"
-icon = ExtResource("3_gold")
+icon = ExtResource("5_purple_bar")
 expand_icon = true
 
-[node name="UnlockXP" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockWaveTimerRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockWaveTimerRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockWaveTimerRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
+
+[node name="UnlockXPRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockXP" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockXPRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "XP Bar"
-icon = ExtResource("3_gold")
+icon = ExtResource("5_purple_bar")
 expand_icon = true
 
-[node name="UnlockMinimap" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockXPRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockXPRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockXPRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
+
+[node name="UnlockMinimapRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockMinimap" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockMinimapRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Minimap"
-icon = ExtResource("3_gold")
-expand_icon = true
 
-[node name="UpgradeMinimap" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockMinimapRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockMinimapRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UnlockMinimapRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "20"
+vertical_alignment = 1
+
+[node name="UpgradeMinimapRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeMinimap" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMinimapRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "See Enemies"
-icon = ExtResource("3_gold")
-expand_icon = true
 
-[node name="UpgradeMaxHealth" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMinimapRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMinimapRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMinimapRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "50"
+vertical_alignment = 1
+
+[node name="UpgradeMaxHealthRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeMaxHealth" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMaxHealthRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "+20 Max HP"
 icon = ExtResource("4_healthbar")
 expand_icon = true
 
-[node name="HealPlayer" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMaxHealthRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMaxHealthRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/UpgradeMaxHealthRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "15"
+vertical_alignment = 1
+
+[node name="HealPlayerRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HealPlayer" type="Button" parent="Panel/Window/Margin/VBox/Body/HUDColumn/HealPlayerRow"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Heal +20 HP"
 icon = ExtResource("4_healthbar")
 expand_icon = true
+
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/HUDColumn/HealPlayerRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/HUDColumn/HealPlayerRow/Cost"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/HUDColumn/HealPlayerRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
 
 [node name="StatsColumn" type="VBoxContainer" parent="Panel/Window/Margin/VBox/Body"]
 layout_mode = 2
@@ -214,44 +473,132 @@ theme_override_constants/separation = 10
 [node name="StatsTitle" type="Label" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.92, 0.65, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 19
 text = "Stats"
 horizontal_alignment = 1
 
-[node name="UpgradeStrength" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
-custom_minimum_size = Vector2(0, 82)
+[node name="UpgradeStrengthRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeStrength" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeStrengthRow"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
 text = "STR +1"
 icon = ExtResource("6_str")
 icon_alignment = 1
 expand_icon = true
 
-[node name="UpgradeAgility" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
-custom_minimum_size = Vector2(0, 82)
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeStrengthRow"]
 layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeStrengthRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeStrengthRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "1"
+vertical_alignment = 1
+
+[node name="UpgradeAgilityRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeAgility" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeAgilityRow"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
 text = "AGI +1"
 icon = ExtResource("7_agi")
 icon_alignment = 1
 expand_icon = true
 
-[node name="UpgradeIntelligence" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
-custom_minimum_size = Vector2(0, 82)
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeAgilityRow"]
 layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeAgilityRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeAgilityRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "1"
+vertical_alignment = 1
+
+[node name="UpgradeIntelligenceRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeIntelligence" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeIntelligenceRow"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
 text = "INT +1"
 icon = ExtResource("8_int")
 icon_alignment = 1
 expand_icon = true
 
-[node name="UnlockStats" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
-custom_minimum_size = Vector2(0, 54)
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeIntelligenceRow"]
 layout_mode = 2
-text = "Show Stats"
-icon = ExtResource("3_gold")
-expand_icon = true
+alignment = 1
 
-[node name="SpacerStats" type="Control" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
-custom_minimum_size = Vector2(0, 80)
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeIntelligenceRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UpgradeIntelligenceRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "1"
+vertical_alignment = 1
+
+[node name="UnlockStatsRow" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UnlockStats" type="Button" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UnlockStatsRow"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Show Stats"
+
+[node name="Cost" type="HBoxContainer" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UnlockStatsRow"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UnlockStatsRow/Cost"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("3_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CostLabel" type="Label" parent="Panel/Window/Margin/VBox/Body/StatsColumn/UnlockStatsRow/Cost"]
+custom_minimum_size = Vector2(34, 0)
+layout_mode = 2
+text = "10"
+vertical_alignment = 1
 
 [node name="Footer" type="HBoxContainer" parent="Panel/Window/Margin/VBox"]
 layout_mode = 2
@@ -358,31 +705,26 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Rat"
-icon = ExtResource("3_gold")
 
 [node name="SpiderButton" type="Button" parent="VSSendPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Spider"
-icon = ExtResource("3_gold")
 
 [node name="BatButton" type="Button" parent="VSSendPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Bat"
-icon = ExtResource("3_gold")
 
 [node name="TroggButton" type="Button" parent="VSSendPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Trogg"
-icon = ExtResource("3_gold")
 
 [node name="OrcButton" type="Button" parent="VSSendPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Orc"
-icon = ExtResource("3_gold")
 
 [node name="BackButton" type="Button" parent="VSSendPanel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
