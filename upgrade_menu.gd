@@ -103,6 +103,124 @@ func _apply_enemy_button_style(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", _make_texture_style(ENEMY_BUTTON_TEXTURE))
 	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
+func _get_stat_upgrade_color(stat_name: String) -> Color:
+	match stat_name:
+		"Strength":
+			return Color(1.0, 0.28, 0.16, 1.0)
+		"Agility":
+			return Color(0.25, 1.0, 0.35, 1.0)
+		"Intelligence":
+			return Color(0.25, 0.65, 1.0, 1.0)
+	return Color(1.0, 0.9, 0.25, 1.0)
+
+func _play_stat_upgrade_effect(stat_name: String, source_button: Control = null) -> void:
+	var color = _get_stat_upgrade_color(stat_name)
+	_pulse_upgrade_button(source_button)
+	_pulse_player_sprite(color)
+	_spawn_stat_upgrade_particles(color)
+	_spawn_stat_upgrade_ring(color)
+	_spawn_stat_upgrade_popup(stat_name, color)
+
+func _pulse_upgrade_button(source_button: Control) -> void:
+	if source_button == null or not is_instance_valid(source_button):
+		return
+	var original_scale = source_button.scale
+	source_button.pivot_offset = source_button.size * 0.5
+	source_button.scale = original_scale * 1.14
+	var tween = create_tween()
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(source_button, "scale", original_scale, 0.22)
+
+func _pulse_player_sprite(color: Color) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	var sprite = player.get_node_or_null("Sprite2D")
+	if sprite == null:
+		return
+	var original_scale = sprite.scale
+	var original_modulate = sprite.modulate
+	sprite.scale = original_scale * 1.28
+	sprite.modulate = color
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "scale", original_scale, 0.28)
+	tween.tween_property(sprite, "modulate", original_modulate, 0.28)
+
+func _spawn_stat_upgrade_particles(color: Color) -> void:
+	if player == null or not is_instance_valid(player) or get_parent() == null:
+		return
+	var burst = CPUParticles2D.new()
+	burst.emitting = false
+	burst.one_shot = true
+	burst.amount = 46
+	burst.lifetime = 0.58
+	burst.explosiveness = 0.95
+	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	burst.emission_sphere_radius = 14.0
+	burst.spread = 180.0
+	burst.gravity = Vector2(0, -40)
+	burst.initial_velocity_min = 90.0
+	burst.initial_velocity_max = 210.0
+	burst.damping_min = 90.0
+	burst.damping_max = 150.0
+	burst.scale_amount_min = 2.2
+	burst.scale_amount_max = 5.5
+	burst.color = color
+	burst.global_position = player.global_position + Vector2(0, -28)
+	burst.z_index = 30
+	get_parent().add_child(burst)
+	burst.emitting = true
+	var timer = get_tree().create_timer(1.0)
+	timer.timeout.connect(burst.queue_free)
+
+func _spawn_stat_upgrade_ring(color: Color) -> void:
+	if player == null or not is_instance_valid(player) or get_parent() == null:
+		return
+	var ring = Line2D.new()
+	ring.closed = true
+	ring.width = 4.0
+	ring.default_color = Color(color.r, color.g, color.b, 0.85)
+	ring.z_index = 29
+	var points = PackedVector2Array()
+	for i in range(32):
+		var angle = TAU * float(i) / 32.0
+		points.append(Vector2(cos(angle), sin(angle)) * 18.0)
+	ring.points = points
+	ring.global_position = player.global_position + Vector2(0, -28)
+	ring.scale = Vector2(0.35, 0.35)
+	get_parent().add_child(ring)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(ring, "scale", Vector2(2.4, 2.4), 0.48)
+	tween.tween_property(ring, "modulate:a", 0.0, 0.48)
+	tween.chain().tween_callback(ring.queue_free)
+
+func _spawn_stat_upgrade_popup(stat_name: String, color: Color) -> void:
+	if player == null or not is_instance_valid(player) or get_parent() == null:
+		return
+	var popup = Label.new()
+	popup.text = "+1 %s" % stat_name
+	popup.add_theme_font_size_override("font_size", 18)
+	popup.add_theme_color_override("font_color", color)
+	popup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	popup.custom_minimum_size = Vector2(120, 28)
+	popup.z_index = 100
+	popup.modulate = Color(1, 1, 1, 1)
+	get_parent().add_child(popup)
+	popup.global_position = player.global_position + Vector2(-60, -86)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(popup, "global_position", popup.global_position + Vector2(0, -38), 0.62)
+	tween.tween_property(popup, "modulate:a", 0.0, 0.62)
+	tween.chain().tween_callback(popup.queue_free)
+
 func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String) -> Button:
 	var btn = Button.new()
 	btn.custom_minimum_size = Vector2(0, 54)
@@ -374,6 +492,7 @@ func _on_upgrade_strength_pressed():
 		hud.add_gems(-cost)
 		player.upgrade_strength()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
+		_play_stat_upgrade_effect("Strength", $Panel/UpgradeStrength)
 		update_button_texts()
 
 func _on_upgrade_agility_pressed():
@@ -382,6 +501,7 @@ func _on_upgrade_agility_pressed():
 		hud.add_gems(-cost)
 		player.upgrade_agility()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
+		_play_stat_upgrade_effect("Agility", $Panel/UpgradeAgility)
 		update_button_texts()
 
 func _on_upgrade_intelligence_pressed():
@@ -390,6 +510,7 @@ func _on_upgrade_intelligence_pressed():
 		hud.add_gems(-cost)
 		player.upgrade_intelligence()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
+		_play_stat_upgrade_effect("Intelligence", $Panel/UpgradeIntelligence)
 		update_button_texts()
 
 func _on_upgrade_spikes_pressed():
