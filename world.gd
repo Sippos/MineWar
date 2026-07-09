@@ -21,6 +21,7 @@ var minecart_trail_length: int = 16
 
 var astar: AStarGrid2D
 const ENEMY_SCENE = preload("res://enemy.tscn")
+const FRONT_GEM_Z_INDEX = 2
 
 var gem_blocks = {}
 
@@ -235,11 +236,11 @@ func generate_initial_world() -> void:
 				
 				var front_sprite = Sprite2D.new()
 				front_sprite.texture = load("res://Stat_Ressources_Overlay_Front.png")
-				front_sprite.position = front_layer.map_to_local(Vector2i(cell.x, cell.y + 1))
-				front_sprite.position.y += 1 # Ensure it sorts AFTER the front wall cell (whose origin is 0)
 				front_sprite.offset.y = -17 # Visually shift it back up to its intended position
+				front_sprite.z_index = FRONT_GEM_Z_INDEX
 				front_sprite.visible = false
-				front_layer.add_child(front_sprite)
+				add_child(front_sprite)
+				_position_front_gem_sprite(front_sprite, cell)
 				
 				gem_blocks[cell] = { "top": sprite, "front": front_sprite }
 				
@@ -415,7 +416,13 @@ func update_front_wall(cell: Vector2i) -> void:
 	if gem_blocks.has(cell):
 		var sprites = gem_blocks[cell]
 		if is_instance_valid(sprites.front):
+			_position_front_gem_sprite(sprites.front, cell)
 			sprites.front.visible = has_front_wall
+
+func _position_front_gem_sprite(sprite: Sprite2D, cell: Vector2i) -> void:
+	var below_cell = Vector2i(cell.x, cell.y + 1)
+	sprite.global_position = front_layer.to_global(front_layer.map_to_local(below_cell))
+	sprite.global_position.y += 1.0
 
 func update_astar_weight(cell: Vector2i) -> void:
 	if not astar.is_in_bounds(cell.x, cell.y):

@@ -16,12 +16,15 @@ var block_layer = null
 var anim_timer = 0.0
 var current_anim_row = 0
 var gem_recheck_timer = 0.0
+var last_walkable_cell = INVALID_CELL
+var path_start_is_current = true
 
 func _ready():
 	add_to_group("peons")
 	var world = get_parent()
 	base_node = world.get_node_or_null("Base")
 	block_layer = world.get_node_or_null("BlockLayer")
+	last_walkable_cell = _nearest_walkable_cell(global_position, 8)
 	randomize()
 
 func _physics_process(delta):
@@ -76,8 +79,7 @@ func _physics_process(delta):
 		if global_position.distance_to(base_node.global_position) < 36.0:
 			if base_node.has_signal("gems_deposited"):
 				base_node.gems_deposited.emit(1)
-			state = "IDLE"
-			astar_path.clear()
+			_find_next_job()
 			velocity = Vector2.ZERO
 			_update_animation(delta)
 			return
@@ -123,8 +125,21 @@ func _try_target_reachable_gem() -> bool:
 		return true
 	return false
 
+func _find_next_job() -> void:
+	target_gem = null
+	astar_path.clear()
+	gem_recheck_timer = 0.0
+	if _try_target_reachable_gem():
+		state = "MOVE_TO_GEM"
+	elif _choose_wander_path():
+		state = "IDLE"
+	else:
+		state = "IDLE"
+
 func _is_collectible_gem(gem) -> bool:
 	if not is_instance_valid(gem):
+		return false
+	if gem.is_queued_for_deletion():
 		return false
 	if gem.is_in_group("rails"):
 		return false
@@ -138,7 +153,7 @@ func _choose_wander_path() -> bool:
 	if not _path_finished():
 		return true
 	
-	var start_cell = _nearest_walkable_cell(global_position, 2)
+	var start_cell = _get_path_start_cell(8)
 	if start_cell == INVALID_CELL:
 		velocity = Vector2.ZERO
 		return false
@@ -174,7 +189,7 @@ func _set_path_to_global(target_global: Vector2) -> bool:
 	return true
 
 func _build_path_to_cell(end_cell: Vector2i):
-	var start_cell = _nearest_walkable_cell(global_position, 2)
+	var start_cell = _get_path_start_cell(8)
 	if start_cell == INVALID_CELL:
 		return []
 	return _build_path_between(start_cell, end_cell)
@@ -195,7 +210,7 @@ func _build_path_between(start_cell: Vector2i, end_cell: Vector2i):
 
 func _set_path(path) -> void:
 	astar_path = path
-	path_index = 1 if astar_path.size() > 1 else 0
+	path_index = 1 if path_start_is_current and astar_path.size() > 1 else 0
 
 func _path_finished() -> bool:
 	return path_index >= astar_path.size()
@@ -218,6 +233,18 @@ func _nearest_walkable_cell(target_global: Vector2, max_radius: int) -> Vector2i
 					return cell
 	return INVALID_CELL
 
+func _get_path_start_cell(max_radius: int) -> Vector2i:
+	var cell = _nearest_walkable_cell(global_position, max_radius)
+	if cell != INVALID_CELL:
+		last_walkable_cell = cell
+		path_start_is_current = true
+		return cell
+	if last_walkable_cell != INVALID_CELL and _is_walkable_cell(last_walkable_cell):
+		path_start_is_current = false
+		return last_walkable_cell
+	path_start_is_current = true
+	return INVALID_CELL
+
 func _is_walkable_cell(cell: Vector2i) -> bool:
 	if not block_layer:
 		return false
@@ -237,6 +264,8 @@ func move_along_path(_delta):
 		return
 	
 	var target_cell = astar_path[path_index]
+	if _is_walkable_cell(target_cell):
+		last_walkable_cell = target_cell
 	var target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 	# Walk near the lower half of the cleared tile so the peon appears grounded.
 	target_pos.y += 16
@@ -247,6 +276,8 @@ func move_along_path(_delta):
 			velocity = Vector2.ZERO
 			return
 		target_cell = astar_path[path_index]
+		if _is_walkable_cell(target_cell):
+			last_walkable_cell = target_cell
 		target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 		target_pos.y += 16
 	
