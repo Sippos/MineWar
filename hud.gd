@@ -25,6 +25,9 @@ var totem_wheel: Control
 var totem_wheel_icons := {}
 var totem_status_container: Control
 var totem_status_slots := {}
+var nerubian_status_container: HBoxContainer
+var nerubian_spawn_slot: Control
+var nerubian_spider_slots := []
 
 const TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const TOTEM_LABELS = {
@@ -39,6 +42,9 @@ const TOTEM_TEXTURES = {
 	"radar": "res://Shaman_Totem_Radar.png",
 	"gem": "res://Shaman_Totem_GemBuff.png"
 }
+const NERUBIAN_SPIDER_TEXTURE = "res://character_sprites/spider_walk_spritesheet.png"
+const NERUBIAN_MAX_SPIDER_SLOTS = 5
+const NERUBIAN_SPAWN_MAX_COOLDOWN = 3.5
 
 func _ready():
 	if minimap:
@@ -58,6 +64,7 @@ func _ready():
 	_setup_notice_ui()
 	_setup_totem_wheel_ui()
 	_setup_totem_status_ui()
+	_setup_nerubian_status_ui()
 
 func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
@@ -117,6 +124,7 @@ func _setup_notice_ui() -> void:
 func _process(delta):
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
+	_update_nerubian_status_from_world()
 
 func _setup_totem_wheel_ui() -> void:
 	totem_wheel = Control.new()
@@ -133,7 +141,6 @@ func _setup_totem_wheel_ui() -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	totem_wheel.add_child(dim)
 	
-	var center = Vector2(0.5, 0.5)
 	var offsets = {
 		"dig": Vector2(0, -92),
 		"heal": Vector2(92, 0),
@@ -189,51 +196,87 @@ func _setup_totem_status_ui() -> void:
 	add_child(totem_status_container)
 	
 	for type in TOTEM_TYPES:
-		var slot = Control.new()
-		slot.custom_minimum_size = Vector2(56, 54)
+		var slot = _create_icon_status_slot(TOTEM_TEXTURES[type], Vector2(56, 54))
 		slot.visible = false
-		
-		var bg = ColorRect.new()
-		bg.name = "Background"
-		bg.color = Color(0, 0, 0, 0.55)
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-		slot.add_child(bg)
-		
-		var icon = TextureRect.new()
-		icon.name = "Icon"
-		icon.texture = load(TOTEM_TEXTURES[type])
-		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-		icon.offset_left = 7
-		icon.offset_top = 4
-		icon.offset_right = -7
-		icon.offset_bottom = -10
-		slot.add_child(icon)
-		
-		var fill = ColorRect.new()
-		fill.name = "Fill"
-		fill.color = Color(0.25, 0.75, 1.0, 0.35)
-		fill.anchor_left = 0
-		fill.anchor_right = 1
-		fill.anchor_top = 1
-		fill.anchor_bottom = 1
-		fill.offset_left = 0
-		fill.offset_right = 0
-		fill.offset_top = -4
-		fill.offset_bottom = 0
-		slot.add_child(fill)
-		
-		var label = Label.new()
-		label.name = "Timer"
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-		label.add_theme_font_size_override("font_size", 11)
-		label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		slot.add_child(label)
-		
 		totem_status_container.add_child(slot)
 		totem_status_slots[type] = slot
+
+func _setup_nerubian_status_ui() -> void:
+	nerubian_status_container = HBoxContainer.new()
+	nerubian_status_container.name = "NerubianStatus"
+	nerubian_status_container.visible = false
+	nerubian_status_container.alignment = BoxContainer.ALIGNMENT_END
+	nerubian_status_container.add_theme_constant_override("separation", 6)
+	nerubian_status_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	nerubian_status_container.offset_left = -392
+	nerubian_status_container.offset_top = 18
+	nerubian_status_container.offset_right = -24
+	nerubian_status_container.offset_bottom = 78
+	add_child(nerubian_status_container)
+	
+	nerubian_spawn_slot = _create_icon_status_slot(NERUBIAN_SPIDER_TEXTURE, Vector2(64, 58), "BROOD")
+	nerubian_status_container.add_child(nerubian_spawn_slot)
+	
+	for i in range(NERUBIAN_MAX_SPIDER_SLOTS):
+		var slot = _create_icon_status_slot(NERUBIAN_SPIDER_TEXTURE, Vector2(48, 50))
+		slot.visible = false
+		nerubian_status_container.add_child(slot)
+		nerubian_spider_slots.append(slot)
+
+func _create_icon_status_slot(texture_path: String, size: Vector2, title: String = "") -> Control:
+	var slot = Control.new()
+	slot.custom_minimum_size = size
+	
+	var bg = ColorRect.new()
+	bg.name = "Background"
+	bg.color = Color(0, 0, 0, 0.55)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	slot.add_child(bg)
+	
+	var icon = TextureRect.new()
+	icon.name = "Icon"
+	icon.texture = load(texture_path)
+	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	icon.offset_left = 6
+	icon.offset_top = 4
+	icon.offset_right = -6
+	icon.offset_bottom = -12
+	slot.add_child(icon)
+	
+	var fill = ColorRect.new()
+	fill.name = "Fill"
+	fill.color = Color(0.25, 0.75, 1.0, 0.35)
+	fill.anchor_left = 0
+	fill.anchor_right = 1
+	fill.anchor_top = 1
+	fill.anchor_bottom = 1
+	fill.offset_left = 0
+	fill.offset_right = 0
+	fill.offset_top = -4
+	fill.offset_bottom = 0
+	slot.add_child(fill)
+	
+	var label = Label.new()
+	label.name = "Timer"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	label.add_theme_font_size_override("font_size", 10)
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	slot.add_child(label)
+	
+	if title != "":
+		var title_label = Label.new()
+		title_label.name = "Title"
+		title_label.text = title
+		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		title_label.add_theme_font_size_override("font_size", 9)
+		title_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		slot.add_child(title_label)
+	
+	return slot
 
 func add_gems(amount: int) -> void:
 	total_gems += amount
@@ -291,7 +334,6 @@ func update_stomp_cooldown(stomp_level: int, current_cooldown: float, max_cooldo
 	if stomp_level > 0:
 		if stomp_container and not stomp_container.visible:
 			stomp_container.visible = true
-		
 		if stomp_progress:
 			stomp_progress.max_value = max_cooldown
 			stomp_progress.value = current_cooldown
@@ -343,29 +385,69 @@ func update_totem_status(statuses: Dictionary) -> void:
 		slot.visible = visible
 		if not visible:
 			continue
-		
 		any_visible = true
-		var icon = slot.get_node_or_null("Icon")
-		var fill = slot.get_node_or_null("Fill")
-		var label = slot.get_node_or_null("Timer")
 		if active > 0.0:
-			slot.modulate = Color(1, 1, 1, 1)
-			if label:
-				label.text = "%d" % ceil(active)
-			if fill:
-				fill.color = Color(0.2, 0.8, 1.0, 0.45)
-				fill.anchor_top = clamp(1.0 - ratio, 0.0, 1.0)
+			_update_status_slot(slot, active, ratio, false, Color(0.2, 0.8, 1.0, 0.45))
 		else:
-			slot.modulate = Color(0.55, 0.55, 0.55, 0.95)
-			if label:
-				label.text = "%d" % ceil(cooldown)
-			if fill:
-				fill.color = Color(0.1, 0.1, 0.1, 0.55)
-				fill.anchor_top = 0.0
-		if icon:
-			icon.modulate = Color.WHITE
+			_update_status_slot(slot, cooldown, 0.0, true, Color(0.1, 0.1, 0.1, 0.55))
 	
 	totem_status_container.visible = any_visible
+
+func _update_nerubian_status_from_world() -> void:
+	if not nerubian_status_container:
+		return
+	var world = get_parent()
+	var player = world.get_node_or_null("Player") if world else null
+	if not player or str(player.get("current_hero_name")) != "Nerubian":
+		nerubian_status_container.visible = false
+		return
+	
+	nerubian_status_container.visible = true
+	var cooldown = max(float(player.get("nerubian_spawn_cooldown_timer")), 0.0)
+	var cooldown_ratio = clamp(cooldown / NERUBIAN_SPAWN_MAX_COOLDOWN, 0.0, 1.0)
+	if cooldown > 0.0:
+		_update_status_slot(nerubian_spawn_slot, cooldown, cooldown_ratio, true, Color(0.1, 0.1, 0.1, 0.55))
+	else:
+		_update_status_slot(nerubian_spawn_slot, 0.0, 1.0, false, Color(0.2, 0.9, 0.35, 0.42), "READY")
+	
+	var spider_data = []
+	for spider in get_tree().get_nodes_in_group("nerubian_spiders"):
+		if is_instance_valid(spider) and spider.get("owner_player") == player:
+			var active = float(spider.get("lifetime"))
+			var max_life = active
+			if spider.has_method("get_max_lifetime"):
+				max_life = spider.get_max_lifetime()
+			var ratio = active / max(max_life, 0.01)
+			spider_data.append({"lifetime": active, "ratio": clamp(ratio, 0.0, 1.0)})
+	
+	spider_data.sort_custom(func(a, b): return float(a["lifetime"]) < float(b["lifetime"]))
+	for i in range(nerubian_spider_slots.size()):
+		var slot = nerubian_spider_slots[i]
+		if i < spider_data.size():
+			slot.visible = true
+			_update_status_slot(slot, float(spider_data[i]["lifetime"]), float(spider_data[i]["ratio"]), false, Color(0.75, 0.35, 1.0, 0.38))
+		else:
+			slot.visible = false
+
+func _update_status_slot(slot: Control, time_value: float, ratio: float, is_cooldown: bool, fill_color: Color, override_text: String = "") -> void:
+	if not slot:
+		return
+	var fill = slot.get_node_or_null("Fill")
+	var label = slot.get_node_or_null("Timer")
+	var icon = slot.get_node_or_null("Icon")
+	slot.modulate = Color(0.58, 0.58, 0.58, 0.95) if is_cooldown else Color(1, 1, 1, 1)
+	if label:
+		if override_text != "":
+			label.text = override_text
+		elif time_value > 0.0:
+			label.text = "%d" % ceil(time_value)
+		else:
+			label.text = ""
+	if fill:
+		fill.color = fill_color
+		fill.anchor_top = clamp(1.0 - ratio, 0.0, 1.0)
+	if icon:
+		icon.modulate = Color.WHITE
 
 func unlock_minimap() -> void:
 	minimap.visible = true
