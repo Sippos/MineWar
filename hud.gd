@@ -42,6 +42,14 @@ const TOTEM_TEXTURES = {
 	"radar": "res://Shaman_Totem_Radar.png",
 	"gem": "res://Shaman_Totem_GemBuff.png"
 }
+const STOMP_SPRITE_TEXTURES = [
+	"res://StompSprite.png",
+	"res://StompSprite.webp",
+	"res://StompSprite.tres",
+	"res://stomp_sprite.png",
+	"res://sprites/StompSprite.png",
+	"res://assets/StompSprite.png"
+]
 const NERUBIAN_SPIDER_TEXTURE = "res://character_sprites/spider_walk_spritesheet.png"
 const NERUBIAN_MAX_SPIDER_SLOTS = 5
 const NERUBIAN_SPAWN_MAX_COOLDOWN = 3.5
@@ -74,44 +82,75 @@ func _ready():
 	_setup_nerubian_status_ui()
 	_relayout_unlocked_hud()
 
+func _load_stomp_texture() -> Texture2D:
+	for texture_path in STOMP_SPRITE_TEXTURES:
+		if ResourceLoader.exists(texture_path):
+			var texture = load(texture_path)
+			if texture is Texture2D:
+				return texture
+	return null
+
 func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
 	stomp_container.name = "StompContainer"
 	stomp_container.visible = false
 	stomp_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	stomp_container.offset_left = -80
-	stomp_container.offset_top = -80
-	stomp_container.offset_right = -30
-	stomp_container.offset_bottom = -30
+	stomp_container.offset_left = -88
+	stomp_container.offset_top = -88
+	stomp_container.offset_right = -28
+	stomp_container.offset_bottom = -28
 	
-	var stomp_icon = ColorRect.new()
+	var stomp_icon = Control.new()
+	stomp_icon.name = "StompIcon"
 	stomp_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	stomp_icon.color = Color(0.2, 0.2, 0.2, 0.8)
 	
-	var stomp_label = Label.new()
-	stomp_label.text = "STOMP"
-	stomp_label.add_theme_font_size_override("font_size", 12)
-	stomp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stomp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	stomp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	stomp_icon.add_child(stomp_label)
+	var bg = ColorRect.new()
+	bg.name = "Background"
+	bg.color = Color(0, 0, 0, 0.58)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stomp_icon.add_child(bg)
+	
+	var icon_texture = _load_stomp_texture()
+	if icon_texture:
+		var icon = TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = icon_texture
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icon.offset_left = 5
+		icon.offset_top = 5
+		icon.offset_right = -5
+		icon.offset_bottom = -5
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stomp_icon.add_child(icon)
+	else:
+		var stomp_label = Label.new()
+		stomp_label.text = "STOMP"
+		stomp_label.add_theme_font_size_override("font_size", 12)
+		stomp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stomp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		stomp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		stomp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stomp_icon.add_child(stomp_label)
 	
 	stomp_progress = TextureProgressBar.new()
 	stomp_progress.name = "StompProgress"
 	stomp_progress.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stomp_progress.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
+	stomp_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bg_tex = GradientTexture2D.new()
-	bg_tex.width = 50
-	bg_tex.height = 50
-	bg_tex.fill_from = Vector2(0,0)
-	bg_tex.fill_to = Vector2(0,0)
+	bg_tex.width = 60
+	bg_tex.height = 60
+	bg_tex.fill_from = Vector2(0, 0)
+	bg_tex.fill_to = Vector2(0, 0)
 	var grad = Gradient.new()
-	grad.colors = PackedColorArray([Color(0,0,0,0.65), Color(0,0,0,0.65)])
+	grad.colors = PackedColorArray([Color(0, 0, 0, 0.68), Color(0, 0, 0, 0.68)])
 	bg_tex.gradient = grad
 	stomp_progress.texture_progress = bg_tex
 	stomp_progress.step = 0.01
-	
 	stomp_icon.add_child(stomp_progress)
+	
 	stomp_container.add_child(stomp_icon)
 	add_child(stomp_container)
 
