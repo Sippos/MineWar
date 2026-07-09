@@ -1,11 +1,14 @@
 name: Deploy to Itch.io
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
   group: itch-deploy-main
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   export-and-deploy:
@@ -13,8 +16,6 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Export Godot Game (Web)
         uses: firebelley/godot-export@v5.2.1
