@@ -1,29 +1,39 @@
 extends RigidBody2D
 
+const GEM_VISUAL_OFFSET = Vector2(0, -24)
+
 var tethered_to = null
 
 func _ready() -> void:
 	add_to_group("gems")
+	z_index = 1
+	_set_visual_offset(GEM_VISUAL_OFFSET)
 	var area = get_node_or_null("PickupArea")
 	if area:
 		if not area.body_exited.is_connected(_on_pickup_area_body_exited):
 			area.body_exited.connect(_on_pickup_area_body_exited)
 
-func tether_to(player) -> void:
+func tether_to(player) -> bool:
+	if tethered_to != null and is_instance_valid(tethered_to) and tethered_to != player:
+		return false
 	tethered_to = player
 	if player is PhysicsBody2D:
 		add_collision_exception_with(player)
-	var sprite = get_node_or_null("Sprite2D")
-	if sprite:
-		sprite.position = Vector2(0, -24)
+	z_index = 1
+	_set_visual_offset(GEM_VISUAL_OFFSET)
+	return true
 
 func untether() -> void:
 	if tethered_to != null and tethered_to is PhysicsBody2D:
 		remove_collision_exception_with(tethered_to)
 	tethered_to = null
+	z_index = 1
+	_set_visual_offset(GEM_VISUAL_OFFSET)
+
+func _set_visual_offset(offset: Vector2) -> void:
 	var sprite = get_node_or_null("Sprite2D")
 	if sprite:
-		sprite.position = Vector2(0, 0)
+		sprite.position = offset
 
 func _physics_process(delta: float) -> void:
 	if tethered_to != null and is_instance_valid(tethered_to):
@@ -49,9 +59,9 @@ func _physics_process(delta: float) -> void:
 					apply_central_force(push_dir * (20.0 - g_dist) * 50.0)
 
 func _on_pickup_area_body_entered(body) -> void:
-	if body.name == "Player" and body.has_method("add_nearby_gem"):
+	if body.has_method("add_nearby_gem"):
 		body.add_nearby_gem(self)
 
 func _on_pickup_area_body_exited(body) -> void:
-	if body.name == "Player" and body.has_method("remove_nearby_gem"):
+	if body.has_method("remove_nearby_gem"):
 		body.remove_nearby_gem(self)
