@@ -1,36 +1,53 @@
 extends Node
 
-const IOS_CANVAS_MODULATE_COLOR := Color(0.35, 0.35, 0.42, 1.0)
+const IOS_CANVAS_MODULATE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
+const MOBILE_CONTROLS_SCENE := preload("res://mobile_controls.tscn")
 
 var _enabled := false
+var _apply_timer := 0.0
+var _mobile_controls_layer: CanvasLayer = null
 
 func _ready() -> void:
-	_enabled = OS.has_feature("web") and _is_ios_browser()
+	_enabled = OS.has_feature("web") and _is_mobile_or_touch_browser()
 	if not _enabled:
+		set_process(false)
 		return
 	get_tree().node_added.connect(_on_node_added)
-	call_deferred("_apply_to_current_scene")
+	set_process(true)
+	call_deferred("_apply_mobile_web_fallbacks")
 
-func _is_ios_browser() -> bool:
+func _process(delta: float) -> void:
+	if not _enabled:
+		return
+	_apply_timer -= delta
+	if _apply_timer <= 0.0:
+		_apply_timer = 0.5
+		_apply_mobile_web_fallbacks()
+
+func _is_mobile_or_touch_browser() -> bool:
 	if OS.has_feature("ios") or OS.has_feature("web_ios"):
 		return true
-	if not Engine.has_singleton("JavaScriptBridge"):
+	if not OS.has_feature("web"):
 		return false
-	var js_bridge = Engine.get_singleton("JavaScriptBridge")
-	var ua := str(js_bridge.eval("navigator.userAgent || ''"))
-	var platform := str(js_bridge.eval("navigator.platform || ''"))
-	var max_touch := int(js_bridge.eval("navigator.maxTouchPoints || 0"))
-	return ua.contains("iPhone") or ua.contains("iPad") or ua.contains("iPod") or (platform == "MacIntel" and max_touch > 1)
+
+	var ua := str(JavaScriptBridge.eval("navigator.userAgent || ''", true))
+	var platform := str(JavaScriptBridge.eval("navigator.platform || ''", true))
+	var max_touch := int(JavaScriptBridge.eval("navigator.maxTouchPoints || 0", true))
+
+	return max_touch > 0 or ua.contains("Mobile") or ua.contains("iPhone") or ua.contains("iPad") or ua.contains("iPod") or ua.contains("Android") or (platform == "MacIntel" and max_touch > 1)
 
 func _on_node_added(node: Node) -> void:
-	_apply_to_node(node)
+	if not _enabled:
+		return
+	call_deferred("_apply_to_subtree", node)
 
-func _apply_to_current_scene() -> void:
-	var scene := get_tree().current_scene
-	if scene:
-		_apply_to_subtree(scene)
+func _apply_mobile_web_fallbacks() -> void:
+	_apply_to_subtree(get_tree().root)
+	_update_mobile_controls()
 
 func _apply_to_subtree(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
 	_apply_to_node(node)
 	for child in node.get_children():
 		_apply_to_subtree(child)
@@ -39,4 +56,42 @@ func _apply_to_node(node: Node) -> void:
 	if node is CanvasModulate:
 		(node as CanvasModulate).color = IOS_CANVAS_MODULATE_COLOR
 	elif node is PointLight2D:
-		(node as PointLight2D).shadow_enabled = false
+		var light := node as PointLight2D
+		light.shadow_enabled = false
+		light.visible = false
+
+func _update_mobile_controls() -> void:
+	var should_show := _current_scene_has_player()
+	if should_show:
+		_ensure_mobile_controls()
+		if _mobile_controls_layer:
+			_mobile_controls_layer.visible = true
+	elif _mobile_controls_layer:
+		_mobile_controls_layer.visible = false
+
+func _ensure_mobile_controls() -> void:
+	if is_instance_valid(_mobile_controls_layer):
+		return
+	_mobile_controls_layer = CanvasLayer.new()
+	_mobile_controls_layer.name = "MobileControlsLayer"
+	_mobile_controls_layer.layer = 100
+	get_tree().root.add_child(_mobile_controls_layer)
+
+	var controls := MOBILE_CONTROLS_SCENE.instantiate()
+	controls.name = "MobileControls"
+	controls.player_id = 1
+	_mobile_controls_layer.add_child(controls)
+
+func _current_scene_has_player() -> bool:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return false
+	return _subtree_has_player(scene)
+
+func _subtree_has_player(node: Node) -> bool:
+	if node.name == "Player":
+		return true
+	for child in node.get_children():
+		if _subtree_has_player(child):
+			return true
+	return false
