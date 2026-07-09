@@ -6,7 +6,7 @@ var current_mode = Mode.SINGLE_PLAYER
 var p1_index = 0
 var p2_index = 0
 
-var available_heroes = ["Dwarf", "Shaman"]
+var available_heroes = ["Dwarf", "Shaman", "Nerubian"]
 
 @onready var p1_label = $Panel/VBox/HBox/P1Container/HeroName
 @onready var p1_sprite = $Panel/VBox/HBox/P1Container/SpriteContainer/Sprite
