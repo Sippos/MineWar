@@ -3,6 +3,8 @@ extends Node
 var rtc_peer: WebRTCMultiplayerPeer
 var rtc_conn: WebRTCPeerConnection
 
+const DEFAULT_UNLOCKED_HEROES = ["Dwarf", "Nerubian"]
+
 func _ready() -> void:
 	# Global UI controls for menus
 	var ui_joy_buttons = {
@@ -25,8 +27,9 @@ func _ready() -> void:
 	var start_event = InputEventJoypadButton.new(); start_event.button_index = JOY_BUTTON_START; InputMap.action_add_event("pause", start_event)
 	
 	load_game()
+	_ensure_default_heroes_unlocked()
 
-var unlocked_heroes = ["Dwarf"]
+var unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
 var current_hero = "Dwarf"
 var hero_p1 = "Dwarf"
 var hero_p2 = "Dwarf"
@@ -43,6 +46,10 @@ var hero_data = {
 	"Shaman": {
 		"walk": "res://character_sprites/shaman_walk_spritesheet_25d.png",
 		"attack": "res://character_sprites/shaman_walk_spritesheet_25d.png"
+	},
+	"Nerubian": {
+		"walk": "res://character_sprites/spider_walk_spritesheet.png",
+		"attack": "res://character_sprites/spider_walk_spritesheet.png"
 	}
 }
 
@@ -82,6 +89,15 @@ func load_game() -> void:
 			if typeof(loaded) == TYPE_ARRAY:
 				unlocked_heroes = loaded
 			file.close()
+
+func _ensure_default_heroes_unlocked() -> void:
+	var changed = false
+	for hero_name in DEFAULT_UNLOCKED_HEROES:
+		if not unlocked_heroes.has(hero_name):
+			unlocked_heroes.append(hero_name)
+			changed = true
+	if changed:
+		save_game()
 
 func mark_monster_seen(monster_name: String) -> void:
 	if not seen_monsters.has(monster_name):
