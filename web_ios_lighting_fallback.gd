@@ -1,15 +1,15 @@
 extends Node
 
-const WEB_CANVAS_MODULATE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
-const MOBILE_CONTROLS_SCENE := preload("res://mobile_controls.tscn")
+const WEB_CANVAS_MODULATE_COLOR = Color(1.0, 1.0, 1.0, 1.0)
+const MOBILE_CONTROLS_SCENE = preload("res://mobile_controls.tscn")
 
-var _enabled := false
-var _apply_timer := 0.0
-var _mobile_controls_layer: CanvasLayer = null
+var enabled = false
+var apply_timer = 0.0
+var mobile_controls_layer = null
 
 func _ready() -> void:
-	_enabled = OS.has_feature("web")
-	if not _enabled:
+	enabled = OS.has_feature("web")
+	if not enabled:
 		set_process(false)
 		return
 	get_tree().node_added.connect(_on_node_added)
@@ -17,15 +17,15 @@ func _ready() -> void:
 	call_deferred("_apply_web_fallbacks")
 
 func _process(delta: float) -> void:
-	if not _enabled:
+	if not enabled:
 		return
-	_apply_timer -= delta
-	if _apply_timer <= 0.0:
-		_apply_timer = 0.5
+	apply_timer -= delta
+	if apply_timer <= 0.0:
+		apply_timer = 0.5
 		_apply_web_fallbacks()
 
 func _on_node_added(node: Node) -> void:
-	if not _enabled:
+	if not enabled:
 		return
 	call_deferred("_apply_to_subtree", node)
 
@@ -42,36 +42,35 @@ func _apply_to_subtree(node: Node) -> void:
 
 func _apply_to_node(node: Node) -> void:
 	if node is CanvasModulate:
-		(node as CanvasModulate).color = WEB_CANVAS_MODULATE_COLOR
+		node.color = WEB_CANVAS_MODULATE_COLOR
 	elif node is PointLight2D:
-		var light := node as PointLight2D
-		light.shadow_enabled = false
-		light.visible = false
+		node.shadow_enabled = false
+		node.visible = false
 
 func _update_mobile_controls() -> void:
-	var should_show := _current_scene_has_player()
+	var should_show = _current_scene_has_player()
 	if should_show:
 		_ensure_mobile_controls()
-		if _mobile_controls_layer:
-			_mobile_controls_layer.visible = true
-	elif _mobile_controls_layer:
-		_mobile_controls_layer.visible = false
+		if is_instance_valid(mobile_controls_layer):
+			mobile_controls_layer.visible = true
+	elif is_instance_valid(mobile_controls_layer):
+		mobile_controls_layer.visible = false
 
 func _ensure_mobile_controls() -> void:
-	if is_instance_valid(_mobile_controls_layer):
+	if is_instance_valid(mobile_controls_layer):
 		return
-	_mobile_controls_layer = CanvasLayer.new()
-	_mobile_controls_layer.name = "MobileControlsLayer"
-	_mobile_controls_layer.layer = 100
-	get_tree().root.add_child(_mobile_controls_layer)
+	mobile_controls_layer = CanvasLayer.new()
+	mobile_controls_layer.name = "MobileControlsLayer"
+	mobile_controls_layer.layer = 100
+	get_tree().root.add_child(mobile_controls_layer)
 
-	var controls := MOBILE_CONTROLS_SCENE.instantiate()
+	var controls = MOBILE_CONTROLS_SCENE.instantiate()
 	controls.name = "MobileControls"
 	controls.player_id = 1
-	_mobile_controls_layer.add_child(controls)
+	mobile_controls_layer.add_child(controls)
 
 func _current_scene_has_player() -> bool:
-	var scene := get_tree().current_scene
+	var scene = get_tree().current_scene
 	if scene == null:
 		return false
 	return _subtree_has_player(scene)
