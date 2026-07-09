@@ -15,6 +15,10 @@ extends CanvasLayer
 
 var total_gems = 0
 var total_gold = 0
+var run_started_msec = 0
+var run_gems_collected = 0
+var run_gold_collected = 0
+var last_wave_reached = 1
 var minimap_shows_enemies = false
 
 var stomp_container: Control
@@ -60,8 +64,11 @@ const HUD_STACK_LABEL_LEFT := 30.0
 const HUD_STATS_HEIGHT := 36.0
 const HUD_HEALTH_BAR_OFFSET_Y := 18.0
 const HUD_HEALTH_MODULE_HEIGHT := 66.0
+const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
+const MENU_BUTTON_TEXTURE := "res://Button.png"
 
 func _ready():
+	run_started_msec = Time.get_ticks_msec()
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
 		
@@ -192,6 +199,19 @@ func _layout_health_hud_module(label_name: String, bar: Control, y: float) -> fl
 	if bar:
 		bar.position = Vector2(HUD_STACK_LEFT, y + HUD_HEALTH_BAR_OFFSET_Y)
 	return y + HUD_HEALTH_MODULE_HEIGHT + HUD_STACK_GAP
+
+func _make_texture_style(texture_path: String) -> StyleBoxTexture:
+	var stylebox = StyleBoxTexture.new()
+	var texture = load(texture_path)
+	if texture:
+		stylebox.texture = texture
+	return stylebox
+
+func _apply_menu_button_style(button: Button) -> void:
+	button.add_theme_stylebox_override("normal", _make_texture_style(MENU_BUTTON_TEXTURE))
+	button.add_theme_stylebox_override("hover", _make_texture_style(MENU_BUTTON_TEXTURE))
+	button.add_theme_stylebox_override("pressed", _make_texture_style(MENU_BUTTON_TEXTURE))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
 func _setup_totem_wheel_ui() -> void:
 	totem_wheel = Control.new()
@@ -347,10 +367,14 @@ func _create_icon_status_slot(texture_path: String, size: Vector2, title: String
 
 func add_gems(amount: int) -> void:
 	total_gems += amount
+	if amount > 0:
+		run_gems_collected += amount
 	label.text = "%d" % total_gems
 
 func add_gold(amount: int) -> void:
 	total_gold += amount
+	if amount > 0:
+		run_gold_collected += amount
 	if gold_label:
 		gold_label.text = "%d" % total_gold
 
@@ -534,6 +558,7 @@ func update_respawn_timer(time_left: float) -> void:
 		respawn_label.visible = false
 
 func update_wave_info(wave: int, time_left: float, max_time: float, is_boss: bool) -> void:
+	last_wave_reached = max(last_wave_reached, wave)
 	if is_boss:
 		wave_label.add_theme_color_override("font_color", Color(1, 0, 0)) # Red text for Boss
 		if time_left < 0:
@@ -589,28 +614,188 @@ func _on_minimap_draw() -> void:
 				var enemy_cell = tile_map.local_to_map(tile_map.to_local(enemy.global_position))
 				minimap.draw_rect(Rect2((enemy_cell.x + 20) * 5, (enemy_cell.y + 2) * 5, 5, 5), Color(1, 0, 0))
 
+func _get_player_node() -> Node:
+	var world = get_parent()
+	if world:
+		return world.get_node_or_null("Player")
+	return null
+
+func _format_run_time() -> String:
+	var elapsed = max(0, int((Time.get_ticks_msec() - run_started_msec) / 1000))
+	var minutes = int(elapsed / 60)
+	var seconds = elapsed % 60
+	return "%02d:%02d" % [minutes, seconds]
+
+func _get_player_hero_name() -> String:
+	var player = _get_player_node()
+	if player:
+		var hero_name = player.get("current_hero_name")
+		if typeof(hero_name) == TYPE_STRING and hero_name != "":
+			return hero_name
+	return "Hero"
+
+func _get_player_stat(player: Node, stat_name: String, fallback: int = 0) -> int:
+	if not player:
+		return fallback
+	var value = player.get(stat_name)
+	if typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
+		return int(value)
+	return fallback
+
+func _get_player_portrait_texture() -> Texture2D:
+	var player = _get_player_node()
+	if not player:
+		return null
+	var sprite = player.get_node_or_null("Sprite2D")
+	if not sprite or not sprite.texture:
+		return null
+	var texture = sprite.texture
+	var frame_w = texture.get_width() / 8.0
+	var frame_h = texture.get_height() / 8.0
+	if frame_w > 0.0 and frame_h > 0.0:
+		var atlas = AtlasTexture.new()
+		atlas.atlas = texture
+		atlas.region = Rect2(0, 0, frame_w, frame_h)
+		return atlas
+	return texture
+
+func _create_game_over_stat_label(stat_name: String, stat_value: String) -> Label:
+	var stat_label = Label.new()
+	stat_label.text = "%s: %s" % [stat_name, stat_value]
+	stat_label.add_theme_font_size_override("font_size", 18)
+	stat_label.add_theme_color_override("font_color", Color(0.96, 0.88, 0.72, 1.0))
+	return stat_label
+
+func _add_game_over_stats(stats_box: VBoxContainer) -> void:
+	var player = _get_player_node()
+	stats_box.add_child(_create_game_over_stat_label("Time survived", _format_run_time()))
+	stats_box.add_child(_create_game_over_stat_label("Wave reached", str(last_wave_reached)))
+	stats_box.add_child(_create_game_over_stat_label("Gems collected", str(run_gems_collected)))
+	stats_box.add_child(_create_game_over_stat_label("Gold earned", str(run_gold_collected)))
+	stats_box.add_child(_create_game_over_stat_label("Gems left", str(total_gems)))
+	stats_box.add_child(_create_game_over_stat_label("Gold left", str(total_gold)))
+	if player:
+		stats_box.add_child(_create_game_over_stat_label("Level", str(_get_player_stat(player, "level", 1))))
+		stats_box.add_child(_create_game_over_stat_label("Stats", "%d STR / %d AGI / %d INT" % [
+			_get_player_stat(player, "strength", 1),
+			_get_player_stat(player, "agility", 1),
+			_get_player_stat(player, "intelligence", 1)
+		]))
+
+func _create_game_over_overlay() -> void:
+	if has_node("GameOverOverlay"):
+		return
+	if has_node("GameOverMenuButton"):
+		get_node("GameOverMenuButton").queue_free()
+	if respawn_label:
+		respawn_label.visible = false
+	
+	var viewport_size = get_viewport().get_visible_rect().size
+	var panel_width = min(viewport_size.x * 0.78, 720.0)
+	var panel_height = min(viewport_size.y * 0.82, 500.0)
+	
+	var overlay = Control.new()
+	overlay.name = "GameOverOverlay"
+	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	
+	var dim = ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0, 0, 0, 0.58)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(dim)
+	
+	var panel = Panel.new()
+	panel.name = "Panel"
+	panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	panel.add_theme_stylebox_override("panel", _make_texture_style(MENU_PANEL_TEXTURE))
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -panel_width * 0.5
+	panel.offset_top = -panel_height * 0.5
+	panel.offset_right = panel_width * 0.5
+	panel.offset_bottom = panel_height * 0.5
+	overlay.add_child(panel)
+	
+	var content = VBoxContainer.new()
+	content.name = "Content"
+	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content.offset_left = 72
+	content.offset_top = 48
+	content.offset_right = -72
+	content.offset_bottom = -42
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 12)
+	panel.add_child(content)
+	
+	var title = Label.new()
+	title.text = "GAME OVER"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_color_override("font_color", Color(1.0, 0.16, 0.1, 1.0))
+	content.add_child(title)
+	
+	var subtitle = Label.new()
+	subtitle.text = "Base Destroyed"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 22)
+	subtitle.add_theme_color_override("font_color", Color(1.0, 0.9, 0.72, 1.0))
+	content.add_child(subtitle)
+	
+	var body = HBoxContainer.new()
+	body.alignment = BoxContainer.ALIGNMENT_CENTER
+	body.custom_minimum_size = Vector2(0, 220)
+	body.add_theme_constant_override("separation", 28)
+	content.add_child(body)
+	
+	var hero_box = VBoxContainer.new()
+	hero_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	hero_box.custom_minimum_size = Vector2(170, 0)
+	hero_box.add_theme_constant_override("separation", 6)
+	body.add_child(hero_box)
+	
+	var portrait = TextureRect.new()
+	portrait.custom_minimum_size = Vector2(140, 150)
+	portrait.texture = _get_player_portrait_texture()
+	portrait.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero_box.add_child(portrait)
+	
+	var hero_name = Label.new()
+	hero_name.text = _get_player_hero_name()
+	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_name.add_theme_font_size_override("font_size", 22)
+	hero_name.add_theme_color_override("font_color", Color(1.0, 0.92, 0.74, 1.0))
+	hero_box.add_child(hero_name)
+	
+	var stats_box = VBoxContainer.new()
+	stats_box.custom_minimum_size = Vector2(330, 0)
+	stats_box.add_theme_constant_override("separation", 4)
+	body.add_child(stats_box)
+	_add_game_over_stats(stats_box)
+	
+	var btn = Button.new()
+	btn.name = "BackToMenuButton"
+	btn.text = "Back to Main Menu"
+	btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	btn.custom_minimum_size = Vector2(340, 58)
+	btn.add_theme_font_size_override("font_size", 28)
+	_apply_menu_button_style(btn)
+	btn.pressed.connect(_return_to_main_menu)
+	content.add_child(btn)
+	btn.call_deferred("grab_focus")
+
+func _return_to_main_menu() -> void:
+	get_tree().paused = false
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+	get_tree().change_scene_to_file("res://menu.tscn")
+
 func on_game_over() -> void:
-	respawn_label.text = "GAME OVER! Base Destroyed!"
-	respawn_label.visible = true
-	
-	if not has_node("GameOverMenuButton"):
-		var btn = Button.new()
-		btn.name = "GameOverMenuButton"
-		btn.text = "Back to Main Menu"
-		btn.process_mode = Node.PROCESS_MODE_ALWAYS
-		btn.add_theme_font_size_override("font_size", 32)
-		btn.custom_minimum_size = Vector2(300, 60)
-		
-		var viewport_size = get_viewport().get_visible_rect().size
-		btn.position = Vector2((viewport_size.x - 300) / 2, viewport_size.y / 2 + 50)
-		
-		btn.pressed.connect(func():
-			get_tree().paused = false
-			if multiplayer.multiplayer_peer:
-				multiplayer.multiplayer_peer.close()
-				multiplayer.multiplayer_peer = null
-			get_tree().change_scene_to_file("res://menu.tscn")
-		)
-		add_child(btn)
-	
+	_create_game_over_overlay()
 	get_tree().paused = true
