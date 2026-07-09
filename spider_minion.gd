@@ -6,6 +6,8 @@ const TARGET_SEARCH_RADIUS = 9
 const WANDER_RADIUS = 7
 const TARGET_RECHECK_TIME = 0.4
 
+@export var max_lifetime := 70.0
+
 var owner_player: Node2D = null
 var state = "FIND_TARGET"
 var target_cell = INVALID_CELL
@@ -28,6 +30,7 @@ var lifetime = 70.0
 func _ready() -> void:
 	add_to_group("nerubian_spiders")
 	add_to_group("friendly_minions")
+	lifetime = max_lifetime
 	randomize()
 
 func _physics_process(delta: float) -> void:
@@ -74,6 +77,19 @@ func _physics_process(delta: float) -> void:
 				move_along_path(delta)
 	
 	_update_animation(delta)
+	_update_lifespan_visual()
+
+func get_max_lifetime() -> float:
+	return max_lifetime
+
+func get_lifetime_ratio() -> float:
+	return clamp(lifetime / max(max_lifetime, 0.01), 0.0, 1.0)
+
+func _update_lifespan_visual() -> void:
+	if not has_node("Sprite2D"):
+		return
+	var ratio = get_lifetime_ratio()
+	$Sprite2D.modulate.a = clamp(0.35 + ratio * 0.65, 0.35, 1.0)
 
 func _choose_dig_target() -> bool:
 	var start_cell = _nearest_walkable_cell(global_position, 3)
