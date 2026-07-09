@@ -1,6 +1,9 @@
 extends Control
 
+const MENU_THEME = preload("res://global_theme.tres")
+
 func _ready() -> void:
+	theme = MENU_THEME
 	$VSOnlineButton.pressed.connect(_on_vs_online_pressed)
 	$VSModeButton.pressed.connect(_on_vs_mode_pressed)
 	$SinglePlayerButton.pressed.connect(_on_single_player_pressed)
