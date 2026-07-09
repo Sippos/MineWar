@@ -4,6 +4,8 @@ var rail_path = []
 var path_index = 0
 var speed = 100.0
 var income_timer = 0.0
+var anim_timer = 0.0
+var current_anim_row = 0
 
 var rail_layer = null
 
@@ -33,12 +35,36 @@ func _process(delta):
 		
 		if dir.length() > 0:
 			global_position += dir * speed * delta
+			animate_cart(dir, delta)
 		
 		if global_position.distance_to(target_pos) < 5.0:
 			path_index += 1
 			if path_index >= rail_path.size():
 				rail_path.reverse()
 				path_index = 0
+
+func animate_cart(dir: Vector2, delta: float) -> void:
+	var angle = dir.angle()
+	var PI_8 = PI / 8.0
+	if angle > -PI_8 and angle <= PI_8:
+		current_anim_row = 6 # Right
+	elif angle > PI_8 and angle <= 3 * PI_8:
+		current_anim_row = 7 # Down-Right
+	elif angle > 3 * PI_8 and angle <= 5 * PI_8:
+		current_anim_row = 0 # Down
+	elif angle > 5 * PI_8 and angle <= 7 * PI_8:
+		current_anim_row = 1 # Down-Left
+	elif angle > 7 * PI_8 or angle <= -7 * PI_8:
+		current_anim_row = 2 # Left
+	elif angle > -7 * PI_8 and angle <= -5 * PI_8:
+		current_anim_row = 3 # Up-Left
+	elif angle > -5 * PI_8 and angle <= -3 * PI_8:
+		current_anim_row = 4 # Up
+	elif angle > -3 * PI_8 and angle <= -PI_8:
+		current_anim_row = 5 # Up-Right
+
+	anim_timer += delta * 12.0
+	$Sprite2D.frame = current_anim_row * 8 + (int(anim_timer) % 8)
 
 func find_longest_rail_path():
 	if not rail_layer: return
