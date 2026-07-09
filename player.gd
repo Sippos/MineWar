@@ -91,12 +91,17 @@ func remove_nearby_gem(gem) -> void:
 	nearby_gems.erase(gem)
 
 func deposit_gems() -> int:
-	var count = carried_gems.size()
+	var deposited = 0
+	var remaining_items = []
 	for gem in carried_gems:
 		if is_instance_valid(gem):
-			gem.queue_free()
-	carried_gems.clear()
-	return count
+			if gem.has_method("should_deposit_as_gem") and not gem.should_deposit_as_gem():
+				remaining_items.append(gem)
+			else:
+				gem.queue_free()
+				deposited += 1
+	carried_gems = remaining_items
+	return deposited
 
 func upgrade_strength() -> void:
 	strength += 1

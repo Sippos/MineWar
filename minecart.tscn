@@ -1,12 +1,32 @@
-[gd_scene load_steps=3 format=3 uid="uid://minecartuid"]
+[gd_scene load_steps=5 format=3 uid="uid://minecartuid"]
 
 [ext_resource type="Script" path="res://minecart.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://character_sprites/minecart_spritesheet_25d.png" id="2_tex"]
 
-[node name="Minecart" type="Node2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cart"]
+size = Vector2(22, 18)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 34.0
+
+[node name="Minecart" type="RigidBody2D"]
+collision_layer = 0
+collision_mask = 0
 script = ExtResource("1_script")
+gravity_scale = 0.0
+linear_damp = 3.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_tex")
 hframes = 8
 vframes = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_cart")
+
+[node name="PickupArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
+shape = SubResource("CircleShape2D_pickup")
+
+[connection signal="body_entered" from="PickupArea" to="." method="_on_pickup_area_body_entered"]

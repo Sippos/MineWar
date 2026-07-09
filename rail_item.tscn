@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://gemuid"]
+[gd_scene format=3 uid="uid://railitemuid"]
 
 [ext_resource type="Script" path="res://rail_item.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://rail_item_placeholder.png" id="2_tex"]

@@ -438,20 +438,26 @@ func update_rail_autotile(cell: Vector2i) -> void:
 	var rail_layer = get_node("RailLayer")
 	
 	if rail_layer.get_cell_source_id(cell) == -1: return
+	if block_layer.get_cell_source_id(cell) != -1:
+		rail_layer.erase_cell(cell)
+		return
 	
-	var up = rail_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) != -1
-	var down = rail_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) != -1
-	var left = rail_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) != -1
-	var right = rail_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) != -1
+	var up_cell = Vector2i(cell.x, cell.y - 1)
+	var right_cell = Vector2i(cell.x + 1, cell.y)
+	var down_cell = Vector2i(cell.x, cell.y + 1)
+	var left_cell = Vector2i(cell.x - 1, cell.y)
+	var up = rail_layer.get_cell_source_id(up_cell) != -1 and block_layer.get_cell_source_id(up_cell) == -1
+	var right = rail_layer.get_cell_source_id(right_cell) != -1 and block_layer.get_cell_source_id(right_cell) == -1
+	var down = rail_layer.get_cell_source_id(down_cell) != -1 and block_layer.get_cell_source_id(down_cell) == -1
+	var left = rail_layer.get_cell_source_id(left_cell) != -1 and block_layer.get_cell_source_id(left_cell) == -1
 	
-	var atlas_coords = Vector2i(0, 0)
-	if up and down and left and right:
-		atlas_coords = Vector2i(0, 1) # Intersection
-	elif (left or right) and not (up or down):
-		atlas_coords = Vector2i(1, 0) # Horizontal
-	elif (up or down) and not (left or right):
-		atlas_coords = Vector2i(0, 0) # Vertical
-	else:
-		atlas_coords = Vector2i(0, 1) # Intersection as fallback
+	var mask = 0
+	if up: mask |= 1
+	if right: mask |= 2
+	if down: mask |= 4
+	if left: mask |= 8
+	if mask == 0:
+		mask = 5
+	var atlas_coords = Vector2i(mask % 4, int(mask / 4))
 		
 	rail_layer.set_cell(cell, 15, atlas_coords)
