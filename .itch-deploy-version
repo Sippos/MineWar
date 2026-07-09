@@ -1,2 +1,2 @@
-latest-main-deploy=2026-07-09T10:55:00Z
-includes=shaman-base,peon-pathing,minecart-fixes,stable-deploy-workflow
+latest-main-deploy=2026-07-09T11:00:00Z
+includes=shaman-base,peon-pathing,minecart-fixes,no-concurrency-deploy-workflow
