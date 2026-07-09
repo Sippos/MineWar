@@ -1,13 +1,16 @@
 extends CanvasLayer
 
 signal send_enemy(type: int)
-@onready var hud = get_parent().get_node("HUD")
-@onready var player = get_parent().get_node("Player")
+@onready var hud = get_parent().get_node_or_null("HUD")
+@onready var player = get_parent().get_node_or_null("Player")
 @onready var panel = $Panel
 
 const MENU_ART_CENTER := Vector2(580.0, 323.0)
 const MENU_ART_SIZE := Vector2(992.0, 624.0)
 const VS_MENU_MARGIN := 16.0
+const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
+const ENEMY_BUTTON_TEXTURE := "res://Button.png"
+const GOLD_ICON_TEXTURE := "res://GoldCoin.png"
 
 var healthbar_unlocked = false
 var base_health_unlocked = false
@@ -18,7 +21,8 @@ var minimap_unlocked = false
 var minimap_upgraded = false
 
 func _ready():
-	$Panel/Close.pressed.connect(_on_close_pressed)
+	if not $Panel/Close.pressed.is_connected(_on_close_pressed):
+		$Panel/Close.pressed.connect(_on_close_pressed)
 	hide_menu()
 
 
@@ -27,13 +31,22 @@ func get_upgrade_cost(stat_level: int) -> int:
 
 func update_button_texts():
 	var str_cost = get_upgrade_cost(player.strength)
-	$Panel/UpgradeStrength.text = "%d Gems" % str_cost
+	$Panel/UpgradeStrength.text = ""
+	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(str_cost)
 	
 	var agi_cost = get_upgrade_cost(player.agility)
-	$Panel/UpgradeAgility.text = "%d Gems" % agi_cost
+	$Panel/UpgradeAgility.text = ""
+	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(agi_cost)
 	
 	var int_cost = get_upgrade_cost(player.intelligence)
-	$Panel/UpgradeIntelligence.text = "%d Gems" % int_cost
+	$Panel/UpgradeIntelligence.text = ""
+	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(int_cost)
+	
+	var vs_mode = _is_vs_mode()
+	$Panel/UnlockWaveTimer.visible = not vs_mode
+	$Panel/UnlockWaveTimer.disabled = vs_mode or wave_timer_unlocked
+	$Panel/GoldPileIcon4.visible = not vs_mode
+	$Panel/BranchTitle6.visible = not vs_mode
 	
 	$Panel/UpgradeSpikes.visible = false
 	$Panel/UpgradeSpikes.disabled = true
@@ -50,6 +63,10 @@ func update_button_texts():
 
 var vs_prompt_panel: Panel
 var vs_send_panel: Panel
+
+func _is_vs_mode() -> bool:
+	var level = get_parent()
+	return level != null and bool(level.get("is_vs_mode"))
 
 func _get_menu_hero() -> String:
 	if player:
@@ -73,20 +90,35 @@ func _layout_vs_upgrade_panel() -> void:
 	panel.scale = Vector2(fit_scale, fit_scale)
 	panel.position = desired_top_left - menu_top_left * fit_scale
 
+func _make_texture_style(texture_path: String) -> StyleBoxTexture:
+	var stylebox = StyleBoxTexture.new()
+	var texture = load(texture_path)
+	if texture:
+		stylebox.texture = texture
+	return stylebox
+
+func _apply_enemy_button_style(btn: Button) -> void:
+	btn.add_theme_stylebox_override("normal", _make_texture_style(ENEMY_BUTTON_TEXTURE))
+	btn.add_theme_stylebox_override("hover", _make_texture_style(ENEMY_BUTTON_TEXTURE))
+	btn.add_theme_stylebox_override("pressed", _make_texture_style(ENEMY_BUTTON_TEXTURE))
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
 func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String) -> Button:
 	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(0, 48)
+	btn.custom_minimum_size = Vector2(0, 54)
+	btn.tooltip_text = "%s: %d gold, +%d gold income" % [enemy_name, cost, income]
+	_apply_enemy_button_style(btn)
 	
 	var hbox = HBoxContainer.new()
 	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_theme_constant_override("separation", 10)
+	hbox.add_theme_constant_override("separation", 12)
 	
 	var tex_rect = TextureRect.new()
 	var tex = load(tex_path)
+	var atlas = AtlasTexture.new()
 	if tex:
-		var atlas = AtlasTexture.new()
 		atlas.atlas = tex
 		var fw = tex.get_width() / 8
 		var fh = tex.get_height() / 8
@@ -95,43 +127,36 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 		tex_rect.texture = atlas
 	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tex_rect.custom_minimum_size = Vector2(32, 32)
+	tex_rect.custom_minimum_size = Vector2(42, 42)
 	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(tex_rect)
 	
-	var lbl_name = Label.new()
-	lbl_name.text = enemy_name
-	lbl_name.custom_minimum_size = Vector2(60, 0)
-	lbl_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	lbl_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_child(lbl_name)
-	
 	var cost_icon = TextureRect.new()
-	cost_icon.texture = load("res://StatRessources.png")
+	cost_icon.texture = load(GOLD_ICON_TEXTURE)
 	cost_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	cost_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	cost_icon.custom_minimum_size = Vector2(16, 16)
+	cost_icon.custom_minimum_size = Vector2(22, 22)
 	cost_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(cost_icon)
 	
 	var lbl_cost = Label.new()
-	lbl_cost.text = str(cost) + " ->"
-	lbl_cost.custom_minimum_size = Vector2(40, 0)
+	lbl_cost.text = str(cost)
+	lbl_cost.custom_minimum_size = Vector2(28, 0)
 	lbl_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lbl_cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl_cost)
 	
 	var inc_icon = TextureRect.new()
-	inc_icon.texture = load("res://StatRessources.png")
+	inc_icon.texture = load(GOLD_ICON_TEXTURE)
 	inc_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	inc_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	inc_icon.custom_minimum_size = Vector2(16, 16)
+	inc_icon.custom_minimum_size = Vector2(22, 22)
 	inc_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(inc_icon)
 	
 	var lbl_inc = Label.new()
 	lbl_inc.text = "+" + str(income)
-	lbl_inc.custom_minimum_size = Vector2(25, 0)
+	lbl_inc.custom_minimum_size = Vector2(30, 0)
 	lbl_inc.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lbl_inc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(lbl_inc)
@@ -151,6 +176,7 @@ func _create_vs_panels():
 	opaque_stylebox.corner_radius_top_right = 4
 	opaque_stylebox.corner_radius_bottom_left = 4
 	opaque_stylebox.corner_radius_bottom_right = 4
+	var menu_stylebox = _make_texture_style(MENU_PANEL_TEXTURE)
 		
 	vs_prompt_panel = Panel.new()
 	vs_prompt_panel.name = "VSPromptPanel"
@@ -196,22 +222,23 @@ func _create_vs_panels():
 	
 	vs_send_panel = Panel.new()
 	vs_send_panel.name = "VSSendPanel"
-	vs_send_panel.add_theme_stylebox_override("panel", opaque_stylebox)
+	vs_send_panel.add_theme_stylebox_override("panel", menu_stylebox)
 	vs_send_panel.anchor_left = 0.5
 	vs_send_panel.anchor_top = 0.5
 	vs_send_panel.anchor_right = 0.5
 	vs_send_panel.anchor_bottom = 0.5
-	vs_send_panel.offset_left = -150
-	vs_send_panel.offset_top = -200
-	vs_send_panel.offset_right = 150
-	vs_send_panel.offset_bottom = 200
+	vs_send_panel.offset_left = -190
+	vs_send_panel.offset_top = -240
+	vs_send_panel.offset_right = 190
+	vs_send_panel.offset_bottom = 240
 	
 	var vbox2 = VBoxContainer.new()
 	vbox2.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox2.offset_left = 20
-	vbox2.offset_top = 20
-	vbox2.offset_right = -20
-	vbox2.offset_bottom = -20
+	vbox2.offset_left = 54
+	vbox2.offset_top = 50
+	vbox2.offset_right = -54
+	vbox2.offset_bottom = -50
+	vbox2.add_theme_constant_override("separation", 8)
 	
 	var lbl2 = Label.new()
 	lbl2.text = "Send Enemies"
@@ -262,7 +289,7 @@ func _on_vs_back_pressed():
 func show_menu():
 	update_button_texts()
 	if player: player.can_move = false
-	if get_parent().is_vs_mode:
+	if _is_vs_mode():
 		_create_vs_panels()
 		vs_prompt_panel.visible = true
 		vs_send_panel.visible = false
@@ -305,6 +332,8 @@ func _on_unlock_stats_pressed():
 		$Panel/UnlockStats.disabled = true
 
 func _on_unlock_wave_timer_pressed():
+	if _is_vs_mode():
+		return
 	if not wave_timer_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		wave_timer_unlocked = true
