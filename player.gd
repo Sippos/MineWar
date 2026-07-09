@@ -232,10 +232,16 @@ func _physics_process(delta: float) -> void:
 		if carried_gems.size() > 0:
 			for nearby in nearby_gems:
 				if is_instance_valid(nearby) and nearby.has_method("load_gem"):
-					var loaded_gem = carried_gems.pop_back()
-					if nearby.load_gem(loaded_gem, self):
+					var loaded_any = false
+					while carried_gems.size() > 0:
+						var loaded_gem = carried_gems.pop_back()
+						if nearby.load_gem(loaded_gem, self):
+							loaded_any = true
+						else:
+							carried_gems.append(loaded_gem)
+							break
+					if loaded_any:
 						return
-					carried_gems.append(loaded_gem)
 			var gem = carried_gems.pop_back()
 			if is_instance_valid(gem) and gem.has_method("untether"):
 				gem.untether()
