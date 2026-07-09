@@ -38,7 +38,22 @@ var currently_digging_cell = null
 var walk_timer = 0.0
 var current_anim_row = 0
 
+var current_hero_name = "Dwarf"
 var current_sprite_scale = Vector2(0.85, 0.85)
+var current_sprite_position = Vector2(0, -24)
+
+const HERO_VISUALS = {
+	"Dwarf": {
+		"walk_scale": Vector2(0.85, 0.85),
+		"attack_scale": Vector2(1.25, 1.25),
+		"sprite_position": Vector2(0, -24)
+	},
+	"Shaman": {
+		"walk_scale": Vector2(0.58, 0.58),
+		"attack_scale": Vector2(0.58, 0.58),
+		"sprite_position": Vector2(0, -16)
+	}
+}
 
 var attack_timer = 0.0
 var currently_attacking_enemy = null
@@ -70,11 +85,24 @@ func update_hero_sprites() -> void:
 		h_name = Global.hero_p2
 		
 	if Global.hero_data.has(h_name):
+		current_hero_name = h_name
 		var data = Global.hero_data[h_name]
 		tex_walk = load(data["walk"])
 		tex_attack = load(data["attack"])
 		if has_node("Sprite2D"):
 			$Sprite2D.texture = tex_walk
+			_apply_sprite_visuals(false)
+
+func _get_hero_visuals() -> Dictionary:
+	return HERO_VISUALS.get(current_hero_name, HERO_VISUALS["Dwarf"])
+
+func _apply_sprite_visuals(is_attack: bool) -> void:
+	var visuals = _get_hero_visuals()
+	current_sprite_scale = visuals["attack_scale"] if is_attack else visuals["walk_scale"]
+	current_sprite_position = visuals["sprite_position"]
+	if has_node("Sprite2D"):
+		$Sprite2D.scale = current_sprite_scale
+		$Sprite2D.position = current_sprite_position
 
 
 func get_weight_penalty() -> float:
@@ -284,13 +312,11 @@ func _physics_process(delta: float) -> void:
 	if currently_attacking_enemy != null or currently_digging_cell != null:
 		if $Sprite2D.texture != tex_attack:
 			$Sprite2D.texture = tex_attack
-			current_sprite_scale = Vector2(1.25, 1.25) # Compensate for smaller drawing
-			$Sprite2D.scale = current_sprite_scale
+			_apply_sprite_visuals(true)
 	else:
 		if $Sprite2D.texture != tex_walk:
 			$Sprite2D.texture = tex_walk
-			current_sprite_scale = Vector2(0.85, 0.85) # Good chunky size for Dome Keeper feel
-			$Sprite2D.scale = current_sprite_scale
+			_apply_sprite_visuals(false)
 
 func handle_digging(delta: float) -> void:
 	var input_dir = Vector2.ZERO
