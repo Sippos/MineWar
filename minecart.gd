@@ -28,7 +28,7 @@ func _ready() -> void:
 func should_deposit_as_gem() -> bool:
 	return false
 
-func tether_to(player) -> void:
+func tether_to(player) -> bool:
 	if placed_on_rail:
 		return false
 	tethered_to = player
