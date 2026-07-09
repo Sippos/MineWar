@@ -35,10 +35,11 @@ func update_button_texts():
 	var spikes_level = base.spikes_level if base else 0
 	$Panel/UpgradeSpikes.text = "Upgrade Spikes (Lvl %d) - 20 Gold" % spikes_level
 	
-	$Panel/SwapHero.text = "Swap Hero (Current: %s)" % Global.current_hero
-	var is_dwarf = (Global.current_hero == "Dwarf")
-	var is_shaman = (Global.current_hero == "Shaman")
+	var hero_name = _get_menu_hero()
+	var is_dwarf = (hero_name == "Dwarf")
+	var is_shaman = (hero_name == "Shaman")
 	
+	$Panel/SwapHero.visible = false
 	$Panel/FactionTitle.visible = is_dwarf or is_shaman
 	$Panel/BuyRail.visible = is_dwarf
 	$Panel/BuyMinecart.visible = is_dwarf
@@ -46,6 +47,16 @@ func update_button_texts():
 
 var vs_prompt_panel: Panel
 var vs_send_panel: Panel
+
+func _get_menu_hero() -> String:
+	if player:
+		var hero_name = player.get("current_hero_name")
+		if typeof(hero_name) == TYPE_STRING and hero_name != "":
+			return hero_name
+	var p_id = get_parent().get("player_id")
+	if p_id == 2:
+		return Global.hero_p2
+	return Global.hero_p1
 
 func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String) -> Button:
 	var btn = Button.new()
@@ -245,7 +256,7 @@ func show_menu():
 		vs_prompt_panel.get_child(0).get_child(1).call_deferred("grab_focus")
 	else:
 		panel.visible = true
-		$Panel/SwapHero.call_deferred("grab_focus")
+		$Panel/Close.call_deferred("grab_focus")
 
 func hide_menu():
 	panel.visible = false
@@ -345,7 +356,7 @@ func _on_upgrade_spikes_pressed():
 			update_button_texts()
 
 func _on_swap_hero_pressed():
-	if Global.unlocked_heroes.size() > 1:
+	if $Panel/SwapHero.visible and Global.unlocked_heroes.size() > 1:
 		Global.current_hero = Global.get_next_hero()
 		player.update_hero_sprites()
 		update_button_texts()
