@@ -8,13 +8,20 @@ var p2_index = 0
 
 var available_heroes = ["Dwarf", "Shaman", "Nerubian"]
 
+@onready var panel = $Panel
+@onready var root_vbox = $Panel/VBox
+@onready var hero_hbox = $Panel/VBox/HBox
+@onready var title_label = $Panel/VBox/Label
+@onready var p1_container = $Panel/VBox/HBox/P1Container
 @onready var p1_label = $Panel/VBox/HBox/P1Container/HeroName
+@onready var p1_sprite_container = $Panel/VBox/HBox/P1Container/SpriteContainer
 @onready var p1_sprite = $Panel/VBox/HBox/P1Container/SpriteContainer/Sprite
 @onready var p1_prev = $Panel/VBox/HBox/P1Container/HBox/PrevBtn
 @onready var p1_next = $Panel/VBox/HBox/P1Container/HBox/NextBtn
 
 @onready var p2_container = $Panel/VBox/HBox/P2Container
 @onready var p2_label = $Panel/VBox/HBox/P2Container/HeroName
+@onready var p2_sprite_container = $Panel/VBox/HBox/P2Container/SpriteContainer
 @onready var p2_sprite = $Panel/VBox/HBox/P2Container/SpriteContainer/Sprite
 @onready var p2_prev = $Panel/VBox/HBox/P2Container/HBox/PrevBtn
 @onready var p2_next = $Panel/VBox/HBox/P2Container/HBox/NextBtn
@@ -35,12 +42,42 @@ func _ready() -> void:
 	back_btn.pressed.connect(func(): queue_free())
 	
 	p2_container.visible = (current_mode == Mode.VS_LOCAL)
+	get_tree().root.size_changed.connect(_layout_for_screen)
+	_layout_for_screen()
 	
 	update_ui(1)
 	if current_mode == Mode.VS_LOCAL:
 		update_ui(2)
 		
 	start_btn.grab_focus()
+
+func _layout_for_screen() -> void:
+	var screen_size = get_viewport().get_visible_rect().size
+	if screen_size.x <= 0.0 or screen_size.y <= 0.0:
+		return
+	var compact = screen_size.x < 700.0 or screen_size.y < 520.0
+	var panel_w = clamp(screen_size.x * 0.9, 300.0, 620.0)
+	var panel_h = clamp(screen_size.y * 0.86, 300.0, 430.0)
+	panel.offset_left = -panel_w * 0.5
+	panel.offset_right = panel_w * 0.5
+	panel.offset_top = -panel_h * 0.5
+	panel.offset_bottom = panel_h * 0.5
+	root_vbox.theme_override_constants/separation = 8 if compact else 18
+	hero_hbox.theme_override_constants/separation = 12 if compact else 40
+	title_label.theme_override_font_sizes/font_size = 24 if compact else 32
+	
+	var sprite_size = 84.0 if compact else 128.0
+	_configure_sprite_container(p1_sprite_container, p1_sprite, sprite_size)
+	_configure_sprite_container(p2_sprite_container, p2_sprite, sprite_size)
+	var button_size = Vector2(180, 42) if compact else Vector2(200, 50)
+	start_btn.custom_minimum_size = button_size
+	back_btn.custom_minimum_size = button_size
+
+func _configure_sprite_container(container: Control, sprite: Sprite2D, sprite_size: float) -> void:
+	container.custom_minimum_size = Vector2(sprite_size, sprite_size)
+	sprite.position = Vector2(sprite_size * 0.5, sprite_size * 0.5)
+	var scale_factor = sprite_size / 128.0
+	sprite.scale = Vector2(scale_factor, scale_factor)
 
 func change_hero(player_id: int, dir: int) -> void:
 	if player_id == 1:
