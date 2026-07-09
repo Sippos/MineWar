@@ -8,6 +8,8 @@ func _ready() -> void:
 	level1.is_vs_mode = true
 	level2.player_id = 2
 	level2.is_vs_mode = true
+	_refresh_level_base(level1)
+	_refresh_level_base(level2)
 	
 	# Connect sending enemies
 	var hud1 = level1.get_node_or_null("UpgradeMenu")
@@ -17,6 +19,11 @@ func _ready() -> void:
 	var hud2 = level2.get_node_or_null("UpgradeMenu")
 	if hud2:
 		hud2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
+
+func _refresh_level_base(level) -> void:
+	var base = level.get_node_or_null("Base")
+	if base and base.has_method("refresh_base_sprite"):
+		base.call_deferred("refresh_base_sprite")
 
 func _on_p1_send_enemy(enemy_type: int) -> void:
 	print("p1 sending enemy type ", enemy_type)
