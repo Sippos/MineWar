@@ -38,7 +38,11 @@ var currently_digging_cell = null
 var walk_timer = 0.0
 var current_anim_row = 0
 
+var current_hero_name = "Dwarf"
+var walk_sprite_scale = Vector2(0.85, 0.85)
+var attack_sprite_scale = Vector2(1.25, 1.25)
 var current_sprite_scale = Vector2(0.85, 0.85)
+var current_sprite_position = Vector2(0, -24)
 
 var attack_timer = 0.0
 var currently_attacking_enemy = null
@@ -64,17 +68,44 @@ func _ready() -> void:
 	
 	update_hero_sprites()
 
+func _get_walk_scale_for_hero(h_name: String) -> Vector2:
+	if h_name == "Shaman":
+		return Vector2(0.55, 0.55)
+	return Vector2(0.85, 0.85)
+
+func _get_attack_scale_for_hero(h_name: String) -> Vector2:
+	if h_name == "Shaman":
+		return Vector2(0.55, 0.55)
+	return Vector2(1.25, 1.25)
+
+func _get_sprite_position_for_hero(h_name: String) -> Vector2:
+	if h_name == "Shaman":
+		return Vector2(0, -32)
+	return Vector2(0, -24)
+
+func _apply_sprite_visual_state(use_attack_scale: bool) -> void:
+	current_sprite_scale = attack_sprite_scale if use_attack_scale else walk_sprite_scale
+	if has_node("Sprite2D"):
+		$Sprite2D.position = current_sprite_position
+		$Sprite2D.scale = current_sprite_scale
+
 func update_hero_sprites() -> void:
 	var h_name = Global.hero_p1
 	if player_id == 2:
 		h_name = Global.hero_p2
 		
 	if Global.hero_data.has(h_name):
+		current_hero_name = h_name
+		walk_sprite_scale = _get_walk_scale_for_hero(h_name)
+		attack_sprite_scale = _get_attack_scale_for_hero(h_name)
+		current_sprite_position = _get_sprite_position_for_hero(h_name)
+		
 		var data = Global.hero_data[h_name]
 		tex_walk = load(data["walk"])
 		tex_attack = load(data["attack"])
 		if has_node("Sprite2D"):
 			$Sprite2D.texture = tex_walk
+			_apply_sprite_visual_state(false)
 
 
 func get_weight_penalty() -> float:
@@ -279,13 +310,11 @@ func _physics_process(delta: float) -> void:
 	if currently_attacking_enemy != null or currently_digging_cell != null:
 		if $Sprite2D.texture != tex_attack:
 			$Sprite2D.texture = tex_attack
-			current_sprite_scale = Vector2(1.25, 1.25) # Compensate for smaller drawing
-			$Sprite2D.scale = current_sprite_scale
+			_apply_sprite_visual_state(true)
 	else:
 		if $Sprite2D.texture != tex_walk:
 			$Sprite2D.texture = tex_walk
-			current_sprite_scale = Vector2(0.85, 0.85) # Good chunky size for Dome Keeper feel
-			$Sprite2D.scale = current_sprite_scale
+			_apply_sprite_visual_state(false)
 
 func handle_digging(delta: float) -> void:
 	var input_dir = Vector2.ZERO
