@@ -62,9 +62,9 @@ func _layout_for_screen() -> void:
 	panel.offset_right = panel_w * 0.5
 	panel.offset_top = -panel_h * 0.5
 	panel.offset_bottom = panel_h * 0.5
-	root_vbox.theme_override_constants/separation = 8 if compact else 18
-	hero_hbox.theme_override_constants/separation = 12 if compact else 40
-	title_label.theme_override_font_sizes/font_size = 24 if compact else 32
+	root_vbox.add_theme_constant_override("separation", 8 if compact else 18)
+	hero_hbox.add_theme_constant_override("separation", 12 if compact else 40)
+	title_label.add_theme_font_size_override("font_size", 24 if compact else 32)
 	
 	var sprite_size = 84.0 if compact else 128.0
 	_configure_sprite_container(p1_sprite_container, p1_sprite, sprite_size)
