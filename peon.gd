@@ -1,5 +1,9 @@
 extends CharacterBody2D
 
+const INVALID_CELL = Vector2i(999999, 999999)
+const WANDER_RADIUS = 7
+const GEM_RECHECK_TIME = 0.6
+
 var state = "IDLE"
 var target_gem = null
 var base_node = null
@@ -11,62 +15,246 @@ var speed = 120.0
 var block_layer = null
 var anim_timer = 0.0
 var current_anim_row = 0
+var gem_recheck_timer = 0.0
 
 func _ready():
 	add_to_group("peons")
 	var world = get_parent()
-	if world.has_node("Base"):
-		base_node = world.get_node("Base")
-	if world.has_node("BlockLayer"):
-		block_layer = world.get_node("BlockLayer")
+	base_node = world.get_node_or_null("Base")
+	block_layer = world.get_node_or_null("BlockLayer")
+	randomize()
 
 func _physics_process(delta):
-	# Apply a small gravity just in case to ground them if they end up flying?
-	# No, astar ensures they walk on ground, but if they are off, let's just let move_along_path handle it.
+	gem_recheck_timer -= delta
 	
 	if state == "IDLE":
-		# Wait for gems to drop
-		target_gem = find_closest_gem()
-		if target_gem:
-			state = "SEEK_GEM"
-			
-	elif state == "SEEK_GEM":
-		if not is_instance_valid(target_gem):
-			state = "IDLE"
-			return
-		if calculate_path_to(target_gem.global_position):
-			state = "MOVE_TO_GEM"
-		else:
-			target_gem = null
-			state = "IDLE"
-			
+		if gem_recheck_timer <= 0.0:
+			gem_recheck_timer = GEM_RECHECK_TIME
+			if _try_target_reachable_gem():
+				state = "MOVE_TO_GEM"
+			else:
+				_choose_wander_path()
+		
+		move_along_path(delta)
+		
 	elif state == "MOVE_TO_GEM":
 		if not is_instance_valid(target_gem):
+			target_gem = null
 			state = "IDLE"
+			astar_path.clear()
+			velocity = Vector2.ZERO
+			_update_animation(delta)
 			return
-			
-		# Check if close to gem
-		if global_position.distance_to(target_gem.global_position) < 20.0:
-			# Pick it up
+		
+		if global_position.distance_to(target_gem.global_position) < 24.0:
 			target_gem.queue_free()
 			target_gem = null
-			state = "RETURN_TO_BASE"
-			calculate_path_to(base_node.global_position)
+			if base_node and _set_path_to_global(base_node.global_position):
+				state = "RETURN_TO_BASE"
+			else:
+				state = "IDLE"
+			_update_animation(delta)
 			return
-			
+		
+		if _path_finished():
+			if not _set_path_to_global(target_gem.global_position):
+				target_gem = null
+				state = "IDLE"
+				velocity = Vector2.ZERO
+				_update_animation(delta)
+				return
+		
 		move_along_path(delta)
 		
 	elif state == "RETURN_TO_BASE":
-		if global_position.distance_to(base_node.global_position) < 30.0:
-			# Deposit gem
+		if not base_node:
+			state = "IDLE"
+			velocity = Vector2.ZERO
+			_update_animation(delta)
+			return
+		
+		if global_position.distance_to(base_node.global_position) < 36.0:
 			if base_node.has_signal("gems_deposited"):
 				base_node.gems_deposited.emit(1)
 			state = "IDLE"
+			astar_path.clear()
+			velocity = Vector2.ZERO
+			_update_animation(delta)
 			return
-			
-		move_along_path(delta)
 		
-	# Animation
+		if _path_finished():
+			if not _set_path_to_global(base_node.global_position):
+				state = "IDLE"
+				velocity = Vector2.ZERO
+				_update_animation(delta)
+				return
+		
+		move_along_path(delta)
+	
+	_update_animation(delta)
+
+func _try_target_reachable_gem() -> bool:
+	var gems = get_tree().get_nodes_in_group("gems")
+	var best_gem = null
+	var best_path = []
+	var best_score = 999999.0
+	
+	for gem in gems:
+		if not _is_collectible_gem(gem):
+			continue
+		
+		var target_cell = _nearest_walkable_cell(gem.global_position, 4)
+		if target_cell == INVALID_CELL:
+			continue
+		
+		var path = _build_path_to_cell(target_cell)
+		if path.size() == 0:
+			continue
+		
+		var score = float(path.size()) + global_position.distance_to(gem.global_position) / 64.0
+		if score < best_score:
+			best_score = score
+			best_gem = gem
+			best_path = path
+	
+	if best_gem:
+		target_gem = best_gem
+		_set_path(best_path)
+		return true
+	return false
+
+func _is_collectible_gem(gem) -> bool:
+	if not is_instance_valid(gem):
+		return false
+	if gem.is_in_group("rails"):
+		return false
+	if gem.tethered_to != null and is_instance_valid(gem.tethered_to):
+		return false
+	return true
+
+func _choose_wander_path() -> bool:
+	if not block_layer:
+		return false
+	if not _path_finished():
+		return true
+	
+	var start_cell = _nearest_walkable_cell(global_position, 2)
+	if start_cell == INVALID_CELL:
+		velocity = Vector2.ZERO
+		return false
+	
+	var candidate_paths = []
+	for x in range(start_cell.x - WANDER_RADIUS, start_cell.x + WANDER_RADIUS + 1):
+		for y in range(start_cell.y - WANDER_RADIUS, start_cell.y + WANDER_RADIUS + 1):
+			var cell = Vector2i(x, y)
+			var manhattan = abs(cell.x - start_cell.x) + abs(cell.y - start_cell.y)
+			if manhattan < 2:
+				continue
+			if not _is_walkable_cell(cell):
+				continue
+			var path = _build_path_between(start_cell, cell)
+			if path.size() > 1 and path.size() <= WANDER_RADIUS * 2:
+				candidate_paths.append(path)
+	
+	if candidate_paths.size() == 0:
+		velocity = Vector2.ZERO
+		return false
+	
+	_set_path(candidate_paths[randi() % candidate_paths.size()])
+	return true
+
+func _set_path_to_global(target_global: Vector2) -> bool:
+	var target_cell = _nearest_walkable_cell(target_global, 6)
+	if target_cell == INVALID_CELL:
+		return false
+	var path = _build_path_to_cell(target_cell)
+	if path.size() == 0:
+		return false
+	_set_path(path)
+	return true
+
+func _build_path_to_cell(end_cell: Vector2i):
+	var start_cell = _nearest_walkable_cell(global_position, 2)
+	if start_cell == INVALID_CELL:
+		return []
+	return _build_path_between(start_cell, end_cell)
+
+func _build_path_between(start_cell: Vector2i, end_cell: Vector2i):
+	var world = get_parent()
+	if not world or not world.astar:
+		return []
+	var astar = world.astar
+	if not astar.is_in_bounds(start_cell.x, start_cell.y):
+		return []
+	if not astar.is_in_bounds(end_cell.x, end_cell.y):
+		return []
+	if astar.is_point_solid(start_cell) or astar.is_point_solid(end_cell):
+		return []
+	
+	return astar.get_id_path(start_cell, end_cell)
+
+func _set_path(path) -> void:
+	astar_path = path
+	path_index = 1 if astar_path.size() > 1 else 0
+
+func _path_finished() -> bool:
+	return path_index >= astar_path.size()
+
+func _nearest_walkable_cell(target_global: Vector2, max_radius: int) -> Vector2i:
+	if not block_layer:
+		return INVALID_CELL
+	
+	var center = block_layer.local_to_map(block_layer.to_local(target_global))
+	if _is_walkable_cell(center):
+		return center
+	
+	for radius in range(1, max_radius + 1):
+		for x in range(center.x - radius, center.x + radius + 1):
+			for y in range(center.y - radius, center.y + radius + 1):
+				if x != center.x - radius and x != center.x + radius and y != center.y - radius and y != center.y + radius:
+					continue
+				var cell = Vector2i(x, y)
+				if _is_walkable_cell(cell):
+					return cell
+	return INVALID_CELL
+
+func _is_walkable_cell(cell: Vector2i) -> bool:
+	if not block_layer:
+		return false
+	var world = get_parent()
+	if not world or not world.astar:
+		return false
+	var astar = world.astar
+	if not astar.is_in_bounds(cell.x, cell.y):
+		return false
+	if astar.is_point_solid(cell):
+		return false
+	return block_layer.get_cell_source_id(cell) == -1
+
+func move_along_path(_delta):
+	if _path_finished():
+		velocity = Vector2.ZERO
+		return
+	
+	var target_cell = astar_path[path_index]
+	var target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
+	# Walk near the lower half of the cleared tile so the peon appears grounded.
+	target_pos.y += 16
+	
+	if global_position.distance_to(target_pos) < 5.0:
+		path_index += 1
+		if _path_finished():
+			velocity = Vector2.ZERO
+			return
+		target_cell = astar_path[path_index]
+		target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
+		target_pos.y += 16
+	
+	var dir = global_position.direction_to(target_pos)
+	velocity = dir * speed
+	move_and_slide()
+
+func _update_animation(delta):
 	if velocity.length() > 0:
 		var angle = velocity.angle()
 		var PI_8 = PI / 8.0
@@ -93,45 +281,3 @@ func _physics_process(delta):
 	else:
 		anim_timer = 0.0
 		$Sprite2D.frame = current_anim_row * 8
-
-func find_closest_gem():
-	var gems = get_tree().get_nodes_in_group("gems")
-	var closest = null
-	var min_dist = 99999.0
-	for gem in gems:
-		if not gem.is_in_group("rails") and not is_instance_valid(gem.tethered_to):
-			var d = global_position.distance_to(gem.global_position)
-			if d < min_dist:
-				min_dist = d
-				closest = gem
-	return closest
-
-func calculate_path_to(target_global: Vector2) -> bool:
-	if not block_layer: return false
-	var world = get_parent()
-	var astar = world.astar
-	var start_cell = block_layer.local_to_map(block_layer.to_local(global_position))
-	var end_cell = block_layer.local_to_map(block_layer.to_local(target_global))
-	
-	if astar.is_in_bounds(start_cell.x, start_cell.y) and astar.is_in_bounds(end_cell.x, end_cell.y):
-		astar_path = astar.get_point_path(start_cell, end_cell)
-		path_index = 0
-		return astar_path.size() > 0
-	return false
-
-func move_along_path(delta):
-	if path_index < astar_path.size():
-		var target_pos = block_layer.to_global(block_layer.map_to_local(astar_path[path_index]))
-		
-		# Offset target pos to bottom center of cell so they walk on the ground
-		target_pos.y += 16
-		
-		var dir = global_position.direction_to(target_pos)
-		velocity = dir * speed
-		
-		if global_position.distance_to(target_pos) < 5.0:
-			path_index += 1
-			
-		move_and_slide()
-	else:
-		velocity = Vector2.ZERO
