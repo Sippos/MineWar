@@ -1,6 +1,6 @@
 extends Node
 
-const IOS_CANVAS_MODULATE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
+const WEB_CANVAS_MODULATE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const MOBILE_CONTROLS_SCENE := preload("res://mobile_controls.tscn")
 
 var _enabled := false
@@ -8,13 +8,13 @@ var _apply_timer := 0.0
 var _mobile_controls_layer: CanvasLayer = null
 
 func _ready() -> void:
-	_enabled = OS.has_feature("web") and _is_mobile_or_touch_browser()
+	_enabled = OS.has_feature("web")
 	if not _enabled:
 		set_process(false)
 		return
 	get_tree().node_added.connect(_on_node_added)
 	set_process(true)
-	call_deferred("_apply_mobile_web_fallbacks")
+	call_deferred("_apply_web_fallbacks")
 
 func _process(delta: float) -> void:
 	if not _enabled:
@@ -22,26 +22,14 @@ func _process(delta: float) -> void:
 	_apply_timer -= delta
 	if _apply_timer <= 0.0:
 		_apply_timer = 0.5
-		_apply_mobile_web_fallbacks()
-
-func _is_mobile_or_touch_browser() -> bool:
-	if OS.has_feature("ios") or OS.has_feature("web_ios"):
-		return true
-	if not OS.has_feature("web"):
-		return false
-
-	var ua := str(JavaScriptBridge.eval("navigator.userAgent || ''", true))
-	var platform := str(JavaScriptBridge.eval("navigator.platform || ''", true))
-	var max_touch := int(JavaScriptBridge.eval("navigator.maxTouchPoints || 0", true))
-
-	return max_touch > 0 or ua.contains("Mobile") or ua.contains("iPhone") or ua.contains("iPad") or ua.contains("iPod") or ua.contains("Android") or (platform == "MacIntel" and max_touch > 1)
+		_apply_web_fallbacks()
 
 func _on_node_added(node: Node) -> void:
 	if not _enabled:
 		return
 	call_deferred("_apply_to_subtree", node)
 
-func _apply_mobile_web_fallbacks() -> void:
+func _apply_web_fallbacks() -> void:
 	_apply_to_subtree(get_tree().root)
 	_update_mobile_controls()
 
@@ -54,7 +42,7 @@ func _apply_to_subtree(node: Node) -> void:
 
 func _apply_to_node(node: Node) -> void:
 	if node is CanvasModulate:
-		(node as CanvasModulate).color = IOS_CANVAS_MODULATE_COLOR
+		(node as CanvasModulate).color = WEB_CANVAS_MODULATE_COLOR
 	elif node is PointLight2D:
 		var light := node as PointLight2D
 		light.shadow_enabled = false
