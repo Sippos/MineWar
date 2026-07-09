@@ -20,16 +20,25 @@ var heal_timer = 0.0
 func _ready() -> void:
 	collision_mask |= 4 # Add layer 3 (enemies)
 	prompt.visible = false
+	call_deferred("refresh_base_sprite")
 
-	var p_id = get_parent().get("player_id")
-	if p_id == null:
-		p_id = 1
-		
-	var h_name = Global.hero_p1
+func refresh_base_sprite() -> void:
+	_apply_base_sprite(_get_hero_name())
+
+func _get_hero_name() -> String:
+	var p_id = _get_player_id()
 	if p_id == 2:
-		h_name = Global.hero_p2
-		
-	_apply_base_sprite(h_name)
+		return Global.hero_p2
+	return Global.hero_p1
+
+func _get_player_id() -> int:
+	var parent = get_parent()
+	if parent == null:
+		return 1
+	var p_id = parent.get("player_id")
+	if p_id == null:
+		return 1
+	return int(p_id)
 
 func _apply_base_sprite(hero_name: String) -> void:
 	var tex = BASE_TEXTURES.get(hero_name, BASE_TEXTURES["Dwarf"])
