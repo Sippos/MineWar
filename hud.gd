@@ -45,6 +45,13 @@ const TOTEM_TEXTURES = {
 const NERUBIAN_SPIDER_TEXTURE = "res://character_sprites/spider_walk_spritesheet.png"
 const NERUBIAN_MAX_SPIDER_SLOTS = 5
 const NERUBIAN_SPAWN_MAX_COOLDOWN = 3.5
+const HUD_STACK_LEFT := 20.0
+const HUD_STACK_TOP := 62.0
+const HUD_STACK_GAP := 8.0
+const HUD_STACK_LABEL_LEFT := 30.0
+const HUD_STATS_HEIGHT := 36.0
+const HUD_HEALTH_BAR_OFFSET_Y := 18.0
+const HUD_HEALTH_MODULE_HEIGHT := 66.0
 
 func _ready():
 	if minimap:
@@ -65,6 +72,7 @@ func _ready():
 	_setup_totem_wheel_ui()
 	_setup_totem_status_ui()
 	_setup_nerubian_status_ui()
+	_relayout_unlocked_hud()
 
 func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
@@ -125,6 +133,26 @@ func _process(delta):
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
 	_update_nerubian_status_from_world()
+
+func _relayout_unlocked_hud() -> void:
+	var y := HUD_STACK_TOP
+	var stats_container = get_node_or_null("StatsContainer")
+	if stats_container and stats_container.visible:
+		stats_container.position = Vector2(HUD_STACK_LEFT, y)
+		y += HUD_STATS_HEIGHT + HUD_STACK_GAP
+	y = _layout_health_hud_module("BaseLabel", base_health_bar, y)
+	y = _layout_health_hud_module("PlayerLabel", player_health_bar, y)
+
+func _layout_health_hud_module(label_name: String, bar: Control, y: float) -> float:
+	var title_label = get_node_or_null(label_name)
+	var is_visible = (bar != null and bar.visible) or (title_label != null and title_label.visible)
+	if not is_visible:
+		return y
+	if title_label:
+		title_label.position = Vector2(HUD_STACK_LABEL_LEFT, y)
+	if bar:
+		bar.position = Vector2(HUD_STACK_LEFT, y + HUD_HEALTH_BAR_OFFSET_Y)
+	return y + HUD_HEALTH_MODULE_HEIGHT + HUD_STACK_GAP
 
 func _setup_totem_wheel_ui() -> void:
 	totem_wheel = Control.new()
@@ -297,18 +325,22 @@ func update_stats(str_val: int, agi_val: int, int_val: int) -> void:
 	if int_label: int_label.text = str(int_val)
 
 func unlock_healthbar() -> void:
-	player_health_bar.visible = true
+	if player_health_bar:
+		player_health_bar.visible = true
 	var pl = get_node_or_null("PlayerLabel")
 	if pl: pl.visible = true
+	_relayout_unlocked_hud()
 
 func unlock_base_healthbar() -> void:
 	if base_health_bar: base_health_bar.visible = true
 	var bl = get_node_or_null("BaseLabel")
 	if bl: bl.visible = true
+	_relayout_unlocked_hud()
 
 func unlock_stats() -> void:
 	var sc = get_node_or_null("StatsContainer")
 	if sc: sc.visible = true
+	_relayout_unlocked_hud()
 
 func unlock_wave_timer() -> void:
 	if wave_label: wave_label.visible = true
