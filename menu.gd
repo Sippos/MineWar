@@ -29,7 +29,7 @@ func _layout_for_screen() -> void:
 	$Label.offset_top = title_top
 	$Label.offset_right = screen_size.x - 12.0
 	$Label.offset_bottom = title_top + title_font_size + 12.0
-	$Label.theme_override_font_sizes/font_size = title_font_size
+	$Label.add_theme_font_size_override("font_size", title_font_size)
 	
 	var panel = $MenuPanel
 	panel.position = Vector2(center_x, screen_size.y * 0.5)
