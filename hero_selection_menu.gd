@@ -87,12 +87,14 @@ func change_hero(player_id: int, dir: int) -> void:
 		p2_index = (p2_index + dir + available_heroes.size()) % available_heroes.size()
 		update_ui(2)
 
+func _is_hero_playable(hero_name: String) -> bool:
+	if current_mode == Mode.SINGLE_PLAYER:
+		return Global.is_hero_playable_in_single_player(hero_name)
+	return true
+
 func update_ui(player_id: int) -> void:
 	var h_name = available_heroes[p1_index] if player_id == 1 else available_heroes[p2_index]
-	var is_unlocked = true
-	
-	if current_mode == Mode.SINGLE_PLAYER and not Global.unlocked_heroes.has(h_name):
-		is_unlocked = false
+	var is_unlocked = _is_hero_playable(h_name)
 		
 	var tex = load(Global.hero_data[h_name].walk)
 	
@@ -109,11 +111,7 @@ func update_ui(player_id: int) -> void:
 
 func check_start_btn() -> void:
 	var h1 = available_heroes[p1_index]
-	var h1_ok = true
-	if current_mode == Mode.SINGLE_PLAYER and not Global.unlocked_heroes.has(h1):
-		h1_ok = false
-		
-	start_btn.disabled = not h1_ok
+	start_btn.disabled = not _is_hero_playable(h1)
 
 func _on_start_pressed() -> void:
 	Global.hero_p1 = available_heroes[p1_index]
