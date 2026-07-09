@@ -34,7 +34,9 @@ func should_deposit_as_gem() -> bool:
 
 func tether_to(player) -> bool:
 	if placed_on_rail:
-		return false
+		placed_on_rail = false
+		rail_path.clear()
+		path_index = 0
 	tethered_to = player
 	if player is PhysicsBody2D:
 		add_collision_exception_with(player)
