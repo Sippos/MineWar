@@ -305,19 +305,11 @@ func _create_vs_panels():
 	if vs_prompt_panel != null and is_instance_valid(vs_prompt_panel):
 		return
 		
-	var opaque_stylebox = StyleBoxFlat.new()
-	opaque_stylebox.bg_color = Color(0.15, 0.15, 0.15, 1.0)
-	opaque_stylebox.set_border_width_all(2)
-	opaque_stylebox.border_color = Color(0.3, 0.3, 0.3, 1.0)
-	opaque_stylebox.corner_radius_top_left = 4
-	opaque_stylebox.corner_radius_top_right = 4
-	opaque_stylebox.corner_radius_bottom_left = 4
-	opaque_stylebox.corner_radius_bottom_right = 4
 	var menu_stylebox = _make_texture_style(MENU_PANEL_TEXTURE)
 		
 	vs_prompt_panel = Panel.new()
 	vs_prompt_panel.name = "VSPromptPanel"
-	vs_prompt_panel.add_theme_stylebox_override("panel", opaque_stylebox)
+	vs_prompt_panel.add_theme_stylebox_override("panel", menu_stylebox)
 	vs_prompt_panel.anchor_left = 0.5
 	vs_prompt_panel.anchor_top = 0.5
 	vs_prompt_panel.anchor_right = 0.5
