@@ -5,7 +5,6 @@ var player_id: int = 1 :
 		player_id = val
 		update_hero_sprites()
 
-
 var agility = 1
 var strength = 1
 var intelligence = 1
@@ -19,6 +18,9 @@ const GEM_SCENE = preload("res://gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SHAMAN_TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const SHAMAN_TOTEM_COOLDOWN = 6.0
+const SPIDER_MINION_SCENE = preload("res://spider_minion.tscn")
+const NERUBIAN_SPAWN_COOLDOWN = 3.5
+const NERUBIAN_MAX_SPIDERS = 5
 
 var tex_walk: Texture2D
 var tex_attack: Texture2D
@@ -55,6 +57,11 @@ const HERO_VISUALS = {
 		"walk_scale": Vector2(0.58, 0.58),
 		"attack_scale": Vector2(0.58, 0.58),
 		"sprite_position": Vector2(0, -16)
+	},
+	"Nerubian": {
+		"walk_scale": Vector2(0.46, 0.46),
+		"attack_scale": Vector2(0.52, 0.52),
+		"sprite_position": Vector2(0, -14)
 	}
 }
 
@@ -64,6 +71,7 @@ var shaman_wheel_open = false
 var selected_shaman_totem = "dig"
 var shaman_spell_cooldown_timer = 0.0
 var magic_orb_timer = 0.0
+var nerubian_spawn_cooldown_timer = 0.0
 
 var carried_gems = []
 var nearby_gems = []
@@ -83,7 +91,6 @@ func _ready() -> void:
 	ray_left = RayCast2D.new(); ray_left.position = Vector2(0, -24); ray_left.target_position = Vector2(-34, 0); ray_left.collision_mask = 5; add_child(ray_left)
 	ray_down = RayCast2D.new(); ray_down.position = Vector2(0, -24); ray_down.target_position = Vector2(0, 34); ray_down.collision_mask = 5; add_child(ray_down)
 	ray_up = RayCast2D.new(); ray_up.position = Vector2(0, -24); ray_up.target_position = Vector2(0, -34); ray_up.collision_mask = 5; add_child(ray_up)
-	
 	update_hero_sprites()
 
 func _input(event: InputEvent) -> void:
@@ -99,7 +106,6 @@ func update_hero_sprites() -> void:
 	var h_name = Global.hero_p1
 	if player_id == 2:
 		h_name = Global.hero_p2
-		
 	if Global.hero_data.has(h_name):
 		current_hero_name = h_name
 		var data = Global.hero_data[h_name]
@@ -119,7 +125,6 @@ func _apply_sprite_visuals(is_attack: bool) -> void:
 	if has_node("Sprite2D"):
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
-
 
 func get_weight_penalty() -> float:
 	var p = float(carried_gems.size()) * 0.15
@@ -157,21 +162,18 @@ func upgrade_intelligence() -> void:
 	intelligence += 1
 
 func take_damage(amount: int) -> void:
-	if is_dead or invulnerability_timer > 0.0: return
-	
-	invulnerability_timer = 1.0 # 1 second of invulnerability
+	if is_dead or invulnerability_timer > 0.0:
+		return
+	invulnerability_timer = 1.0
 	health -= amount
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):
 		hud.update_player_health(health, max_health)
-	
-	# Flash red
 	if has_node("Sprite2D"):
 		var sprite = $Sprite2D
 		var tween = create_tween()
 		sprite.modulate = Color(1, 0, 0, 1)
 		tween.tween_property(sprite, "modulate", Color(1, 1, 1, 1), 0.2)
-	
 	if health <= 0:
 		die()
 
@@ -179,27 +181,22 @@ func die() -> void:
 	is_dead = true
 	death_count += 1
 	health = 0
-	
 	for gem in carried_gems:
 		if is_instance_valid(gem) and gem.has_method("untether"):
 			gem.untether()
 	carried_gems.clear()
-	
 	$Sprite2D.visible = false
 	set_collision_layer_value(1, false)
 	set_collision_mask_value(1, false)
-	
 	respawn_timer = min(20.0, 3.0 + (death_count - 1) * 3.0)
 
 func respawn() -> void:
 	is_dead = false
 	health = max_health
 	global_position = get_parent().get_node("Base").global_position
-	
 	$Sprite2D.visible = true
 	set_collision_layer_value(1, true)
 	set_collision_mask_value(1, true)
-	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):
 		hud.update_player_health(health, max_health)
@@ -207,15 +204,19 @@ func respawn() -> void:
 var can_move = true
 
 func _physics_process(delta: float) -> void:
-
 	if shaman_spell_cooldown_timer > 0.0:
 		shaman_spell_cooldown_timer -= delta
 	if magic_orb_timer > 0.0:
 		magic_orb_timer -= delta
+	if nerubian_spawn_cooldown_timer > 0.0:
+		nerubian_spawn_cooldown_timer -= delta
 	_update_shaman_totem_hud()
 	
 	if Input.is_action_just_pressed("p%d_interact" % player_id):
-		_try_open_shaman_totem_wheel()
+		if current_hero_name == "Nerubian":
+			_try_spawn_spider_minion()
+		else:
+			_try_open_shaman_totem_wheel()
 	elif shaman_wheel_open and Input.is_action_just_released("p%d_interact" % player_id):
 		_cast_selected_shaman_totem()
 
@@ -240,15 +241,13 @@ func _physics_process(delta: float) -> void:
 				gem.untether()
 	if invulnerability_timer > 0.0:
 		invulnerability_timer -= delta
-		
 	if stomp_cooldown_timer > 0.0:
 		stomp_cooldown_timer -= delta
-		
+	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_stomp_cooldown"):
 		var max_cooldown = max(1.0, 5.0 - stomp_level * 0.5)
 		hud.update_stomp_cooldown(stomp_level, stomp_cooldown_timer, max_cooldown)
-		
 	if Input.is_action_just_pressed("p%d_stomp" % player_id) and stomp_level > 0 and stomp_cooldown_timer <= 0.0:
 		perform_stomp()
 
@@ -258,7 +257,6 @@ func _physics_process(delta: float) -> void:
 		hud = get_parent().get_node_or_null("HUD")
 		if hud and hud.has_method("update_respawn_timer"):
 			hud.update_respawn_timer(respawn_timer)
-		
 		if respawn_timer <= 0:
 			respawn()
 		return
@@ -271,7 +269,6 @@ func _physics_process(delta: float) -> void:
 
 	var penalty = get_weight_penalty()
 	var current_speed = (base_speed + (agility - 1) * 20.0) * (1.0 - penalty)
-
 	var direction = Vector2.ZERO
 	if can_move:
 		direction.x = Input.get_axis("p%d_left" % player_id, "p%d_right" % player_id)
@@ -280,34 +277,9 @@ func _physics_process(delta: float) -> void:
 	if direction.length() > 0:
 		direction = direction.normalized()
 		velocity = direction * current_speed
-		
-		# Animation logic
-		var angle = direction.angle()
-		var PI_8 = PI / 8.0
-		if angle > -PI_8 and angle <= PI_8:
-			current_anim_row = 6 # Right
-		elif angle > PI_8 and angle <= 3*PI_8:
-			current_anim_row = 7 # Down-Right
-		elif angle > 3*PI_8 and angle <= 5*PI_8:
-			current_anim_row = 0 # Down
-		elif angle > 5*PI_8 and angle <= 7*PI_8:
-			current_anim_row = 1 # Down-Left
-		elif angle > 7*PI_8 or angle <= -7*PI_8:
-			current_anim_row = 2 # Left
-		elif angle > -7*PI_8 and angle <= -5*PI_8:
-			current_anim_row = 3 # Up-Left
-		elif angle > -5*PI_8 and angle <= -3*PI_8:
-			current_anim_row = 4 # Up
-		elif angle > -3*PI_8 and angle <= -PI_8:
-			current_anim_row = 5 # Up-Right
-			
-		$Sprite2D.flip_h = false
-		walk_timer += delta * 12.0
-		$Sprite2D.frame = current_anim_row * 8 + (int(walk_timer) % 8)
+		_update_directional_animation(direction, delta)
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, current_speed)
-		
-		# Idle frame
 		walk_timer = 0.0
 		$Sprite2D.frame = current_anim_row * 8
 
@@ -329,7 +301,7 @@ func _physics_process(delta: float) -> void:
 		var p_center = global_position + Vector2(0, -24)
 		var e_center = enemy_hit.global_position + Vector2(0, 8)
 		if p_center.distance_to(e_center) < 42.0:
-			velocity = Vector2.ZERO # Stop moving into the enemy to prevent jitter
+			velocity = Vector2.ZERO
 
 	move_and_slide()
 	
@@ -338,7 +310,6 @@ func _physics_process(delta: float) -> void:
 		if currently_attacking_enemy != enemy_hit:
 			currently_attacking_enemy = enemy_hit
 			attack_timer = 0.0
-		
 		attack_timer += delta
 		var attack_interval = base_dig_time * pow(0.9, agility - 1)
 		if attack_timer >= attack_interval:
@@ -364,7 +335,34 @@ func _physics_process(delta: float) -> void:
 			$Sprite2D.texture = tex_walk
 			_apply_sprite_visuals(false)
 
+func _update_directional_animation(direction: Vector2, delta: float) -> void:
+	var angle = direction.angle()
+	var PI_8 = PI / 8.0
+	if angle > -PI_8 and angle <= PI_8:
+		current_anim_row = 6
+	elif angle > PI_8 and angle <= 3 * PI_8:
+		current_anim_row = 7
+	elif angle > 3 * PI_8 and angle <= 5 * PI_8:
+		current_anim_row = 0
+	elif angle > 5 * PI_8 and angle <= 7 * PI_8:
+		current_anim_row = 1
+	elif angle > 7 * PI_8 or angle <= -7 * PI_8:
+		current_anim_row = 2
+	elif angle > -7 * PI_8 and angle <= -5 * PI_8:
+		current_anim_row = 3
+	elif angle > -5 * PI_8 and angle <= -3 * PI_8:
+		current_anim_row = 4
+	elif angle > -3 * PI_8 and angle <= -PI_8:
+		current_anim_row = 5
+	$Sprite2D.flip_h = false
+	walk_timer += delta * 12.0
+	$Sprite2D.frame = current_anim_row * 8 + (int(walk_timer) % 8)
+
 func handle_digging(delta: float) -> void:
+	if current_hero_name == "Nerubian":
+		_stop_digging()
+		return
+	
 	var input_dir = Vector2.ZERO
 	if Input.is_action_pressed("p%d_right" % player_id): input_dir.x += 1
 	elif Input.is_action_pressed("p%d_left" % player_id): input_dir.x -= 1
@@ -372,8 +370,6 @@ func handle_digging(delta: float) -> void:
 	elif Input.is_action_pressed("p%d_up" % player_id): input_dir.y -= 1
 	
 	var active_ray: RayCast2D = null
-	
-	# Only dig if we are pressing against a wall (velocity is low due to collision)
 	if velocity.length() < 20.0:
 		if input_dir.x > 0:
 			active_ray = ray_right
@@ -383,53 +379,42 @@ func handle_digging(delta: float) -> void:
 			active_ray = ray_down
 		elif input_dir.y < 0:
 			active_ray = ray_up
-			
+	
 	if active_ray and active_ray.is_colliding():
 		var collider = active_ray.get_collider()
-		
 		if collider == tile_map:
 			var point = active_ray.get_collision_point()
-			# Move point slightly into the tile to get correct cell
 			point += active_ray.target_position.normalized() * 5.0
 			var cell = tile_map.local_to_map(tile_map.to_local(point))
-			
 			if tile_map.get_cell_source_id(cell) != -1:
-				# Prevent digging the top 2 layers to force a single entrance funnel, and prevent digging above the surface
 				if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
 					_stop_digging()
 					return
-					
 				if currently_digging_cell == cell:
 					dig_timer += delta
-					
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					var current_target_dig_time = calculated_dig_time
 					var block_id = tile_map.get_cell_source_id(cell)
 					if block_id == 2: current_target_dig_time = calculated_dig_time * 2.0
 					elif block_id == 3: current_target_dig_time = calculated_dig_time * 4.0
-					
 					var damage_progress = dig_timer / current_target_dig_time
 					var source_id = 7 if damage_progress < 0.66 else 8
 					damage_layer.set_cell(cell, source_id, Vector2i(0, 0))
-					
 					var below_cell = Vector2i(cell.x, cell.y + 1)
 					if front_layer.get_cell_source_id(below_cell) != -1:
 						var front_source_id = 13 if damage_progress < 0.66 else 14
 						front_damage_layer.set_cell(below_cell, front_source_id, Vector2i(0, 0))
-					
 					if dig_timer >= current_target_dig_time:
 						tile_map.erase_cell(cell)
 						damage_layer.erase_cell(cell)
 						front_damage_layer.erase_cell(below_cell)
 						var cell_had_gem = get_parent().has_gem(cell)
 						get_parent().on_cell_dug(cell)
-						
 						var gems_to_spawn = 1 if cell_had_gem else 0
 						if _roll_shaman_gem_bonus():
 							gems_to_spawn += 1
 						_spawn_dug_gems(cell, gems_to_spawn)
-							
 						currently_digging_cell = null
 						dig_timer = 0.0
 				else:
@@ -452,6 +437,33 @@ func _stop_digging() -> void:
 		currently_digging_cell = null
 		dig_timer = 0.0
 
+func _try_spawn_spider_minion() -> void:
+	if current_hero_name != "Nerubian" or is_dead:
+		return
+	var base = get_parent().get_node_or_null("Base")
+	if base and base.get("player_in_zone") == true:
+		return
+	var hud = get_parent().get_node_or_null("HUD")
+	if nerubian_spawn_cooldown_timer > 0.0:
+		if hud and hud.has_method("show_notice"):
+			hud.show_notice("Spider brood ready in %.1fs" % nerubian_spawn_cooldown_timer, 0.8)
+		return
+	var owned_spiders = 0
+	for spider in get_tree().get_nodes_in_group("nerubian_spiders"):
+		if is_instance_valid(spider) and spider.get("owner_player") == self:
+			owned_spiders += 1
+	if owned_spiders >= NERUBIAN_MAX_SPIDERS:
+		if hud and hud.has_method("show_notice"):
+			hud.show_notice("Spider brood limit reached", 0.8)
+		return
+	var spider = SPIDER_MINION_SCENE.instantiate()
+	spider.owner_player = self
+	spider.global_position = global_position + Vector2(randf_range(-18, 18), randf_range(-10, 10))
+	get_parent().add_child(spider)
+	nerubian_spawn_cooldown_timer = max(1.25, NERUBIAN_SPAWN_COOLDOWN - (intelligence - 1) * 0.2)
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("Spawned Brood Spider")
+
 func _try_open_shaman_totem_wheel() -> void:
 	if current_hero_name != "Shaman" or is_dead or shaman_spell_cooldown_timer > 0.0:
 		if current_hero_name == "Shaman" and shaman_spell_cooldown_timer > 0.0:
@@ -462,7 +474,6 @@ func _try_open_shaman_totem_wheel() -> void:
 	var base = get_parent().get_node_or_null("Base")
 	if base and base.get("player_in_zone") == true:
 		return
-	
 	shaman_wheel_open = true
 	selected_shaman_totem = "dig"
 	can_move = false
@@ -476,7 +487,6 @@ func _cast_selected_shaman_totem() -> void:
 	_hide_shaman_totem_wheel()
 	if shaman_spell_cooldown_timer > 0.0:
 		return
-	
 	var totem = SHAMAN_TOTEM_SCENE.instantiate()
 	totem.totem_type = selected_shaman_totem
 	if selected_shaman_totem == "dig":
@@ -484,7 +494,6 @@ func _cast_selected_shaman_totem() -> void:
 	totem.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(totem)
 	shaman_spell_cooldown_timer = SHAMAN_TOTEM_COOLDOWN
-	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("show_notice"):
 		hud.show_notice("Summoned %s" % totem.get_display_name())
@@ -531,7 +540,6 @@ func _update_shaman_totem_hud() -> void:
 	var statuses = {}
 	for type in SHAMAN_TOTEM_TYPES:
 		statuses[type] = { "active": 0.0, "cooldown": max(shaman_spell_cooldown_timer, 0.0), "ratio": 0.0 }
-	
 	for totem in get_tree().get_nodes_in_group("shaman_totems"):
 		if not is_instance_valid(totem):
 			continue
@@ -542,7 +550,6 @@ func _update_shaman_totem_hud() -> void:
 		if lifetime > statuses[type]["active"]:
 			statuses[type]["active"] = lifetime
 			statuses[type]["ratio"] = totem.get_lifetime_ratio() if totem.has_method("get_lifetime_ratio") else 0.0
-	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_totem_status"):
 		hud.update_totem_status(statuses)
@@ -576,14 +583,12 @@ func _maybe_shoot_magic_orb(target_pos: Vector2) -> void:
 	if magic_orb_timer > 0.0:
 		return
 	magic_orb_timer = 0.16
-	
 	var orb = Sprite2D.new()
 	orb.z_index = 7
 	orb.texture = _make_magic_orb_texture()
 	orb.scale = Vector2(0.32, 0.32)
 	orb.global_position = global_position + Vector2(0, -24)
 	get_parent().add_child(orb)
-	
 	var trail = CPUParticles2D.new()
 	trail.amount = 16
 	trail.lifetime = 0.25
@@ -599,7 +604,6 @@ func _maybe_shoot_magic_orb(target_pos: Vector2) -> void:
 	trail.scale_amount_max = 4.0
 	trail.color = Color(0.2, 0.65, 1.0, 0.8)
 	orb.add_child(trail)
-	
 	var tween = create_tween()
 	tween.tween_property(orb, "global_position", target_pos, 0.14)
 	tween.parallel().tween_property(orb, "scale", Vector2(0.08, 0.08), 0.14)
@@ -634,15 +638,12 @@ func level_up() -> void:
 	xp -= max_xp
 	level += 1
 	max_xp = int(max_xp * 1.5)
-	
 	health = max_health
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):
 		hud.update_player_health(health, max_health)
-	
 	if hud and hud.has_method("update_xp"):
 		hud.update_xp(level, xp, max_xp)
-	
 	get_tree().paused = true
 	var menu_scene = preload("res://level_up_menu.tscn")
 	var menu = menu_scene.instantiate()
@@ -658,7 +659,6 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 		health += 10
 	elif upgrade_type == "damage":
 		strength += 1
-	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud:
 		if hud.has_method("update_player_health"):
@@ -670,7 +670,6 @@ func perform_stomp() -> void:
 	stomp_cooldown_timer = max(1.0, 5.0 - stomp_level * 0.5)
 	var radius = 100.0 + stomp_level * 20.0
 	var stomp_damage = 20 * stomp_level * strength
-	
 	var sprite = $Sprite2D
 	if sprite:
 		var tween = create_tween()
@@ -678,8 +677,6 @@ func perform_stomp() -> void:
 		sprite.modulate = Color(1, 1, 0)
 		tween.tween_property(sprite, "scale", current_sprite_scale, 0.2)
 		tween.parallel().tween_property(sprite, "modulate", Color(1, 1, 1), 0.2)
-		
-	# Stomp particle effect
 	var burst = CPUParticles2D.new()
 	burst.emitting = false
 	burst.one_shot = true
@@ -696,15 +693,13 @@ func perform_stomp() -> void:
 	burst.damping_max = 400.0
 	burst.scale_amount_min = 3.0
 	burst.scale_amount_max = 7.0
-	burst.color = Color(0.6, 0.5, 0.4, 0.9) # Dust/Dirt color
+	burst.color = Color(0.6, 0.5, 0.4, 0.9)
 	burst.global_position = global_position
 	burst.z_index = 0
 	get_parent().call_deferred("add_child", burst)
 	burst.call_deferred("set_emitting", true)
-	
 	var t = get_tree().create_timer(1.0)
 	t.timeout.connect(burst.queue_free)
-	
 	var enemies = get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:
 		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) <= radius:
