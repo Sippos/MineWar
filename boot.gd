@@ -14,8 +14,8 @@ func _layout_for_screen() -> void:
 	var compact = size.x < 700.0 or size.y < 520.0
 	$Center.offset_left = 0.0
 	$Center.offset_top = 0.0
-	$Center.offset_right = size.x
-	$Center.offset_bottom = size.y
+	$Center.offset_right = 0.0
+	$Center.offset_bottom = 0.0
 	$Center/VBox.add_theme_constant_override("separation", 10 if compact else 16)
 	$Center/VBox/Title.add_theme_font_size_override("font_size", 38 if compact else 56)
 	$Center/VBox/Hint.add_theme_font_size_override("font_size", 16 if compact else 22)
