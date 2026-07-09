@@ -4,14 +4,28 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/**'
+      - '.deploy-trigger'
+      - 'README.md'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: itch-deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Export Godot Game (Web)
         uses: firebelley/godot-export@v5.2.1
