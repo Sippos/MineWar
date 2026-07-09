@@ -18,6 +18,7 @@ const JUMP_VELOCITY = -400.0
 const GEM_SCENE = preload("res://gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SHAMAN_TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
+const SHAMAN_TOTEM_COOLDOWN = 6.0
 
 var tex_walk: Texture2D
 var tex_attack: Texture2D
@@ -59,7 +60,8 @@ const HERO_VISUALS = {
 
 var attack_timer = 0.0
 var currently_attacking_enemy = null
-var shaman_totem_index = 0
+var shaman_wheel_open = false
+var selected_shaman_totem = "dig"
 var shaman_spell_cooldown_timer = 0.0
 var magic_orb_timer = 0.0
 
@@ -83,6 +85,15 @@ func _ready() -> void:
 	ray_up = RayCast2D.new(); ray_up.position = Vector2(0, -24); ray_up.target_position = Vector2(0, -34); ray_up.collision_mask = 5; add_child(ray_up)
 	
 	update_hero_sprites()
+
+func _input(event: InputEvent) -> void:
+	if not shaman_wheel_open:
+		return
+	if event is InputEventMouseMotion:
+		_update_shaman_wheel_from_mouse()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_update_shaman_wheel_from_mouse()
+		_cast_selected_shaman_totem()
 
 func update_hero_sprites() -> void:
 	var h_name = Global.hero_p1
@@ -201,9 +212,12 @@ func _physics_process(delta: float) -> void:
 		shaman_spell_cooldown_timer -= delta
 	if magic_orb_timer > 0.0:
 		magic_orb_timer -= delta
+	_update_shaman_totem_hud()
 	
 	if Input.is_action_just_pressed("p%d_interact" % player_id):
-		_try_cast_shaman_totem()
+		_try_open_shaman_totem_wheel()
+	elif shaman_wheel_open and Input.is_action_just_released("p%d_interact" % player_id):
+		_cast_selected_shaman_totem()
 
 	if Input.is_action_just_pressed("p%d_grab" % player_id):
 		for gem in nearby_gems:
@@ -239,6 +253,7 @@ func _physics_process(delta: float) -> void:
 		perform_stomp()
 
 	if is_dead:
+		_hide_shaman_totem_wheel()
 		respawn_timer -= delta
 		hud = get_parent().get_node_or_null("HUD")
 		if hud and hud.has_method("update_respawn_timer"):
@@ -246,6 +261,12 @@ func _physics_process(delta: float) -> void:
 		
 		if respawn_timer <= 0:
 			respawn()
+		return
+
+	if shaman_wheel_open:
+		_update_shaman_wheel_from_stick()
+		velocity = Vector2.ZERO
+		_stop_digging()
 		return
 
 	var penalty = get_weight_penalty()
@@ -431,23 +452,100 @@ func _stop_digging() -> void:
 		currently_digging_cell = null
 		dig_timer = 0.0
 
-func _try_cast_shaman_totem() -> void:
+func _try_open_shaman_totem_wheel() -> void:
 	if current_hero_name != "Shaman" or is_dead or shaman_spell_cooldown_timer > 0.0:
+		if current_hero_name == "Shaman" and shaman_spell_cooldown_timer > 0.0:
+			var hud = get_parent().get_node_or_null("HUD")
+			if hud and hud.has_method("show_notice"):
+				hud.show_notice("Totems ready in %.1fs" % shaman_spell_cooldown_timer, 0.8)
 		return
 	var base = get_parent().get_node_or_null("Base")
 	if base and base.get("player_in_zone") == true:
 		return
 	
+	shaman_wheel_open = true
+	selected_shaman_totem = "dig"
+	can_move = false
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("show_totem_wheel"):
+		hud.show_totem_wheel(selected_shaman_totem)
+
+func _cast_selected_shaman_totem() -> void:
+	if not shaman_wheel_open:
+		return
+	_hide_shaman_totem_wheel()
+	if shaman_spell_cooldown_timer > 0.0:
+		return
+	
 	var totem = SHAMAN_TOTEM_SCENE.instantiate()
-	totem.totem_type = SHAMAN_TOTEM_TYPES[shaman_totem_index]
-	shaman_totem_index = (shaman_totem_index + 1) % SHAMAN_TOTEM_TYPES.size()
+	totem.totem_type = selected_shaman_totem
+	if selected_shaman_totem == "dig":
+		totem.follow_target = self
 	totem.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(totem)
-	shaman_spell_cooldown_timer = 6.0
+	shaman_spell_cooldown_timer = SHAMAN_TOTEM_COOLDOWN
 	
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("show_notice"):
 		hud.show_notice("Summoned %s" % totem.get_display_name())
+
+func _hide_shaman_totem_wheel() -> void:
+	if not shaman_wheel_open:
+		return
+	shaman_wheel_open = false
+	can_move = true
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("hide_totem_wheel"):
+		hud.hide_totem_wheel()
+
+func _update_shaman_wheel_from_stick() -> void:
+	var dir = Vector2(
+		Input.get_axis("p%d_left" % player_id, "p%d_right" % player_id),
+		Input.get_axis("p%d_up" % player_id, "p%d_down" % player_id)
+	)
+	if dir.length() >= 0.35:
+		_set_selected_shaman_totem(_totem_type_from_direction(dir))
+
+func _update_shaman_wheel_from_mouse() -> void:
+	var viewport_size = get_viewport().get_visible_rect().size
+	var dir = get_viewport().get_mouse_position() - viewport_size * 0.5
+	if dir.length() >= 24.0:
+		_set_selected_shaman_totem(_totem_type_from_direction(dir))
+
+func _totem_type_from_direction(dir: Vector2) -> String:
+	if abs(dir.x) > abs(dir.y):
+		return "heal" if dir.x > 0.0 else "gem"
+	return "radar" if dir.y > 0.0 else "dig"
+
+func _set_selected_shaman_totem(totem_type: String) -> void:
+	if selected_shaman_totem == totem_type:
+		return
+	selected_shaman_totem = totem_type
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("update_totem_wheel_selection"):
+		hud.update_totem_wheel_selection(selected_shaman_totem)
+
+func _update_shaman_totem_hud() -> void:
+	if current_hero_name != "Shaman":
+		return
+	var statuses = {}
+	for type in SHAMAN_TOTEM_TYPES:
+		statuses[type] = { "active": 0.0, "cooldown": max(shaman_spell_cooldown_timer, 0.0), "ratio": 0.0 }
+	
+	for totem in get_tree().get_nodes_in_group("shaman_totems"):
+		if not is_instance_valid(totem):
+			continue
+		var type = str(totem.get("totem_type"))
+		if not statuses.has(type):
+			continue
+		var lifetime = float(totem.get("lifetime"))
+		if lifetime > statuses[type]["active"]:
+			statuses[type]["active"] = lifetime
+			statuses[type]["ratio"] = totem.get_lifetime_ratio() if totem.has_method("get_lifetime_ratio") else 0.0
+	
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("update_totem_status"):
+		hud.update_totem_status(statuses)
 
 func _get_shaman_dig_time_multiplier() -> float:
 	if current_hero_name != "Shaman":

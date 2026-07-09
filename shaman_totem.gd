@@ -18,14 +18,19 @@ const TOTEM_LABELS = {
 @export var aura_radius: float = 180.0
 @export var lifetime: float = 25.0
 
+var max_lifetime := 25.0
 var heal_timer := 0.0
 var radar_timer := 0.0
 var noticed_enemies := {}
+var follow_target: Node2D = null
+var follow_offset := Vector2(0, -48)
+var float_timer := 0.0
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 func _ready() -> void:
 	add_to_group("shaman_totems")
+	max_lifetime = lifetime
 	if TOTEM_TEXTURES.has(totem_type):
 		sprite.texture = load(TOTEM_TEXTURES[totem_type])
 	_fit_sprite()
@@ -36,6 +41,9 @@ func _process(delta: float) -> void:
 	if lifetime <= 0.0:
 		queue_free()
 		return
+	
+	if totem_type == "dig":
+		_process_dig_follow(delta)
 	
 	match totem_type:
 		"heal":
@@ -48,6 +56,18 @@ func affects_player(player: Node2D) -> bool:
 
 func get_display_name() -> String:
 	return TOTEM_LABELS.get(totem_type, "Totem")
+
+func get_lifetime_ratio() -> float:
+	if max_lifetime <= 0.0:
+		return 0.0
+	return clamp(lifetime / max_lifetime, 0.0, 1.0)
+
+func _process_dig_follow(delta: float) -> void:
+	float_timer += delta
+	if is_instance_valid(follow_target):
+		var target_pos = follow_target.global_position + follow_offset
+		global_position = global_position.lerp(target_pos, min(1.0, delta * 8.0))
+	sprite.position.y = -14.0 + sin(float_timer * 5.0) * 5.0
 
 func _process_healing(delta: float) -> void:
 	heal_timer += delta

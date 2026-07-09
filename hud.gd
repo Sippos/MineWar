@@ -21,6 +21,24 @@ var stomp_container: Control
 var stomp_progress: TextureProgressBar
 var notice_label: Label
 var notice_tween: Tween
+var totem_wheel: Control
+var totem_wheel_icons := {}
+var totem_status_container: Control
+var totem_status_slots := {}
+
+const TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
+const TOTEM_LABELS = {
+	"dig": "Dig",
+	"heal": "Heal",
+	"radar": "Radar",
+	"gem": "Gem"
+}
+const TOTEM_TEXTURES = {
+	"dig": "res://Shaman_Totem_DigBuff.png",
+	"heal": "res://Shaman_Totem_Healing.png",
+	"radar": "res://Shaman_Totem_Radar.png",
+	"gem": "res://Shaman_Totem_GemBuff.png"
+}
 
 func _ready():
 	if minimap:
@@ -38,6 +56,8 @@ func _ready():
 			
 	_setup_stomp_ui()
 	_setup_notice_ui()
+	_setup_totem_wheel_ui()
+	_setup_totem_status_ui()
 
 func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
@@ -97,6 +117,123 @@ func _setup_notice_ui() -> void:
 func _process(delta):
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
+
+func _setup_totem_wheel_ui() -> void:
+	totem_wheel = Control.new()
+	totem_wheel.name = "TotemWheel"
+	totem_wheel.visible = false
+	totem_wheel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	totem_wheel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(totem_wheel)
+	
+	var dim = ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0.0, 0.0, 0.0, 0.35)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	totem_wheel.add_child(dim)
+	
+	var center = Vector2(0.5, 0.5)
+	var offsets = {
+		"dig": Vector2(0, -92),
+		"heal": Vector2(92, 0),
+		"radar": Vector2(0, 92),
+		"gem": Vector2(-92, 0)
+	}
+	
+	for type in TOTEM_TYPES:
+		var slot = PanelContainer.new()
+		slot.name = "%sSlot" % type.capitalize()
+		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.custom_minimum_size = Vector2(74, 84)
+		slot.set_anchors_preset(Control.PRESET_CENTER)
+		slot.offset_left = offsets[type].x - 37
+		slot.offset_top = offsets[type].y - 42
+		slot.offset_right = offsets[type].x + 37
+		slot.offset_bottom = offsets[type].y + 42
+		
+		var box = VBoxContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.alignment = BoxContainer.ALIGNMENT_CENTER
+		slot.add_child(box)
+		
+		var icon = TextureRect.new()
+		icon.custom_minimum_size = Vector2(48, 48)
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture = load(TOTEM_TEXTURES[type])
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(icon)
+		
+		var text = Label.new()
+		text.text = TOTEM_LABELS[type]
+		text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		text.add_theme_font_size_override("font_size", 12)
+		text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(text)
+		
+		totem_wheel.add_child(slot)
+		totem_wheel_icons[type] = slot
+
+func _setup_totem_status_ui() -> void:
+	totem_status_container = HBoxContainer.new()
+	totem_status_container.name = "TotemStatus"
+	totem_status_container.visible = false
+	totem_status_container.alignment = BoxContainer.ALIGNMENT_END
+	totem_status_container.add_theme_constant_override("separation", 6)
+	totem_status_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	totem_status_container.offset_left = -282
+	totem_status_container.offset_top = -136
+	totem_status_container.offset_right = -28
+	totem_status_container.offset_bottom = -82
+	add_child(totem_status_container)
+	
+	for type in TOTEM_TYPES:
+		var slot = Control.new()
+		slot.custom_minimum_size = Vector2(56, 54)
+		slot.visible = false
+		
+		var bg = ColorRect.new()
+		bg.name = "Background"
+		bg.color = Color(0, 0, 0, 0.55)
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		slot.add_child(bg)
+		
+		var icon = TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = load(TOTEM_TEXTURES[type])
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icon.offset_left = 7
+		icon.offset_top = 4
+		icon.offset_right = -7
+		icon.offset_bottom = -10
+		slot.add_child(icon)
+		
+		var fill = ColorRect.new()
+		fill.name = "Fill"
+		fill.color = Color(0.25, 0.75, 1.0, 0.35)
+		fill.anchor_left = 0
+		fill.anchor_right = 1
+		fill.anchor_top = 1
+		fill.anchor_bottom = 1
+		fill.offset_left = 0
+		fill.offset_right = 0
+		fill.offset_top = -4
+		fill.offset_bottom = 0
+		slot.add_child(fill)
+		
+		var label = Label.new()
+		label.name = "Timer"
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		label.add_theme_font_size_override("font_size", 11)
+		label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		slot.add_child(label)
+		
+		totem_status_container.add_child(slot)
+		totem_status_slots[type] = slot
 
 func add_gems(amount: int) -> void:
 	total_gems += amount
@@ -171,6 +308,64 @@ func show_notice(text: String, duration: float = 1.8) -> void:
 	notice_tween.tween_interval(duration)
 	notice_tween.tween_property(notice_label, "modulate", Color(1, 1, 1, 0), 0.35)
 	notice_tween.tween_callback(func(): notice_label.visible = false)
+
+func show_totem_wheel(selected_type: String) -> void:
+	if not totem_wheel:
+		return
+	totem_wheel.visible = true
+	update_totem_wheel_selection(selected_type)
+
+func update_totem_wheel_selection(selected_type: String) -> void:
+	for type in totem_wheel_icons.keys():
+		var slot = totem_wheel_icons[type]
+		if type == selected_type:
+			slot.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			slot.scale = Vector2(1.16, 1.16)
+		else:
+			slot.modulate = Color(0.55, 0.65, 0.75, 0.9)
+			slot.scale = Vector2.ONE
+
+func hide_totem_wheel() -> void:
+	if totem_wheel:
+		totem_wheel.visible = false
+
+func update_totem_status(statuses: Dictionary) -> void:
+	var any_visible = false
+	for type in TOTEM_TYPES:
+		var slot = totem_status_slots.get(type)
+		if not slot:
+			continue
+		var data = statuses.get(type, {})
+		var active = float(data.get("active", 0.0))
+		var cooldown = float(data.get("cooldown", 0.0))
+		var ratio = float(data.get("ratio", 0.0))
+		var visible = active > 0.0 or cooldown > 0.0
+		slot.visible = visible
+		if not visible:
+			continue
+		
+		any_visible = true
+		var icon = slot.get_node_or_null("Icon")
+		var fill = slot.get_node_or_null("Fill")
+		var label = slot.get_node_or_null("Timer")
+		if active > 0.0:
+			slot.modulate = Color(1, 1, 1, 1)
+			if label:
+				label.text = "%d" % ceil(active)
+			if fill:
+				fill.color = Color(0.2, 0.8, 1.0, 0.45)
+				fill.anchor_top = clamp(1.0 - ratio, 0.0, 1.0)
+		else:
+			slot.modulate = Color(0.55, 0.55, 0.55, 0.95)
+			if label:
+				label.text = "%d" % ceil(cooldown)
+			if fill:
+				fill.color = Color(0.1, 0.1, 0.1, 0.55)
+				fill.anchor_top = 0.0
+		if icon:
+			icon.modulate = Color.WHITE
+	
+	totem_status_container.visible = any_visible
 
 func unlock_minimap() -> void:
 	minimap.visible = true
