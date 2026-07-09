@@ -1,6 +1,7 @@
 extends RigidBody2D
 
 const RAIL_SOURCE_ID = 15
+const CARRIED_OFFSET = Vector2(0, 30)
 
 var rail_path: Array[Vector2i] = []
 var path_index = 0
@@ -30,13 +31,16 @@ func tether_to(player) -> void:
 	if placed_on_rail:
 		placed_on_rail = false
 		rail_path.clear()
-		freeze = false
 	tethered_to = player
 	if player is PhysicsBody2D:
 		add_collision_exception_with(player)
+	freeze = true
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	global_position = player.global_position + CARRIED_OFFSET
 	var sprite = get_node_or_null("Sprite2D")
 	if sprite:
-		sprite.position = Vector2(0, -24)
+		sprite.position = Vector2.ZERO
 
 func untether() -> void:
 	if tethered_to != null and tethered_to is PhysicsBody2D:
@@ -53,13 +57,9 @@ func _physics_process(delta: float) -> void:
 	if placed_on_rail:
 		return
 	if tethered_to != null and is_instance_valid(tethered_to):
-		var target_pos = tethered_to.global_position
-		var dir = (target_pos - global_position).normalized()
-		var dist = global_position.distance_to(target_pos)
-		if dist > 55.0:
-			apply_central_force(dir * minf(dist * 30.0, 5000.0))
-		elif dist < 40.0:
-			apply_central_force(-dir * (40.0 - dist) * 100.0)
+		linear_velocity = Vector2.ZERO
+		angular_velocity = 0.0
+		global_position = tethered_to.global_position + CARRIED_OFFSET
 
 func _process(delta: float) -> void:
 	if not placed_on_rail:
@@ -75,8 +75,10 @@ func _try_place_on_rail() -> bool:
 	if rail_layer == null or block_layer == null:
 		return false
 	var cell = rail_layer.local_to_map(rail_layer.to_local(global_position))
-	if not _is_open_rail_cell(cell):
+	if not _is_open_cell(cell):
 		return false
+	if not _is_open_rail_cell(cell):
+		_build_trail_to_base(cell)
 	if not _rebuild_path(cell):
 		return false
 	placed_on_rail = true
@@ -85,6 +87,10 @@ func _try_place_on_rail() -> bool:
 	angular_velocity = 0.0
 	global_position = rail_layer.to_global(rail_layer.map_to_local(rail_path[0]))
 	return true
+
+func refresh_rail_path() -> void:
+	if placed_on_rail:
+		_rebuild_path()
 
 func _update_world_layers() -> void:
 	var world = get_parent()
@@ -97,6 +103,77 @@ func _is_open_rail_cell(cell: Vector2i) -> bool:
 	if rail_layer == null or block_layer == null:
 		return false
 	return rail_layer.get_cell_source_id(cell) == RAIL_SOURCE_ID and block_layer.get_cell_source_id(cell) == -1
+
+func _is_open_cell(cell: Vector2i) -> bool:
+	return block_layer != null and block_layer.get_cell_source_id(cell) == -1
+
+func _build_trail_to_base(start_cell: Vector2i) -> void:
+	var world = get_parent()
+	if world == null:
+		return
+	var base = world.get_node_or_null("Base")
+	if base == null:
+		return
+	var base_cell = rail_layer.local_to_map(rail_layer.to_local(base.global_position))
+	var path = _find_open_path(start_cell, base_cell)
+	if path.is_empty():
+		return
+	var max_length = 16
+	if "minecart_trail_length" in world:
+		max_length = world.minecart_trail_length
+	var limit = mini(path.size(), max_length)
+	for i in range(limit):
+		var cell = path[i]
+		if _is_open_cell(cell):
+			rail_layer.set_cell(cell, RAIL_SOURCE_ID, Vector2i(0, 0))
+	for i in range(limit):
+		_update_rail_and_neighbors(path[i])
+
+func _find_open_path(start_cell: Vector2i, target_cell: Vector2i) -> Array[Vector2i]:
+	if not _is_open_cell(start_cell):
+		return []
+	var queue: Array[Vector2i] = [start_cell]
+	var visited = {start_cell: null}
+	var read_index = 0
+	var best_cell = start_cell
+	var best_dist = _cell_distance(start_cell, target_cell)
+	var max_search = 1200
+	while read_index < queue.size() and read_index < max_search:
+		var curr = queue[read_index]
+		read_index += 1
+		var curr_dist = _cell_distance(curr, target_cell)
+		if curr_dist < best_dist:
+			best_dist = curr_dist
+			best_cell = curr
+		if curr == target_cell:
+			best_cell = curr
+			break
+		for neighbor in _rail_neighbors(curr):
+			if visited.has(neighbor) or not _is_open_cell(neighbor):
+				continue
+			if abs(neighbor.x - start_cell.x) > 40 or abs(neighbor.y - start_cell.y) > 60:
+				continue
+			visited[neighbor] = curr
+			queue.append(neighbor)
+
+	var path: Array[Vector2i] = []
+	var cell = best_cell
+	while cell != null:
+		path.append(cell)
+		cell = visited[cell]
+	path.reverse()
+	return path
+
+func _cell_distance(a: Vector2i, b: Vector2i) -> int:
+	return abs(a.x - b.x) + abs(a.y - b.y)
+
+func _update_rail_and_neighbors(cell: Vector2i) -> void:
+	var world = get_parent()
+	if world == null or not world.has_method("update_rail_autotile"):
+		return
+	world.update_rail_autotile(cell)
+	for neighbor in _rail_neighbors(cell):
+		world.update_rail_autotile(neighbor)
 
 func _has_valid_path() -> bool:
 	if rail_path.is_empty():

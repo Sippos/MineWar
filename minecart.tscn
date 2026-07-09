@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://character_sprites/minecart_spritesheet_25d.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_cart"]
-size = Vector2(22, 18)
+size = Vector2(18, 14)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
 radius = 34.0
@@ -17,6 +17,7 @@ gravity_scale = 0.0
 linear_damp = 3.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.55, 0.55)
 texture = ExtResource("2_tex")
 hframes = 8
 vframes = 8

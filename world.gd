@@ -9,6 +9,8 @@ extends Node2D
 @export var is_vs_mode: bool = false
 var income: int = 1
 var income_timer: float = 3.0
+var minecart_trail_length: int = 16
+const MINECART_TRAIL_UPGRADE_LENGTH = 8
 
 
 @onready var bg_layer: TileMapLayer = $BackgroundLayer
@@ -461,3 +463,9 @@ func update_rail_autotile(cell: Vector2i) -> void:
 	var atlas_coords = Vector2i(mask % 4, int(mask / 4))
 		
 	rail_layer.set_cell(cell, 15, atlas_coords)
+
+func extend_minecart_trail() -> void:
+	minecart_trail_length += MINECART_TRAIL_UPGRADE_LENGTH
+	for cart in get_tree().get_nodes_in_group("minecarts"):
+		if is_instance_valid(cart) and cart.has_method("refresh_rail_path"):
+			cart.refresh_rail_path()
