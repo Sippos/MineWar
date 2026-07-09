@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: itch-deploy-main
+  cancel-in-progress: true
+
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
