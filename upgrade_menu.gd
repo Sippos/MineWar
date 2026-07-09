@@ -5,6 +5,10 @@ signal send_enemy(type: int)
 @onready var player = get_parent().get_node("Player")
 @onready var panel = $Panel
 
+const MENU_ART_CENTER := Vector2(580.0, 323.0)
+const MENU_ART_SIZE := Vector2(992.0, 624.0)
+const VS_MENU_MARGIN := 16.0
+
 var healthbar_unlocked = false
 var base_health_unlocked = false
 var stats_unlocked = false
@@ -31,9 +35,8 @@ func update_button_texts():
 	var int_cost = get_upgrade_cost(player.intelligence)
 	$Panel/UpgradeIntelligence.text = "%d Gems" % int_cost
 	
-	var base = get_parent().get_node_or_null("Base")
-	var spikes_level = base.spikes_level if base else 0
-	$Panel/UpgradeSpikes.text = "Upgrade Spikes (Lvl %d) - 20 Gold" % spikes_level
+	$Panel/UpgradeSpikes.visible = false
+	$Panel/UpgradeSpikes.disabled = true
 	
 	var hero_name = _get_menu_hero()
 	var is_dwarf = (hero_name == "Dwarf")
@@ -57,6 +60,18 @@ func _get_menu_hero() -> String:
 	if p_id == 2:
 		return Global.hero_p2
 	return Global.hero_p1
+
+func _layout_vs_upgrade_panel() -> void:
+	var view_size = get_viewport().get_visible_rect().size
+	var fit_scale = min(
+		(view_size.x - VS_MENU_MARGIN * 2.0) / MENU_ART_SIZE.x,
+		(view_size.y - VS_MENU_MARGIN * 2.0) / MENU_ART_SIZE.y
+	)
+	fit_scale = clamp(fit_scale, 0.42, 0.60)
+	var menu_top_left = MENU_ART_CENTER - MENU_ART_SIZE * 0.5
+	var desired_top_left = (view_size - MENU_ART_SIZE * fit_scale) * 0.5
+	panel.scale = Vector2(fit_scale, fit_scale)
+	panel.position = desired_top_left - menu_top_left * fit_scale
 
 func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String) -> Button:
 	var btn = Button.new()
@@ -233,8 +248,7 @@ func _create_vs_panels():
 
 func _on_vs_upgrades_pressed():
 	vs_prompt_panel.visible = false
-	panel.scale = Vector2(0.6, 0.6)
-	panel.pivot_offset = Vector2(400, 280)
+	_layout_vs_upgrade_panel()
 	panel.visible = true
 
 func _on_vs_send_pressed():
@@ -255,6 +269,8 @@ func show_menu():
 		panel.visible = false
 		vs_prompt_panel.get_child(0).get_child(1).call_deferred("grab_focus")
 	else:
+		panel.position = Vector2.ZERO
+		panel.scale = Vector2.ONE
 		panel.visible = true
 		$Panel/Close.call_deferred("grab_focus")
 

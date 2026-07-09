@@ -363,11 +363,13 @@ text = "Health"
 horizontal_alignment = 1
 
 [node name="UpgradeSpikes" type="Button" parent="Panel" unique_id=710036680]
+visible = false
 layout_mode = 0
 offset_left = 229.0
 offset_top = 105.0
 offset_right = 402.0
 offset_bottom = 160.0
+disabled = true
 text = "Upgrade Spikes (Lvl 0) - 20 Gold"
 
 [node name="SwapHero" type="Button" parent="Panel" unique_id=1700111271]
