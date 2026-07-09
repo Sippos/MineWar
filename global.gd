@@ -3,7 +3,9 @@ extends Node
 var rtc_peer: WebRTCMultiplayerPeer
 var rtc_conn: WebRTCPeerConnection
 
-const DEFAULT_UNLOCKED_HEROES = ["Dwarf", "Nerubian"]
+const DEFAULT_UNLOCKED_HEROES = ["Dwarf"]
+const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
+const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Mech"]
 
 func _ready() -> void:
 	# Global UI controls for menus
@@ -27,9 +29,10 @@ func _ready() -> void:
 	var start_event = InputEventJoypadButton.new(); start_event.button_index = JOY_BUTTON_START; InputMap.action_add_event("pause", start_event)
 	
 	load_game()
-	_ensure_default_heroes_unlocked()
+	_sanitize_unlock_progress()
 
 var unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
+var first_level_beaten = false
 var current_hero = "Dwarf"
 var hero_p1 = "Dwarf"
 var hero_p2 = "Dwarf"
@@ -64,21 +67,45 @@ var monster_data = {
 	"Trogg": "res://character_sprites/trogg_walk_spritesheet.png"
 }
 
+func is_hero_unlocked(hero_name: String) -> bool:
+	return unlocked_heroes.has(hero_name)
+
+func is_hero_playable_in_single_player(hero_name: String) -> bool:
+	return is_hero_unlocked(hero_name) or SINGLE_PLAYER_PLAYTEST_HEROES.has(hero_name)
+
 func unlock_hero(hero_name: String) -> void:
+	if not hero_data.has(hero_name):
+		return
 	if not unlocked_heroes.has(hero_name):
 		unlocked_heroes.append(hero_name)
 		print("Unlocked Hero: ", hero_name)
 		save_game()
 
+func mark_first_level_beaten() -> void:
+	first_level_beaten = true
+	var changed = false
+	for hero_name in FIRST_LEVEL_REWARD_HEROES:
+		if hero_data.has(hero_name) and not unlocked_heroes.has(hero_name):
+			unlocked_heroes.append(hero_name)
+			changed = true
+	if changed:
+		print("First level beaten: unlocked extra heroes")
+	save_game()
+
 func get_next_hero() -> String:
 	var index = unlocked_heroes.find(current_hero)
+	if index == -1:
+		return DEFAULT_UNLOCKED_HEROES[0]
 	var next_index = (index + 1) % unlocked_heroes.size()
 	return unlocked_heroes[next_index]
 
 func save_game() -> void:
 	var file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
 	if file:
-		file.store_var(unlocked_heroes)
+		file.store_var({
+			"unlocked_heroes": unlocked_heroes,
+			"first_level_beaten": first_level_beaten
+		})
 		file.close()
 
 func load_game() -> void:
@@ -88,15 +115,36 @@ func load_game() -> void:
 			var loaded = file.get_var()
 			if typeof(loaded) == TYPE_ARRAY:
 				unlocked_heroes = loaded
+			elif typeof(loaded) == TYPE_DICTIONARY:
+				if loaded.has("unlocked_heroes") and typeof(loaded["unlocked_heroes"]) == TYPE_ARRAY:
+					unlocked_heroes = loaded["unlocked_heroes"]
+				if loaded.has("first_level_beaten"):
+					first_level_beaten = bool(loaded["first_level_beaten"])
 			file.close()
 
-func _ensure_default_heroes_unlocked() -> void:
+func _sanitize_unlock_progress() -> void:
+	var valid_unlocked = []
 	var changed = false
+	
 	for hero_name in DEFAULT_UNLOCKED_HEROES:
-		if not unlocked_heroes.has(hero_name):
-			unlocked_heroes.append(hero_name)
+		if hero_data.has(hero_name) and not valid_unlocked.has(hero_name):
+			valid_unlocked.append(hero_name)
+	
+	if first_level_beaten:
+		for hero_name in FIRST_LEVEL_REWARD_HEROES:
+			if hero_data.has(hero_name) and not valid_unlocked.has(hero_name):
+				valid_unlocked.append(hero_name)
+	
+	for hero_name in unlocked_heroes:
+		if not valid_unlocked.has(hero_name):
 			changed = true
-	if changed:
+	
+	for hero_name in valid_unlocked:
+		if not unlocked_heroes.has(hero_name):
+			changed = true
+	
+	if changed or unlocked_heroes.size() != valid_unlocked.size():
+		unlocked_heroes = valid_unlocked
 		save_game()
 
 func mark_monster_seen(monster_name: String) -> void:
