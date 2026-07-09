@@ -87,9 +87,9 @@ func take_damage(amount: int) -> void:
 
 
 func spawn_rail():
-	var world = get_parent()
-	if world and world.has_method("extend_minecart_trail"):
-		world.extend_minecart_trail()
+	var item = preload("res://rail_item.tscn").instantiate()
+	item.global_position = global_position
+	get_parent().call_deferred("add_child", item)
 
 func spawn_peon():
 	var peon = preload("res://peon.tscn").instantiate()

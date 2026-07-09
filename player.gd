@@ -196,10 +196,18 @@ func _physics_process(delta: float) -> void:
 		for gem in nearby_gems:
 			if is_instance_valid(gem) and not carried_gems.has(gem):
 				if gem.has_method("tether_to"):
-					gem.tether_to(self)
+					var picked_up = gem.tether_to(self)
+					if picked_up == false:
+						continue
 				carried_gems.append(gem)
 	elif Input.is_action_just_pressed("p%d_drop" % player_id):
 		if carried_gems.size() > 0:
+			for nearby in nearby_gems:
+				if is_instance_valid(nearby) and nearby.has_method("load_gem"):
+					var loaded_gem = carried_gems.pop_back()
+					if nearby.load_gem(loaded_gem, self):
+						return
+					carried_gems.append(loaded_gem)
 			var gem = carried_gems.pop_back()
 			if is_instance_valid(gem) and gem.has_method("untether"):
 				gem.untether()

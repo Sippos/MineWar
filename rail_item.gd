@@ -29,4 +29,6 @@ func untether() -> void:
 			]
 			for n in n_cells:
 				world.update_rail_autotile(n)
+			if world.has_method("refresh_minecart_paths"):
+				world.refresh_minecart_paths()
 			queue_free()

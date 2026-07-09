@@ -11,6 +11,7 @@ var anim_timer = 0.0
 var current_anim_row = 0
 var tethered_to = null
 var placed_on_rail = false
+var stored_gems = 0
 
 var rail_layer: TileMapLayer = null
 var block_layer: TileMapLayer = null
@@ -29,8 +30,7 @@ func should_deposit_as_gem() -> bool:
 
 func tether_to(player) -> void:
 	if placed_on_rail:
-		placed_on_rail = false
-		rail_path.clear()
+		return false
 	tethered_to = player
 	if player is PhysicsBody2D:
 		add_collision_exception_with(player)
@@ -41,6 +41,7 @@ func tether_to(player) -> void:
 	var sprite = get_node_or_null("Sprite2D")
 	if sprite:
 		sprite.position = Vector2.ZERO
+	return true
 
 func untether() -> void:
 	if tethered_to != null and tethered_to is PhysicsBody2D:
@@ -68,6 +69,7 @@ func _process(delta: float) -> void:
 		if not _rebuild_path():
 			return
 	_update_income(delta)
+	_deposit_stored_gems()
 	_move_along_path(delta)
 
 func _try_place_on_rail() -> bool:
@@ -86,6 +88,19 @@ func _try_place_on_rail() -> bool:
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	global_position = rail_layer.to_global(rail_layer.map_to_local(rail_path[0]))
+	return true
+
+func load_gem(gem, player = null) -> bool:
+	if not placed_on_rail or gem == self or not is_instance_valid(gem):
+		return false
+	if gem.has_method("should_deposit_as_gem") and not gem.should_deposit_as_gem():
+		return false
+	if gem.has_method("untether"):
+		gem.untether()
+	if player != null and player is PhysicsBody2D:
+		remove_collision_exception_with(player)
+	stored_gems += 1
+	gem.queue_free()
 	return true
 
 func refresh_rail_path() -> void:
@@ -258,6 +273,17 @@ func _update_income(delta: float) -> void:
 	var base = get_parent().get_node_or_null("Base")
 	if base and base.has_signal("gems_deposited"):
 		base.gems_deposited.emit(max(1, int(rail_path.size() / 10.0)))
+
+func _deposit_stored_gems() -> void:
+	if stored_gems <= 0:
+		return
+	var base = get_parent().get_node_or_null("Base")
+	if base == null or not base.has_signal("gems_deposited"):
+		return
+	if global_position.distance_to(base.global_position) > 96.0:
+		return
+	base.gems_deposited.emit(stored_gems)
+	stored_gems = 0
 
 func _move_along_path(delta: float) -> void:
 	if rail_path.is_empty() or rail_layer == null:
