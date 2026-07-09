@@ -9,9 +9,9 @@ const MENU_ART_CENTER := Vector2(580.0, 323.0)
 const MENU_ART_SIZE := Vector2(992.0, 624.0)
 const VS_MENU_MARGIN := 16.0
 const SINGLE_MENU_MARGIN := 18.0
-const SINGLE_MENU_MIN_SCALE := 0.30
-const SINGLE_MENU_MAX_SCALE := 0.58
-const SINGLE_MENU_MAX_HEIGHT_RATIO := 0.45
+const SINGLE_MENU_MIN_SCALE := 0.34
+const SINGLE_MENU_MAX_SCALE := 0.56
+const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.46
 const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
 const ENEMY_BUTTON_TEXTURE := "res://Button.png"
 const GOLD_ICON_TEXTURE := "res://GoldCoin.png"
@@ -98,13 +98,13 @@ func _layout_vs_upgrade_panel() -> void:
 
 func _layout_single_player_upgrade_panel() -> void:
 	var view_size = get_viewport().get_visible_rect().size
-	var width_scale = (view_size.x - SINGLE_MENU_MARGIN * 2.0) / MENU_ART_SIZE.x
-	var height_scale = (view_size.y * SINGLE_MENU_MAX_HEIGHT_RATIO) / MENU_ART_SIZE.y
+	var width_scale = (view_size.x * SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO - SINGLE_MENU_MARGIN) / MENU_ART_SIZE.x
+	var height_scale = (view_size.y - SINGLE_MENU_MARGIN * 2.0) / MENU_ART_SIZE.y
 	var fit_scale = min(width_scale, height_scale)
 	fit_scale = clamp(fit_scale, SINGLE_MENU_MIN_SCALE, SINGLE_MENU_MAX_SCALE)
 	var desired_top_left = Vector2(
-		(view_size.x - MENU_ART_SIZE.x * fit_scale) * 0.5,
-		view_size.y - MENU_ART_SIZE.y * fit_scale - SINGLE_MENU_MARGIN
+		SINGLE_MENU_MARGIN,
+		(view_size.y - MENU_ART_SIZE.y * fit_scale) * 0.5
 	)
 	panel.scale = Vector2(fit_scale, fit_scale)
 	panel.position = desired_top_left - _get_menu_art_top_left() * fit_scale
@@ -305,11 +305,19 @@ func _create_vs_panels():
 	if vs_prompt_panel != null and is_instance_valid(vs_prompt_panel):
 		return
 		
+	var opaque_stylebox = StyleBoxFlat.new()
+	opaque_stylebox.bg_color = Color(0.15, 0.15, 0.15, 1.0)
+	opaque_stylebox.set_border_width_all(2)
+	opaque_stylebox.border_color = Color(0.3, 0.3, 0.3, 1.0)
+	opaque_stylebox.corner_radius_top_left = 4
+	opaque_stylebox.corner_radius_top_right = 4
+	opaque_stylebox.corner_radius_bottom_left = 4
+	opaque_stylebox.corner_radius_bottom_right = 4
 	var menu_stylebox = _make_texture_style(MENU_PANEL_TEXTURE)
 		
 	vs_prompt_panel = Panel.new()
 	vs_prompt_panel.name = "VSPromptPanel"
-	vs_prompt_panel.add_theme_stylebox_override("panel", menu_stylebox)
+	vs_prompt_panel.add_theme_stylebox_override("panel", opaque_stylebox)
 	vs_prompt_panel.anchor_left = 0.5
 	vs_prompt_panel.anchor_top = 0.5
 	vs_prompt_panel.anchor_right = 0.5
