@@ -8,6 +8,10 @@ signal send_enemy(type: int)
 const MENU_ART_CENTER := Vector2(580.0, 323.0)
 const MENU_ART_SIZE := Vector2(992.0, 624.0)
 const VS_MENU_MARGIN := 16.0
+const SINGLE_MENU_MARGIN := 18.0
+const SINGLE_MENU_MIN_SCALE := 0.30
+const SINGLE_MENU_MAX_SCALE := 0.58
+const SINGLE_MENU_MAX_HEIGHT_RATIO := 0.45
 const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
 const ENEMY_BUTTON_TEXTURE := "res://Button.png"
 const GOLD_ICON_TEXTURE := "res://GoldCoin.png"
@@ -78,6 +82,9 @@ func _get_menu_hero() -> String:
 		return Global.hero_p2
 	return Global.hero_p1
 
+func _get_menu_art_top_left() -> Vector2:
+	return MENU_ART_CENTER - MENU_ART_SIZE * 0.5
+
 func _layout_vs_upgrade_panel() -> void:
 	var view_size = get_viewport().get_visible_rect().size
 	var fit_scale = min(
@@ -85,10 +92,22 @@ func _layout_vs_upgrade_panel() -> void:
 		(view_size.y - VS_MENU_MARGIN * 2.0) / MENU_ART_SIZE.y
 	)
 	fit_scale = clamp(fit_scale, 0.42, 0.60)
-	var menu_top_left = MENU_ART_CENTER - MENU_ART_SIZE * 0.5
 	var desired_top_left = (view_size - MENU_ART_SIZE * fit_scale) * 0.5
 	panel.scale = Vector2(fit_scale, fit_scale)
-	panel.position = desired_top_left - menu_top_left * fit_scale
+	panel.position = desired_top_left - _get_menu_art_top_left() * fit_scale
+
+func _layout_single_player_upgrade_panel() -> void:
+	var view_size = get_viewport().get_visible_rect().size
+	var width_scale = (view_size.x - SINGLE_MENU_MARGIN * 2.0) / MENU_ART_SIZE.x
+	var height_scale = (view_size.y * SINGLE_MENU_MAX_HEIGHT_RATIO) / MENU_ART_SIZE.y
+	var fit_scale = min(width_scale, height_scale)
+	fit_scale = clamp(fit_scale, SINGLE_MENU_MIN_SCALE, SINGLE_MENU_MAX_SCALE)
+	var desired_top_left = Vector2(
+		(view_size.x - MENU_ART_SIZE.x * fit_scale) * 0.5,
+		view_size.y - MENU_ART_SIZE.y * fit_scale - SINGLE_MENU_MARGIN
+	)
+	panel.scale = Vector2(fit_scale, fit_scale)
+	panel.position = desired_top_left - _get_menu_art_top_left() * fit_scale
 
 func _make_texture_style(texture_path: String) -> StyleBoxTexture:
 	var stylebox = StyleBoxTexture.new()
@@ -414,8 +433,7 @@ func show_menu():
 		panel.visible = false
 		vs_prompt_panel.get_child(0).get_child(1).call_deferred("grab_focus")
 	else:
-		panel.position = Vector2.ZERO
-		panel.scale = Vector2.ONE
+		_layout_single_player_upgrade_panel()
 		panel.visible = true
 		$Panel/Close.call_deferred("grab_focus")
 
