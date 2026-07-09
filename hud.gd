@@ -19,6 +19,8 @@ var minimap_shows_enemies = false
 
 var stomp_container: Control
 var stomp_progress: TextureProgressBar
+var notice_label: Label
+var notice_tween: Tween
 
 func _ready():
 	if minimap:
@@ -35,6 +37,7 @@ func _ready():
 			add_child(mobile_controls)
 			
 	_setup_stomp_ui()
+	_setup_notice_ui()
 
 func _setup_stomp_ui() -> void:
 	stomp_container = Control.new()
@@ -76,6 +79,20 @@ func _setup_stomp_ui() -> void:
 	stomp_icon.add_child(stomp_progress)
 	stomp_container.add_child(stomp_icon)
 	add_child(stomp_container)
+
+func _setup_notice_ui() -> void:
+	notice_label = Label.new()
+	notice_label.name = "NoticeLabel"
+	notice_label.visible = false
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notice_label.add_theme_font_size_override("font_size", 22)
+	notice_label.add_theme_color_override("font_color", Color(0.45, 0.85, 1.0))
+	notice_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	notice_label.offset_left = 220
+	notice_label.offset_top = 72
+	notice_label.offset_right = -220
+	notice_label.offset_bottom = 112
+	add_child(notice_label)
 
 func _process(delta):
 	if minimap and minimap.visible:
@@ -141,6 +158,19 @@ func update_stomp_cooldown(stomp_level: int, current_cooldown: float, max_cooldo
 		if stomp_progress:
 			stomp_progress.max_value = max_cooldown
 			stomp_progress.value = current_cooldown
+
+func show_notice(text: String, duration: float = 1.8) -> void:
+	if not notice_label:
+		return
+	if notice_tween and notice_tween.is_running():
+		notice_tween.kill()
+	notice_label.text = text
+	notice_label.visible = true
+	notice_label.modulate = Color(1, 1, 1, 1)
+	notice_tween = create_tween()
+	notice_tween.tween_interval(duration)
+	notice_tween.tween_property(notice_label, "modulate", Color(1, 1, 1, 0), 0.35)
+	notice_tween.tween_callback(func(): notice_label.visible = false)
 
 func unlock_minimap() -> void:
 	minimap.visible = true

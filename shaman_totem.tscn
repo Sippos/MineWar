@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://shamantotem"]
+
+[ext_resource type="Script" path="res://shaman_totem.gd" id="1_script"]
+
+[sub_resource type="Gradient" id="Gradient_shadow"]
+colors = PackedColorArray(0, 0, 0, 0.45, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shadow"]
+gradient = SubResource("Gradient_shadow")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.8, 0.8)
+width = 44
+height = 20
+
+[node name="ShamanTotem" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_script")
+
+[node name="Shadow" type="Sprite2D" parent="."]
+position = Vector2(0, 10)
+texture = SubResource("GradientTexture2D_shadow")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -14)

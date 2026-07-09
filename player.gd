@@ -16,6 +16,8 @@ var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 
 const GEM_SCENE = preload("res://gem.tscn")
+const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
+const SHAMAN_TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 
 var tex_walk: Texture2D
 var tex_attack: Texture2D
@@ -57,6 +59,9 @@ const HERO_VISUALS = {
 
 var attack_timer = 0.0
 var currently_attacking_enemy = null
+var shaman_totem_index = 0
+var shaman_spell_cooldown_timer = 0.0
+var magic_orb_timer = 0.0
 
 var carried_gems = []
 var nearby_gems = []
@@ -192,6 +197,14 @@ var can_move = true
 
 func _physics_process(delta: float) -> void:
 
+	if shaman_spell_cooldown_timer > 0.0:
+		shaman_spell_cooldown_timer -= delta
+	if magic_orb_timer > 0.0:
+		magic_orb_timer -= delta
+	
+	if Input.is_action_just_pressed("p%d_interact" % player_id):
+		_try_cast_shaman_totem()
+
 	if Input.is_action_just_pressed("p%d_grab" % player_id):
 		for gem in nearby_gems:
 			if is_instance_valid(gem) and not carried_gems.has(gem):
@@ -317,6 +330,10 @@ func _physics_process(delta: float) -> void:
 		attack_timer = 0.0
 		handle_digging(delta)
 
+	if current_hero_name == "Shaman" and currently_digging_cell != null:
+		walk_timer = 0.0
+		$Sprite2D.frame = current_anim_row * 8
+
 	if currently_attacking_enemy != null or currently_digging_cell != null:
 		if $Sprite2D.texture != tex_attack:
 			$Sprite2D.texture = tex_attack
@@ -365,6 +382,7 @@ func handle_digging(delta: float) -> void:
 					dig_timer += delta
 					
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
+					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					var current_target_dig_time = calculated_dig_time
 					var block_id = tile_map.get_cell_source_id(cell)
 					if block_id == 2: current_target_dig_time = calculated_dig_time * 2.0
@@ -386,11 +404,10 @@ func handle_digging(delta: float) -> void:
 						var cell_had_gem = get_parent().has_gem(cell)
 						get_parent().on_cell_dug(cell)
 						
-						if cell_had_gem:
-							var gem = GEM_SCENE.instantiate()
-							var spawn_pos = tile_map.to_global(tile_map.map_to_local(cell))
-							gem.global_position = spawn_pos
-							get_parent().call_deferred("add_child", gem)
+						var gems_to_spawn = 1 if cell_had_gem else 0
+						if _roll_shaman_gem_bonus():
+							gems_to_spawn += 1
+						_spawn_dug_gems(cell, gems_to_spawn)
 							
 						currently_digging_cell = null
 						dig_timer = 0.0
@@ -403,6 +420,9 @@ func handle_digging(delta: float) -> void:
 	else:
 		_stop_digging()
 
+	if current_hero_name == "Shaman" and currently_digging_cell != null and active_ray:
+		_maybe_shoot_magic_orb(active_ray.get_collision_point())
+
 func _stop_digging() -> void:
 	if currently_digging_cell != null:
 		damage_layer.erase_cell(currently_digging_cell)
@@ -410,6 +430,99 @@ func _stop_digging() -> void:
 		front_damage_layer.erase_cell(below_cell)
 		currently_digging_cell = null
 		dig_timer = 0.0
+
+func _try_cast_shaman_totem() -> void:
+	if current_hero_name != "Shaman" or is_dead or shaman_spell_cooldown_timer > 0.0:
+		return
+	var base = get_parent().get_node_or_null("Base")
+	if base and base.get("player_in_zone") == true:
+		return
+	
+	var totem = SHAMAN_TOTEM_SCENE.instantiate()
+	totem.totem_type = SHAMAN_TOTEM_TYPES[shaman_totem_index]
+	shaman_totem_index = (shaman_totem_index + 1) % SHAMAN_TOTEM_TYPES.size()
+	totem.global_position = global_position + Vector2(0, 8)
+	get_parent().add_child(totem)
+	shaman_spell_cooldown_timer = 6.0
+	
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("Summoned %s" % totem.get_display_name())
+
+func _get_shaman_dig_time_multiplier() -> float:
+	if current_hero_name != "Shaman":
+		return 1.0
+	for totem in get_tree().get_nodes_in_group("shaman_totems"):
+		if is_instance_valid(totem) and totem.get("totem_type") == "dig" and totem.affects_player(self):
+			return 0.65
+	return 1.0
+
+func _roll_shaman_gem_bonus() -> bool:
+	if current_hero_name != "Shaman":
+		return false
+	for totem in get_tree().get_nodes_in_group("shaman_totems"):
+		if is_instance_valid(totem) and totem.get("totem_type") == "gem" and totem.affects_player(self):
+			return randf() < 0.35
+	return false
+
+func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
+	if count <= 0:
+		return
+	var spawn_pos = tile_map.to_global(tile_map.map_to_local(cell))
+	for i in range(count):
+		var gem = GEM_SCENE.instantiate()
+		gem.global_position = spawn_pos + Vector2(randf_range(-12, 12), randf_range(-8, 8))
+		get_parent().call_deferred("add_child", gem)
+
+func _maybe_shoot_magic_orb(target_pos: Vector2) -> void:
+	if magic_orb_timer > 0.0:
+		return
+	magic_orb_timer = 0.16
+	
+	var orb = Sprite2D.new()
+	orb.z_index = 7
+	orb.texture = _make_magic_orb_texture()
+	orb.scale = Vector2(0.32, 0.32)
+	orb.global_position = global_position + Vector2(0, -24)
+	get_parent().add_child(orb)
+	
+	var trail = CPUParticles2D.new()
+	trail.amount = 16
+	trail.lifetime = 0.25
+	trail.emitting = true
+	trail.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 3.0
+	trail.gravity = Vector2.ZERO
+	trail.initial_velocity_min = 18.0
+	trail.initial_velocity_max = 50.0
+	trail.damping_min = 20.0
+	trail.damping_max = 40.0
+	trail.scale_amount_min = 1.5
+	trail.scale_amount_max = 4.0
+	trail.color = Color(0.2, 0.65, 1.0, 0.8)
+	orb.add_child(trail)
+	
+	var tween = create_tween()
+	tween.tween_property(orb, "global_position", target_pos, 0.14)
+	tween.parallel().tween_property(orb, "scale", Vector2(0.08, 0.08), 0.14)
+	tween.tween_callback(orb.queue_free)
+
+func _make_magic_orb_texture() -> Texture2D:
+	var gradient = Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+	gradient.colors = PackedColorArray([
+		Color(0.9, 1.0, 1.0, 1.0),
+		Color(0.2, 0.7, 1.0, 0.9),
+		Color(0.0, 0.15, 0.8, 0.0)
+	])
+	var texture = GradientTexture2D.new()
+	texture.width = 32
+	texture.height = 32
+	texture.fill = 1
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.gradient = gradient
+	return texture
 
 func add_xp(amount: int) -> void:
 	xp += amount
