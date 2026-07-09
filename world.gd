@@ -240,6 +240,7 @@ func generate_initial_world() -> void:
 				front_sprite.position.y += 1 # Ensure it sorts AFTER the front wall cell (whose origin is 0)
 				front_sprite.offset.y = -17 # Visually shift it back up to its intended position
 				front_sprite.visible = false
+				front_sprite.z_index = 1
 				front_layer.add_child(front_sprite)
 				
 				gem_blocks[cell] = { "top": sprite, "front": front_sprite }
