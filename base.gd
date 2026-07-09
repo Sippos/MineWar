@@ -5,6 +5,11 @@ signal upgrade_requested
 signal base_damaged(new_health)
 signal game_over
 
+const BASE_TEXTURES = {
+	"Dwarf": preload("res://DwarfBase.png"),
+	"Shaman": preload("res://ShamanBase.png")
+}
+
 var health = 100
 var player_in_zone = false
 var spikes_level = 0
@@ -24,19 +29,14 @@ func _ready() -> void:
 	if p_id == 2:
 		h_name = Global.hero_p2
 		
-	if h_name == "Shaman":
-		var tex = load("res://ShamanBase.png") if ResourceLoader.exists("res://ShamanBase.png") else load("res://ShamanaBase.png")
-		if tex:
-			$Sprite2D.texture = tex
-			$Sprite2D.modulate = Color(1, 1, 1, 1)
-			$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
-	elif h_name == "Dwarf":
-		var tex = load("res://DwarfBase.png")
-		if tex:
-			$Sprite2D.texture = tex
-			$Sprite2D.modulate = Color(1, 1, 1, 1)
-			$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
-	
+	_apply_base_sprite(h_name)
+
+func _apply_base_sprite(hero_name: String) -> void:
+	var tex = BASE_TEXTURES.get(hero_name, BASE_TEXTURES["Dwarf"])
+	if tex:
+		$Sprite2D.texture = tex
+		$Sprite2D.modulate = Color(1, 1, 1, 1)
+		$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
 
 func _process(delta: float) -> void:
 	if player_in_zone:
