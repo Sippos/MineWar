@@ -2,6 +2,7 @@ extends RigidBody2D
 
 const RAIL_SOURCE_ID = 15
 const CARRIED_OFFSET = Vector2(0, 30)
+const PICKUP_RADIUS = 72.0
 
 var rail_path: Array[Vector2i] = []
 var path_index = 0
@@ -20,8 +21,11 @@ func _ready() -> void:
 	add_to_group("minecarts")
 	var area = get_node_or_null("PickupArea")
 	if area:
+		if not area.body_entered.is_connected(_on_pickup_area_body_entered):
+			area.body_entered.connect(_on_pickup_area_body_entered)
 		if not area.body_exited.is_connected(_on_pickup_area_body_exited):
 			area.body_exited.connect(_on_pickup_area_body_exited)
+		call_deferred("_register_nearby_player")
 	_update_world_layers()
 	freeze = false
 
@@ -30,9 +34,7 @@ func should_deposit_as_gem() -> bool:
 
 func tether_to(player) -> bool:
 	if placed_on_rail:
-		placed_on_rail = false
-		rail_path.clear()
-		path_index = 0
+		return false
 	tethered_to = player
 	if player is PhysicsBody2D:
 		add_collision_exception_with(player)
@@ -325,6 +327,11 @@ func animate_cart(dir: Vector2, delta: float) -> void:
 
 	anim_timer += delta * 12.0
 	$Sprite2D.frame = current_anim_row * 8 + (int(anim_timer) % 8)
+
+func _register_nearby_player() -> void:
+	var player = get_parent().get_node_or_null("Player")
+	if player and player.has_method("add_nearby_gem") and global_position.distance_to(player.global_position) <= PICKUP_RADIUS:
+		player.add_nearby_gem(self)
 
 func _on_pickup_area_body_entered(body) -> void:
 	if body.name == "Player" and body.has_method("add_nearby_gem"):
