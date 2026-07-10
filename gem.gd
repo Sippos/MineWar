@@ -1,14 +1,13 @@
 extends RigidBody2D
 
-const GEM_VISUAL_OFFSET = Vector2(0, -8)
-const FOLLOW_DISTANCE = 32.0
-const SLOT_BACK_SPACING = 5.0
-const SLOT_SIDE_OFFSET = 6.0
-const FOLLOW_RESPONSE = 6.0
-const MAX_FOLLOW_SPEED = 320.0
-const SNAP_DISTANCE = 220.0
-const LOOSE_Z_INDEX = 0
-const CARRIED_Z_INDEX = 1
+const GEM_VISUAL_OFFSET = Vector2(0, -5)
+const FOLLOW_DISTANCE = 26.0
+const SLOT_BACK_SPACING = 4.0
+const SLOT_SIDE_OFFSET = 5.0
+const FOLLOW_RESPONSE = 11.0
+const MAX_FOLLOW_SPEED = 420.0
+const SNAP_DISTANCE = 160.0
+const WORLD_Z_INDEX = 0
 
 var tethered_to = null
 var _follow_direction := Vector2.DOWN
@@ -16,7 +15,7 @@ var _last_tether_position := Vector2.ZERO
 
 func _ready() -> void:
 	add_to_group("gems")
-	_apply_loose_sorting()
+	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	
 	# Gems are collectible markers, not movable world physics objects. Keeping
@@ -43,14 +42,14 @@ func tether_to(player) -> bool:
 	if player is CharacterBody2D and player.velocity.length_squared() > 16.0:
 		_follow_direction = player.velocity.normalized()
 	
-	# Carried gems are moved explicitly as lightweight followers instead of by
-	# forces. A gentler response gives them a soft trailing motion while still
-	# allowing them to follow the player through narrow tunnel turns.
+	# Carried gems remain normal Y-sorted world objects. Their actual trailing
+	# position decides whether they render in front of or behind the hero instead
+	# of a fixed Z index forcing every gem over the character sprite.
 	freeze = true
 	sleeping = true
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
-	z_index = CARRIED_Z_INDEX
+	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	return true
 
@@ -60,13 +59,12 @@ func untether() -> void:
 	sleeping = true
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
-	_apply_loose_sorting()
+	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 
-func _apply_loose_sorting() -> void:
-	# Loose gems share the normal world Z layer so parent Y-sorting can place
-	# them above exposed tunnel tiles but behind the player when overlapping.
-	z_index = LOOSE_Z_INDEX
+func _apply_world_sorting() -> void:
+	z_index = WORLD_Z_INDEX
+	z_as_relative = true
 
 func _set_visual_offset(offset: Vector2) -> void:
 	var sprite = get_node_or_null("Sprite2D")
@@ -89,7 +87,7 @@ func _physics_process(delta: float) -> void:
 	_last_tether_position = player_position
 	
 	var slot := _get_carry_slot()
-	var back_distance := FOLLOW_DISTANCE + float(min(slot, 2)) * SLOT_BACK_SPACING
+	var back_distance := FOLLOW_DISTANCE + float(min(slot, 3)) * SLOT_BACK_SPACING
 	var side_offset := 0.0
 	if slot > 0:
 		side_offset = SLOT_SIDE_OFFSET if slot % 2 == 1 else -SLOT_SIDE_OFFSET
@@ -98,8 +96,9 @@ func _physics_process(delta: float) -> void:
 	var to_target := target_position - global_position
 	var distance := to_target.length()
 	
-	# Only recover instantly after a very large separation. Normal following is
-	# deliberately slower so the gems drift behind the player instead of snapping.
+	# Recover only when a follower is genuinely lost. Normal movement is a
+	# critically damped-looking ease with a capped step, which keeps the bundle
+	# compact through corners without the old spring wobble.
 	if distance > SNAP_DISTANCE:
 		global_position = target_position
 	elif distance > 0.01:
