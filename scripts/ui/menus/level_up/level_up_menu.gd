@@ -42,8 +42,8 @@ func _make_menu() -> void:
 	var panel := $Panel
 	var size := get_viewport().get_visible_rect().size
 	var compact := size.x < 700.0
-	var w := min(620.0, max(390.0, size.x - 28.0))
-	var h := min(560.0, max(430.0, size.y - 28.0))
+	var w: float = min(620.0, max(390.0, size.x - 28.0))
+	var h: float = min(560.0, max(430.0, size.y - 28.0))
 	panel.offset_left = -w * 0.5
 	panel.offset_top = -h * 0.5
 	panel.offset_right = w * 0.5
@@ -99,7 +99,7 @@ func _ability_button(option: Dictionary, compact: bool) -> Button:
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	b.expand_icon = true
-	b.icon_max_width = 78 if compact else 96
+	b.add_theme_constant_override("icon_max_width", 78 if compact else 96)
 	b.add_theme_constant_override("icon_spacing", 8)
 	b.add_theme_font_size_override("font_size", 15 if compact else 17)
 	b.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72))

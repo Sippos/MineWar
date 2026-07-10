@@ -260,7 +260,7 @@ func _hit_enemies_with_hammer(origin: Vector2, direction: Vector2, range_value: 
 		var enemy_center: Vector2 = enemy.global_position + Vector2(0, 8)
 		var to_enemy := enemy_center - origin
 		var forward_distance := to_enemy.dot(direction)
-		var side_distance := abs(to_enemy.cross(direction))
+		var side_distance: float = abs(to_enemy.cross(direction))
 		if forward_distance >= 0.0 and forward_distance <= range_value and side_distance <= 42.0:
 			candidates.append({"enemy": enemy, "distance": forward_distance})
 	candidates.sort_custom(func(a, b): return float(a["distance"]) < float(b["distance"]))
@@ -313,7 +313,7 @@ func _track_melee_bash() -> void:
 	var attack_timer := float(player.get("attack_timer"))
 	var attacking_enemy = player.get("currently_attacking_enemy")
 	if bash_level > 0 and is_instance_valid(attacking_enemy):
-		var attack_completed := attacking_enemy == last_attacking_enemy and last_attack_timer > 0.02 and attack_timer <= 0.001
+		var attack_completed: bool = attacking_enemy == last_attacking_enemy and last_attack_timer > 0.02 and attack_timer <= 0.001
 		if attack_completed:
 			_register_bash_attack(attacking_enemy)
 	last_attack_timer = attack_timer
@@ -512,7 +512,7 @@ func _process_shaman_support(delta: float) -> void:
 	if shaman_support_tick > 0.0:
 		return
 	shaman_support_tick = 0.5
-	var extra_heal := max(0, totem_level + wisdom_level - 1)
+	var extra_heal: int = max(0, totem_level + wisdom_level - 1)
 	for totem in get_tree().get_nodes_in_group("shaman_totems"):
 		if not _is_owned_totem(totem):
 			continue
@@ -1139,15 +1139,15 @@ func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldo
 	var slot = ability_slots.get(ability)
 	if slot == null:
 		return
-	var icon := slot.get_node_or_null("Root/Icon")
-	var overlay := slot.get_node_or_null("Root/CooldownOverlay")
-	var timer := slot.get_node_or_null("Root/Timer")
-	var level_label := slot.get_node_or_null("Root/Level")
+	var icon: Node = slot.get_node_or_null("Root/Icon")
+	var overlay: Node = slot.get_node_or_null("Root/CooldownOverlay")
+	var timer: Node = slot.get_node_or_null("Root/Timer")
+	var level_label: Node = slot.get_node_or_null("Root/Level")
 	var locked := level_value <= 0
 	if icon:
 		icon.modulate = Color(1.2, 0.92, 0.42, 1.0) if active else (Color(0.38, 0.38, 0.38, 0.85) if locked else Color.WHITE)
 	if overlay:
-		var ratio := clamp(cooldown / max(max_cooldown, 0.01), 0.0, 1.0)
+		var ratio: float = clamp(cooldown / max(max_cooldown, 0.01), 0.0, 1.0)
 		overlay.anchor_top = 1.0 - ratio
 		overlay.visible = cooldown > 0.0 and not active
 	if timer:

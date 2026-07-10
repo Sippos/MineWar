@@ -108,7 +108,7 @@ func _rebuild_buttons() -> void:
 		return
 	for child in grid.get_children():
 		child.queue_free()
-	var hero := upgrade_menu._get_menu_hero() if upgrade_menu.has_method("_get_menu_hero") else "Hero"
+	var hero: String = str(upgrade_menu._get_menu_hero()) if upgrade_menu.has_method("_get_menu_hero") else "Hero"
 	title.text = "%s Base Upgrades" % hero
 	_add("STR +1", "_on_upgrade_strength_pressed", "res://Strenght.png", _gem_cost("strength"))
 	_add("AGI +1", "_on_upgrade_agility_pressed", "res://Agility.png", _gem_cost("agility"))
@@ -161,7 +161,7 @@ func _button(text_value: String, method_name: String, icon_path: String = "") ->
 	b.add_theme_font_size_override("font_size", 15)
 	b.add_theme_color_override("font_color", Color(1.0, 0.9, 0.7))
 	b.expand_icon = true
-	b.icon_max_width = 44
+	b.add_theme_constant_override("icon_max_width", 44)
 	b.icon = _icon_texture(icon_path)
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.12, 0.07, 0.035, 0.95)

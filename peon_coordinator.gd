@@ -50,7 +50,7 @@ func _reconcile_peons(world: Node) -> void:
 		var state := str(peon.get("state"))
 		var target = peon.get("target_gem")
 		if state == "MOVE_TO_GEM" and is_instance_valid(target):
-			var target_id := target.get_instance_id()
+			var target_id: int = target.get_instance_id()
 			if claimed.has(target_id):
 				_release_duplicate_assignment(peon)
 			else:
