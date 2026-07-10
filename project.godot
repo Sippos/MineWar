@@ -23,7 +23,6 @@ HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
 UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
 MatchFlow="*res://match_flow.gd"
 PeonCoordinator="*res://peon_coordinator.gd"
-EconomyClarity="*res://economy_clarity.gd"
 
 [display]
 
