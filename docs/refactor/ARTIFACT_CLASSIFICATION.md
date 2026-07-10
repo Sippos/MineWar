@@ -139,7 +139,7 @@ Classification and eventual placement:
 - health bars, stat icons, `GoldCoinPile.png`, and similar explicit `hud.tscn`/`upgrade_menu.tscn` resources: HUD/upgrade-specific unless a reference manifest proves wider reuse.
 - no first-party font file or custom font resource was found; labels use engine/default fonts with per-scene overrides.
 
-Use a dedicated `assets/themes/` destination now rather than `assets/materials/themes/`: a Godot `Theme` is a UI style resource, not a material, and one active global theme is sufficient to establish clear ownership. Theme dependencies must migrate in ordered atomic batches: first shared textures plus sidecars and all direct consumers, then the `.tres` and `project.godot` path. Scenes contain hardcoded `res://MenuPanel.png` paths; `global_theme.tres` contains hardcoded paths to both shared textures; `project.godot` contains the theme path. Confidence: **confirmed**.
+Use a dedicated `assets/themes/` destination now rather than `assets/materials/themes/`: a Godot `Theme` is a UI style resource, not a material, and one active global theme is sufficient to establish clear ownership. Theme dependencies must migrate in ordered atomic batches: first shared textures plus sidecars and all direct consumers, then the `.tres` and `project.godot` path. Scenes contain hardcoded `res://assets/sprites/ui/common/MenuPanel.png` paths; `global_theme.tres` contains hardcoded paths to both shared textures under `res://assets/sprites/ui/common/`; `project.godot` contains the theme path. Confidence: **confirmed**.
 
 ## 10. Addon classification and exports
 
