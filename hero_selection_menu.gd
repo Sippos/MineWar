@@ -6,7 +6,10 @@ var current_mode = Mode.SINGLE_PLAYER
 var p1_index = 0
 var p2_index = 0
 
-var available_heroes = ["Dwarf", "Shaman", "Nerubian"]
+# Keep unlock progression in Global for later, but expose every implemented hero
+# in the selection carousel while the project is in playtest mode.
+var available_heroes = ["Dwarf", "Shaman", "Nerubian", "Mech"]
+const PLAYTEST_ALL_HEROES := true
 
 @onready var panel = $Panel
 @onready var root_vbox = $Panel/VBox
@@ -88,6 +91,8 @@ func change_hero(player_id: int, dir: int) -> void:
 		update_ui(2)
 
 func _is_hero_playable(hero_name: String) -> bool:
+	if PLAYTEST_ALL_HEROES:
+		return Global.hero_data.has(hero_name)
 	if current_mode == Mode.SINGLE_PLAYER:
 		return Global.is_hero_playable_in_single_player(hero_name)
 	return true
@@ -95,7 +100,6 @@ func _is_hero_playable(hero_name: String) -> bool:
 func update_ui(player_id: int) -> void:
 	var h_name = available_heroes[p1_index] if player_id == 1 else available_heroes[p2_index]
 	var is_unlocked = _is_hero_playable(h_name)
-		
 	var tex = load(Global.hero_data[h_name].walk)
 	
 	if player_id == 1:
@@ -119,7 +123,7 @@ func _on_start_pressed() -> void:
 	if current_mode == Mode.VS_LOCAL:
 		Global.hero_p2 = available_heroes[p2_index]
 	else:
-		Global.hero_p2 = Global.hero_p1 # default sync
+		Global.hero_p2 = Global.hero_p1
 		
 	if current_mode == Mode.SINGLE_PLAYER:
 		get_tree().change_scene_to_file("res://main.tscn")

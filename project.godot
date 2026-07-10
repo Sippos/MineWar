@@ -4,7 +4,7 @@
 ;
 ; Format:
 ;   [section] ; section goes between []
-;   param=value ; assign values to parameters
+;   param=value
 
 config_version=5
 
@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 Global="*res://global.gd"
 WebIOSLightingFallback="*res://web_ios_lighting_fallback.gd"
+HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
 
 [display]
 
