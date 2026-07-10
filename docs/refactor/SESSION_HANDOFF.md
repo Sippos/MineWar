@@ -11,10 +11,7 @@ This file is the durable restart point for continuing MineWars work from a phone
 - Repository: `/home/sebastian-berger/mining`.
 - `localFS` must expose `/home/sebastian-berger/mining`.
 - `localGD` must report a ready Godot session for project `Mining`.
-- `localGit` must report the same repository and the expected branch.
-- Godot AI normally listens on `127.0.0.1:8000` for MCP and `127.0.0.1:9500` for the editor WebSocket.
-- The restricted Git MCP normally listens on `127.0.0.1:8001`.
-- Do not launch duplicate servers while those ports are already occupied.
+- `localGit` must report the same repository and expected branch.
 - Quick Tunnel URLs change after restart; update the matching ChatGPT connector whenever a tunnel URL changes.
 - The laptop must remain awake, online, and running Godot plus the MCP/tunnel processes.
 
@@ -28,50 +25,54 @@ Before changing files in a new chat:
 4. Inspect the active Godot session and open scenes.
 5. Fetch `origin`, then inspect branch, status, remotes, and latest commit.
 6. Review every staged, unstaged, and untracked change before editing.
-7. Do not assume the previous task was committed or pushed.
+7. Do not assume the previous task was committed, pushed, merged, or deployed.
 8. Preserve unrelated changes and work in one focused batch.
-9. Prefer a task branch; do not edit directly on `main` when avoidable.
+9. Prefer a task branch; do not edit directly on `main`.
 
-## Current authoritative repository baseline
+## Current branch state
 
-- Baseline commit: `aba8253` on `main`, aligned with `origin/main` at the start of the 2026-07-11 recovery session.
-- Godot version: 4.7 stable.
-- The documentation recovery batch is on branch `refactor/recover-refactor-docs`.
-- The batch restores the architecture notes, minecart characterization, progress ledger, this handoff, and status annotations in the planning documents.
-- No gameplay or resource path changes belong in the documentation batch.
+- Documentation recovery commit: `2daab5d` on `refactor/recover-refactor-docs`, pushed to origin.
+- Active task branch: `refactor/mov-011-minecart`.
+- The task branch starts from `2daab5d`, not directly from `main`.
+- `main` and `origin/main` remain at `aba8253` until explicit merge confirmation.
 
-## Preserved uncommitted work
+## MOV-011 completed scope
 
-The previously mixed worktree was separated without discarding it. Recovery material is stored under ignored local paths inside:
+The task branch moves only:
+
+- `minecart.tscn` to `res://scenes/entities/transport/minecart/minecart.tscn`
+- `minecart.gd` and its UID to `res://scripts/gameplay/transport/minecart/`
+- the Base preload path
+- the scene-to-script resource path
+- the progress ledger and this handoff
+
+Rails, rail art, minecart art, connector tooling, and unrelated cleanup are outside the batch.
+
+## Validation completed
+
+- Godot 4.7 filesystem scan completed and settled.
+- The moved minecart scene opened successfully and retained its expected five-node hierarchy.
+- The moved script parsed for symbols and retained 28 functions.
+- `level.tscn` opened successfully after the move.
+- Godot resource search finds the moved scene and script only at their new paths.
+- Current editor errors are pre-existing baseline errors in unrelated scripts/imports; no error references the moved minecart paths.
+
+## Preserved unrelated material
+
+Ignored recovery material remains under:
 
 `.godot/refactor_recovery_20260711/`
 
-That storage contains the partial `MOV-011` minecart move and the unrelated local Git MCP connector files. Do not commit `.godot/` content. Restore only the files required for the next focused branch.
+It includes the unrelated local Git MCP connector files. Never commit `.godot/` content.
 
-## Next safe task after documentation recovery
+## Next required actions
 
-`MOV-011 — Move transport scene group`
+1. Inspect the complete unstaged diff and confirm only the intended `MOV-011` files are present.
+2. Commit with a focused message.
+3. Push `refactor/mov-011-minecart`.
+4. Stop for explicit confirmation before merging into `main`.
+5. After confirmation, merge carefully, inspect the merge result, and only then push `main` with explicit confirmation.
 
-Scope only:
+## Merge rule
 
-- `minecart.tscn`
-- `minecart.gd`
-- `minecart.gd.uid`
-- the required preload/path updates
-- progress and handoff updates
-
-Keep rail scenes, rail art, transport art, connector tooling, and unrelated cleanup out of that batch.
-
-## Validation and completion rules
-
-Before committing a batch:
-
-1. Validate every changed `res://` path.
-2. Run a Godot filesystem scan and wait for it to settle.
-3. Inspect editor and game errors from a fresh validation run.
-4. Inspect the full Git diff and staged diff.
-5. Confirm unrelated files are absent from the commit.
-6. Update `REFACTOR_PROGRESS.md` and this handoff.
-7. Commit with a focused message and push the task branch.
-8. Merge into `main` only after successful validation and explicit confirmation.
-9. Push `main` only after confirming the merge result.
+Do not merge either `refactor/recover-refactor-docs` or `refactor/mov-011-minecart` into `main` without explicit user confirmation. Because the minecart branch contains the documentation commit in its ancestry, merging the minecart branch should include both focused commits; do not merge both branches separately unless Git history is reviewed first.
