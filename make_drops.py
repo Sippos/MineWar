@@ -39,7 +39,7 @@ func _on_body_entered(body: Node2D) -> void:
 
 coin_tscn = """[gd_scene load_steps=4 format=3 uid="uid://coindrop"]
 
-[ext_resource type="Script" path="res://coin_drop.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/gameplay/collectibles/drops/coin_drop.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://goldcoin" path="res://GoldCoin.png" id="2_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
@@ -59,7 +59,7 @@ shape = SubResource("CircleShape2D_1")
 
 xp_tscn = """[gd_scene load_steps=4 format=3 uid="uid://xpdrop"]
 
-[ext_resource type="Script" path="res://xp_drop.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/gameplay/collectibles/drops/xp_drop.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://intdrop" path="res://Int.png" id="2_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
@@ -174,10 +174,10 @@ text = "+ Attack Damage"
 [connection signal="pressed" from="Panel/VBoxContainer/ButtonDamage" to="." method="_on_button_damage_pressed"]
 """
 
-with open("coin_drop.gd", "w") as f: f.write(coin_gd)
-with open("coin_drop.tscn", "w") as f: f.write(coin_tscn)
-with open("xp_drop.gd", "w") as f: f.write(xp_gd)
-with open("xp_drop.tscn", "w") as f: f.write(xp_tscn)
+with open("scripts/gameplay/collectibles/drops/coin_drop.gd", "w") as f: f.write(coin_gd)
+with open("scenes/entities/collectibles/drops/coin_drop.tscn", "w") as f: f.write(coin_tscn)
+with open("scripts/gameplay/collectibles/drops/xp_drop.gd", "w") as f: f.write(xp_gd)
+with open("scenes/entities/collectibles/drops/xp_drop.tscn", "w") as f: f.write(xp_tscn)
 with open("level_up_menu.gd", "w") as f: f.write(level_up_menu_gd)
 with open("level_up_menu.tscn", "w") as f: f.write(level_up_menu_tscn)
 print("Files created.")

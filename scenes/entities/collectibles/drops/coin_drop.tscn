@@ -1,19 +1,17 @@
-[gd_scene format=3 uid="uid://xpdrop"]
+[gd_scene format=3 uid="uid://coindrop"]
 
-[ext_resource type="Script" path="res://xp_drop.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://xp_orb.png" id="2_tex"]
+[ext_resource type="Script" path="res://scripts/gameplay/collectibles/drops/coin_drop.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cglingascc2r1" path="res://GoldCoin.png" id="2_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 16.0
 
-[node name="XPDrop" type="Area2D"]
+[node name="CoinDrop" type="Area2D"]
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("1_script")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-modulate = Color(0, 1, 0.5, 1)
-scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_tex")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

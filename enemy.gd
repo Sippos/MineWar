@@ -184,13 +184,13 @@ func take_damage(amount: int) -> void:
 		die()
 
 func die() -> void:
-	var coin_scene = preload("res://coin_drop.tscn")
+	var coin_scene = preload("res://scenes/entities/collectibles/drops/coin_drop.tscn")
 	var coin = coin_scene.instantiate()
 	coin.gold_value = gold_drop
 	coin.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
 	world.call_deferred("add_child", coin)
 	
-	var xp_scene = preload("res://xp_drop.tscn")
+	var xp_scene = preload("res://scenes/entities/collectibles/drops/xp_drop.tscn")
 	var xp = xp_scene.instantiate()
 	xp.xp_value = xp_drop
 	xp.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))

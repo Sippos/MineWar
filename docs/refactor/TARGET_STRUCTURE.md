@@ -212,7 +212,8 @@ MineWars/
 | HUD/upgrades | `assets/sprites/ui/hud/` or `ui/upgrades/`; shared stat icons may use `ui/common/stats/` | Health bars, `StatRessources.png`, stat icons, coin art. Confirm whether `GoldCoin` and `GoldCoinPile` are semantically shared before combining. |
 | Tileset-related | `assets/sprites/world/terrain/` with subfolders by tileset/difficulty if needed | Brick, edge, front, damage, fog-mask, and background atlases referenced by `level.tscn`. Keep complete atlas families together. |
 | Level-specific | `assets/sprites/world/levels/<level>/` | Create only when multiple levels exist; the current mine is the shared world owner. |
-| Gameplay effects | `assets/sprites/effects/<effect>/` | `xp_orb.png`, potential stomp art after usage is confirmed. |
+| Collectible drops | `assets/sprites/collectibles/<drop>/` | `assets/sprites/collectibles/xp/xp_orb.png`. |
+| Gameplay effects | `assets/sprites/effects/<effect>/` | Potential stomp art after usage is confirmed. |
 | Temporary/debug | `tests/fixtures/`, `assets/debug/`, or `tools/archive/`, depending on runtime role | Placeholders and suspected-unused `MineTrails.png`/`StompSprite.png` remain unmoved until provenance classification (`AUD-003`). |
 
 An asset that appears duplicated is not deletion-ready. The similarly named brick/front/gradient variants, root import-only files, placeholder imports, and multiple resolutions may encode distinct TileSet regions or historical outputs. Compare hashes, import source paths, references, dimensions, and editor use before classifying them.
