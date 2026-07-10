@@ -30,13 +30,13 @@ func _layout_for_screen() -> void:
 	content.add_theme_constant_override("separation", 8 if compact else 12)
 	
 	var title = $Panel/VBoxContainer/Title
-	title.custom_minimum_size.y = 36.0 if compact else 42.0
+	title.custom_minimum_size = Vector2(title.custom_minimum_size.x, 36.0 if compact else 42.0)
 	title.add_theme_font_size_override("font_size", 22 if compact else 26)
 	
 	var label_height = 30.0 if compact else 34.0
 	for label in $Panel/VBoxContainer/ScrollContainer/ControlsList.get_children():
 		if label is Label:
-			label.custom_minimum_size.y = label_height
+			label.custom_minimum_size = Vector2(label.custom_minimum_size.x, label_height)
 	
 	var back_button = $Panel/VBoxContainer/BackButton
 	back_button.custom_minimum_size = Vector2(min(280.0, panel_width - horizontal_margin * 2.0), 52.0 if compact else 60.0)
