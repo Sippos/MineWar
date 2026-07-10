@@ -1,159 +1,138 @@
 extends CanvasLayer
 
 signal upgrade_selected(upgrade_type: String)
+const HERO_SCRIPT = preload("res://hero_abilities.gd")
+const MENU_TEX = preload("res://MenuPanel.png")
 
-var options_container: VBoxContainer
-var hero_controller: Node
-var owning_player: Node
-var build_attempts := 0
+var player: Node
+var controller: Node
+var grid: GridContainer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	get_tree().root.size_changed.connect(_layout_for_viewport)
 
-func setup(_legacy_has_stomp = false) -> void:
-	call_deferred("_build_hero_upgrade_menu")
+func setup(_legacy = false) -> void:
+	call_deferred("_build")
 
-func _build_hero_upgrade_menu() -> void:
-	owning_player = _find_owning_player()
-	hero_controller = owning_player.get_node_or_null("HeroAbilities") if owning_player else null
-	if hero_controller == null and build_attempts < 4:
-		build_attempts += 1
-		await get_tree().process_frame
-		_build_hero_upgrade_menu()
+func _build() -> void:
+	player = get_parent().get_node_or_null("Player")
+	if player == null:
 		return
+	controller = player.get_node_or_null("HeroAbilities")
+	if controller == null:
+		controller = Node.new()
+		controller.name = "HeroAbilities"
+		controller.set_script(HERO_SCRIPT)
+		player.add_child(controller)
+		await get_tree().process_frame
+	if not upgrade_selected.is_connected(controller._on_upgrade_selected):
+		upgrade_selected.connect(controller._on_upgrade_selected)
+	_make_background()
+	_make_menu()
 
+func _make_background() -> void:
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.52)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
+	move_child(dim, 0)
+
+func _make_menu() -> void:
 	var panel := $Panel
-	var old_vbox := panel.get_node_or_null("VBoxContainer")
-	if old_vbox:
-		old_vbox.visible = false
-		old_vbox.queue_free()
-	var old_label := panel.get_node_or_null("Label")
-	if old_label:
-		old_label.visible = false
+	var size := get_viewport().get_visible_rect().size
+	var compact := size.x < 700.0
+	var w := min(620.0, max(390.0, size.x - 28.0))
+	var h := min(560.0, max(430.0, size.y - 28.0))
+	panel.offset_left = -w * 0.5
+	panel.offset_top = -h * 0.5
+	panel.offset_right = w * 0.5
+	panel.offset_bottom = h * 0.5
 
-	options_container = VBoxContainer.new()
-	options_container.name = "HeroUpgradeOptions"
-	options_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	options_container.offset_left = 30.0
-	options_container.offset_top = 28.0
-	options_container.offset_right = -30.0
-	options_container.offset_bottom = -24.0
-	options_container.add_theme_constant_override("separation", 8)
-	panel.add_child(options_container)
+	var art := TextureRect.new()
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	art.texture = MENU_TEX
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_SCALE
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(art)
+
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = 58.0 if compact else 78.0
+	box.offset_top = 40.0 if compact else 52.0
+	box.offset_right = -58.0 if compact else -78.0
+	box.offset_bottom = -48.0 if compact else -62.0
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
 
 	var title := Label.new()
-	title.text = "%s — Choose Ability" % _hero_name()
+	title.text = "%s — Choose Ability" % str(player.get("current_hero_name"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
-	options_container.add_child(title)
+	title.add_theme_font_size_override("font_size", 25 if compact else 30)
+	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.46))
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	title.add_theme_constant_override("outline_size", 4)
+	box.add_child(title)
 
-	var options: Array = []
-	if hero_controller and hero_controller.has_method("get_level_up_options"):
-		options = hero_controller.get_level_up_options()
-	if options.is_empty():
-		options = [
-			{"id":"health", "title":"Vitality", "description":"Increase maximum health", "level":0, "max_level":99, "enabled":true, "reason":"", "icon_path":""},
-			{"id":"damage", "title":"Strength", "description":"Increase attack damage", "level":0, "max_level":99, "enabled":true, "reason":"", "icon_path":""}
-		]
+	grid = GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	box.add_child(grid)
 
+	var options: Array = controller.get_level_up_options()
 	for option in options:
-		options_container.add_child(_make_option_button(option))
-
-	_layout_for_viewport()
-	for child in options_container.get_children():
+		grid.add_child(_ability_button(option, compact))
+	for child in grid.get_children():
 		if child is Button and not child.disabled:
 			child.call_deferred("grab_focus")
 			break
 
-func _find_owning_player() -> Node:
-	var world := get_parent()
-	if world:
-		var direct_player := world.get_node_or_null("Player")
-		if direct_player:
-			return direct_player
-	var node := get_parent()
-	while node:
-		var player := node.get_node_or_null("Player")
-		if player:
-			return player
-		node = node.get_parent()
-	return null
-
-func _hero_name() -> String:
-	if owning_player:
-		return str(owning_player.get("current_hero_name"))
-	return "Hero"
-
-func _layout_for_viewport() -> void:
-	if not is_instance_valid($Panel):
-		return
-	var viewport_size := get_viewport().get_visible_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		return
-	var compact := viewport_size.x < 700.0 or viewport_size.y < 600.0
-	var margin := 16.0 if compact else 28.0
-	var panel_width := min(620.0, max(300.0, viewport_size.x - margin * 2.0))
-	var panel_height := min(570.0, max(350.0, viewport_size.y - margin * 2.0))
-	var panel := $Panel
-	panel.offset_left = -panel_width * 0.5
-	panel.offset_top = -panel_height * 0.5
-	panel.offset_right = panel_width * 0.5
-	panel.offset_bottom = panel_height * 0.5
-	if options_container:
-		options_container.offset_left = 22.0 if compact else 34.0
-		options_container.offset_top = 20.0 if compact else 30.0
-		options_container.offset_right = -22.0 if compact else -34.0
-		options_container.offset_bottom = -18.0 if compact else -26.0
-		options_container.add_theme_constant_override("separation", 6 if compact else 10)
-		for child in options_container.get_children():
-			if child is Button:
-				child.custom_minimum_size = Vector2(0, 68.0 if compact else 88.0)
-
-func _make_option_button(option: Dictionary) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 82)
-	button.disabled = not bool(option.get("enabled", true))
-	var level_value := int(option.get("level", 0))
-	var max_level := int(option.get("max_level", 1))
-	var level_text := ""
-	if max_level > 1:
-		level_text = "  [Level %d/%d]" % [level_value, max_level]
+func _ability_button(option: Dictionary, compact: bool) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(0, 145 if compact else 180)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.disabled = not bool(option.get("enabled", true))
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	b.expand_icon = true
+	b.icon_max_width = 78 if compact else 96
+	b.add_theme_constant_override("icon_spacing", 8)
+	b.add_theme_font_size_override("font_size", 15 if compact else 17)
+	b.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72))
+	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.52, 0.48))
+	var path := str(option.get("icon_path", ""))
+	if path != "" and ResourceLoader.exists(path):
+		b.icon = load(path)
+	var lvl := int(option.get("level", 0))
+	var max_lvl := int(option.get("max_level", 1))
+	var suffix := ""
+	if max_lvl > 1:
+		suffix = "  Lv.%d/%d" % [lvl, max_lvl]
 	var reason := str(option.get("reason", ""))
-	button.text = "%s%s\n%s%s" % [
-		str(option.get("title", "Ability")),
-		level_text,
-		str(option.get("description", "")),
-		(" — " + reason) if reason != "" else ""
-	]
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	var icon_path := str(option.get("icon_path", ""))
-	if icon_path != "" and ResourceLoader.exists(icon_path):
-		button.icon = load(icon_path)
-		button.expand_icon = true
-		button.icon_max_width = 58
-		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.add_theme_constant_override("icon_spacing", 12)
-	var upgrade_id := str(option.get("id", ""))
-	button.pressed.connect(func(): _choose_upgrade(upgrade_id))
-	return button
+	b.text = "%s%s\n%s" % [str(option.get("title", "Ability")), suffix, reason if reason != "" else str(option.get("description", ""))]
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.07, 0.035, 0.94)
+	normal.border_color = Color(0.63, 0.42, 0.17)
+	normal.set_border_width_all(3)
+	normal.set_corner_radius_all(8)
+	var hover := normal.duplicate()
+	hover.bg_color = Color(0.24, 0.13, 0.05, 0.98)
+	hover.border_color = Color(1.0, 0.78, 0.28)
+	var pressed := hover.duplicate()
+	pressed.bg_color = Color(0.34, 0.18, 0.06, 1.0)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("focus", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	var id := str(option.get("id", ""))
+	b.pressed.connect(func(): _choose(id))
+	return b
 
-func _choose_upgrade(upgrade_id: String) -> void:
-	upgrade_selected.emit(upgrade_id)
-	hide_and_unpause()
-
-# Compatibility handlers for the legacy scene connections. These controls are
-# removed as soon as the hero-specific menu is built.
-func _on_button_stomp_pressed() -> void:
-	_choose_upgrade("stomp")
-
-func _on_button_health_pressed() -> void:
-	_choose_upgrade("health")
-
-func _on_button_damage_pressed() -> void:
-	_choose_upgrade("damage")
-
-func hide_and_unpause() -> void:
+func _choose(id: String) -> void:
+	upgrade_selected.emit(id)
 	get_tree().paused = false
 	queue_free()
