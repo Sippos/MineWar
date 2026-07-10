@@ -24,12 +24,12 @@ func _ready() -> void:
 
 func _attach_compact_upgrade_menu(level) -> void:
 	var menu = level.get_node_or_null("UpgradeMenu")
-	if menu == null or menu.get_node_or_null("CompactVSUpgradeMenu"):
+	if menu == null or level.get_node_or_null("CompactVSUpgradeMenu"):
 		return
 	var compact := CanvasLayer.new()
 	compact.name = "CompactVSUpgradeMenu"
 	compact.set_script(COMPACT_VS_MENU)
-	menu.add_child(compact)
+	level.add_child(compact)
 	compact.call_deferred("setup", menu)
 
 func _refresh_level_base(level) -> void:
