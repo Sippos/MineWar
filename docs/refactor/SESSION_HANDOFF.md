@@ -2,10 +2,6 @@
 
 Updated: 2026-07-11
 
-## Purpose
-
-This file is the durable restart point for continuing MineWars work from a phone while the laptop hosts the local filesystem, Godot, and Git MCP servers.
-
 ## Mandatory restart procedure
 
 Before changing files in a new chat:
@@ -16,37 +12,45 @@ Before changing files in a new chat:
 4. Inspect the active Godot session and open scenes.
 5. Fetch `origin`, then inspect branch, status, remotes, and latest commit.
 6. Review every staged, unstaged, and untracked change before editing.
-7. Do not assume the previous task was committed, pushed, merged, or deployed.
-8. Preserve unrelated changes and work in one focused batch.
-9. Prefer a task branch; do not edit directly on `main`.
+7. Preserve unrelated changes and work in one focused batch.
+8. Prefer a task branch; do not edit directly on `main`.
 
 ## Current repository state
 
-- `main` and `origin/main` are synchronized at merge commit `8f33c82`.
-- Documentation recovery is commit `2daab5d`.
-- The minecart transport move is commit `f16f045` and is merged into `main`.
-- Active task branch: `refactor/upgrade-menu-baseline`.
+- `main` and `origin/main` are synchronized at `d53b792`.
+- Active task branch: `refactor/upgrade-menu-hierarchy`.
+- The branch starts from `d53b792`.
 - Ignored recovery material remains under `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
-## Upgrade-menu baseline findings
+## Upgrade-menu hierarchy cleanup
 
-- `upgrade_menu.tscn` opens in Godot 4.7.
-- The scene has 61 visible hierarchy entries in the inspection depth, including deeply nested duplicate `GoldPileIcon` and `BranchTitle` chains.
-- `upgrade_menu.gd` directly references some of those nested labels for stat costs, so duplicate-node deletion must not be done blindly.
-- `upgrade_menu_ui_styler.gd` had a type-inference parse failure for local rectangle calculations.
-- The focused repair adds explicit `Rect2` and `Vector2` types only; it does not change menu layout, node names, prices, or gameplay behavior.
+The legacy decorative hierarchy in `upgrade_menu.tscn` has been flattened while preserving panel-relative positions.
 
-## Validation required before commit
+- The scene contains 61 nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
+- No panel child contains nested decorative label or icon descendants.
+- Anonymous `BranchTitle*` and `GoldPileIcon*` chains were replaced with descriptive direct-child names such as `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
+- `upgrade_menu.gd` now references the stable direct paths for stat costs and wave-timer visibility.
+- `upgrade_menu_ui_styler.gd` now references `HealthTitle` directly.
+- Button nodes and signal connections were not changed.
+- Currency values, gameplay prices, menu layout scale, and upgrade behavior were not changed.
 
-1. Scan the Godot filesystem and wait for it to settle.
-2. Confirm `upgrade_menu_ui_styler.gd` outlines successfully.
-3. Open `upgrade_menu.tscn` and inspect the hierarchy.
-4. Check editor logs and confirm no new error references the changed lines after reload; the Errors dock may retain stale baseline rows.
-5. Inspect the complete Git diff and staged diff.
-6. Confirm only the styler and the two refactor documents are included.
-7. Commit with a focused message and push `refactor/upgrade-menu-baseline`.
-8. Do not merge into `main` without explicit confirmation.
+## Validation completed
 
-## Next structural batch
+- `upgrade_menu.tscn` saved and force-reloaded successfully.
+- The flat hierarchy remained intact after reload.
+- `upgrade_menu.gd` parses with 47 functions and the `send_enemy` signal.
+- `upgrade_menu_ui_styler.gd` parses with 12 functions.
+- A full Godot filesystem scan completed and settled.
+- No changed resource path was introduced.
 
-After this baseline repair is merged, create a separate upgrade-menu hierarchy cleanup branch. First map every script-referenced node path, then remove only proven decorative duplicates while preserving cost labels, button signals, focus behavior, and visible layout.
+## Next required actions
+
+1. Inspect the complete Git diff and staged diff.
+2. Confirm only `upgrade_menu.tscn`, `upgrade_menu.gd`, `upgrade_menu_ui_styler.gd`, and the two refactor documents are included.
+3. Commit with a focused message.
+4. Push `refactor/upgrade-menu-hierarchy`.
+5. Do not merge into `main` without explicit confirmation.
+
+## Recommended next batch after merge
+
+Run the upgrade menu inside a playable single-player and VS session. Record any remaining visual, focus, visibility, or purchasing defects as separate focused fixes rather than combining them with additional hierarchy changes.

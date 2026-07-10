@@ -4,7 +4,7 @@ Status: authoritative restart point
 
 Updated: 2026-07-11
 
-Baseline: `main` at `8f33c82` after the validated `MOV-011` merge and push.
+Baseline: `main` at `d53b792` after the upgrade-menu baseline repair merge and push.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ and Git history differ.
 - Documentation recovery landed in commit `2daab5d`.
 - `MOV-011` landed in commit `f16f045` and was merged into `main` as `8f33c82`.
 - The unrelated local Git MCP connector files remain preserved only in ignored `.godot/refactor_recovery_20260711/` storage and are not part of the refactor commits.
-- Local `main` and `origin/main` are synchronized at `8f33c82`.
+- Local `main` and `origin/main` are synchronized at `d53b792`.
 - The reconciled history is preserved by PR #16.
 - The validated startup corrections are commit `4f5e269`.
 - The working baseline previously launched the configured router, main menu,
@@ -82,6 +82,19 @@ Branch `refactor/upgrade-menu-baseline` inspects the current menu before structu
 
 The first focused repair adds explicit `Rect2` and `Vector2` types in `upgrade_menu_ui_styler.gd`, resolving the current type-inference parse failure without changing layout or gameplay behavior.
 
+## Upgrade-menu hierarchy cleanup
+
+Branch `refactor/upgrade-menu-hierarchy` flattens the legacy decorative hierarchy without changing the visible layout. All 59 panel controls are now direct children with stable descriptive names. Stat cost labels, currency icons, section titles, button signals, and controller paths were preserved or updated explicitly.
+
+Validation completed:
+
+- `upgrade_menu.tscn` saved and force-reloaded successfully.
+- The scene contains 61 nodes total: the CanvasLayer, Panel, and 59 direct panel children.
+- No panel child contains nested decorative descendants.
+- `upgrade_menu.gd` parses with all 47 functions and its `send_enemy` signal.
+- `upgrade_menu_ui_styler.gd` parses with all 12 functions.
+- A full Godot filesystem scan completed and settled.
+
 ## Recommended next task
 
-Validate and merge the upgrade-menu baseline repair. Then create a separate scene-hierarchy cleanup batch that removes only proven duplicate decorative nodes while preserving all script-referenced cost labels.
+Review and merge the hierarchy cleanup. After merge, run the menu inside a playable level and capture any remaining visual or focus defects as separate focused UI fixes.
