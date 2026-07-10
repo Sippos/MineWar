@@ -199,11 +199,11 @@ func _add_section_frame(
 		var control := panel.get_node_or_null(path) as Control
 		if control == null:
 			continue
-		var global_rect := control.get_global_rect()
-		var panel_global_position := panel.get_global_rect().position
-		var local_top_left := global_rect.position - panel_global_position
-		var local_bottom_right := global_rect.end - panel_global_position
-		var local_rect := Rect2(local_top_left, local_bottom_right - local_top_left).abs()
+		var global_rect: Rect2 = control.get_global_rect()
+		var panel_global_position: Vector2 = panel.get_global_rect().position
+		var local_top_left: Vector2 = global_rect.position - panel_global_position
+		var local_bottom_right: Vector2 = global_rect.end - panel_global_position
+		var local_rect: Rect2 = Rect2(local_top_left, local_bottom_right - local_top_left).abs()
 		if local_rect.size.x <= 1.0 or local_rect.size.y <= 1.0:
 			continue
 		if has_bounds:
