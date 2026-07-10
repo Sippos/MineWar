@@ -358,14 +358,16 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-008 — Move one character family: Dwarf art
 
+- **Status:** Implemented 2026-07-10.
 - **Objective:** Place only Dwarf art under explicit character ownership.
-- **Files/category:** `character_sprites/dwarf_walk_highres_spritesheet.png`, `dwarf_attack_pixelart_spritesheet.png`, their sidecars, and `DwarfBase.png` only if classification confirms it is character-owned rather than base-owned; otherwise defer the base image.
-- **Source → target:** `assets/sprites/characters/dwarf/` (or `assets/sprites/base/factions/dwarf/` for `DwarfBase.png`).
-- **Known references:** string paths in `global.gd`, player texture loads, `level.tscn`, `base.gd`, `base.tscn`, `.import` metadata, and UIDs where present.
+- **Files/category:** `character_sprites/dwarf_walk_highres_spritesheet.png`, `character_sprites/dwarf_attack_pixelart_spritesheet.png`, and their valid sidecars. `DwarfBase.png` and its sidecar are explicitly excluded because they are base-system art; the orphan root `dwarf_attack_spritesheet.png.import` is also excluded.
+- **Source → target:** `assets/sprites/characters/dwarf/`.
+- **Known references:** string paths in `global.gd`, `level.tscn`, `.import` metadata, and UIDs where present. Base resources remain unchanged because `DwarfBase.png` is outside this batch.
 - **Prerequisites:** `AUD-003`, `AUD-006`, character animation visual baseline; freeze the optional base-file decision before execution.
 - **Risk/scope:** Medium; one actor family, no scene/script moves.
 - **Validation commands:** exact Dwarf filenames/path/UID search; load `level.tscn`/`base.tscn`; common checks.
 - **Manual checks:** Dwarf idle/walk/attack/dig/death/respawn and Dwarf base rendering.
+- **Follow-up:** Investigate the observed UI/itch.io visual mismatch in a separate UI/deployment task; it was not addressed by this asset-only batch.
 - **Rollback:** Restore the selected images/sidecars and all old paths; reimport.
 
 ### MOV-009 — Move one enemy art family: Rat

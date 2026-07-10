@@ -97,8 +97,8 @@ var hero_p2 = "Dwarf"
 
 var hero_data = {
 	"Dwarf": {
-		"walk": "res://character_sprites/dwarf_walk_highres_spritesheet.png",
-		"attack": "res://character_sprites/dwarf_attack_pixelart_spritesheet.png"
+		"walk": "res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png",
+		"attack": "res://assets/sprites/characters/dwarf/dwarf_attack_pixelart_spritesheet.png"
 	},
 	"Mech": {
 		"walk": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
