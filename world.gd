@@ -33,7 +33,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not get_tree().paused:
 		if player_id == 1:
 			get_tree().paused = true
-			var pause_menu = preload("res://pause_menu.tscn").instantiate()
+			var pause_menu = preload("res://scenes/ui/overlays/pause/pause_menu.tscn").instantiate()
 			get_tree().root.add_child(pause_menu)
 
 func _ready() -> void:
