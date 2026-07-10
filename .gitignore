@@ -3,6 +3,14 @@
 *.translation
 # export_presets.cfg
 
+# Local Godot editor tooling
+/addons/godot_ai/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+
 # Mac
 .DS_Store
 
