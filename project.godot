@@ -24,6 +24,7 @@ UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
 MatchFlow="*res://match_flow.gd"
 PeonCoordinator="*res://peon_coordinator.gd"
 EconomyClarity="*res://economy_clarity.gd"
+CombatReadability="*res://combat_readability.gd"
 
 [display]
 
