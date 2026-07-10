@@ -1,6 +1,12 @@
 extends RigidBody2D
 
-const GEM_VISUAL_OFFSET = Vector2(0, -24)
+const GEM_VISUAL_OFFSET = Vector2(0, -8)
+const FOLLOW_DISTANCE = 40.0
+const FOLLOW_SPEED_GAIN = 8.0
+const MAX_FOLLOW_SPEED = 260.0
+const FOLLOW_RESPONSE = 10.0
+const SEPARATION_DISTANCE = 14.0
+const MAX_SEPARATION_SPEED = 24.0
 
 var tethered_to = null
 
@@ -36,27 +42,33 @@ func _set_visual_offset(offset: Vector2) -> void:
 		sprite.position = offset
 
 func _physics_process(delta: float) -> void:
+	var desired_velocity = Vector2.ZERO
+
 	if tethered_to != null and is_instance_valid(tethered_to):
-		var target_pos = tethered_to.global_position
-		var dir = (target_pos - global_position).normalized()
-		var dist = global_position.distance_to(target_pos)
-		
-		# Pull towards player, but repel if too close
-		if dist > 55.0:
-			var force_magnitude = minf(dist * 30.0, 5000.0)
-			apply_central_force(dir * force_magnitude)
-		elif dist < 40.0:
-			var force_magnitude = (40.0 - dist) * 100.0
-			apply_central_force(-dir * force_magnitude)
-			
-		# Repel other gems to prevent overlapping each other
-		var gems = get_tree().get_nodes_in_group("gems")
-		for g in gems:
-			if g != self and is_instance_valid(g) and g.tethered_to == tethered_to:
-				var g_dist = global_position.distance_to(g.global_position)
-				if g_dist < 20.0 and g_dist > 0.1:
-					var push_dir = g.global_position.direction_to(global_position)
-					apply_central_force(push_dir * (20.0 - g_dist) * 50.0)
+		var to_target = tethered_to.global_position - global_position
+		var dist = to_target.length()
+
+		if dist > FOLLOW_DISTANCE:
+			var follow_speed = minf((dist - FOLLOW_DISTANCE) * FOLLOW_SPEED_GAIN, MAX_FOLLOW_SPEED)
+			desired_velocity = to_target.normalized() * follow_speed
+
+		# Keep nearby carried gems apart without the strong spring forces that
+		# previously made them wobble outside narrow tunnel walls.
+		var separation_velocity = Vector2.ZERO
+		for gem in get_tree().get_nodes_in_group("gems"):
+			if gem == self or not is_instance_valid(gem) or gem.tethered_to != tethered_to:
+				continue
+			var gem_distance = global_position.distance_to(gem.global_position)
+			if gem_distance < SEPARATION_DISTANCE and gem_distance > 0.1:
+				var push_direction = gem.global_position.direction_to(global_position)
+				var separation_strength = (SEPARATION_DISTANCE - gem_distance) / SEPARATION_DISTANCE
+				separation_velocity += push_direction * separation_strength * MAX_SEPARATION_SPEED
+
+		desired_velocity += separation_velocity.limit_length(MAX_SEPARATION_SPEED)
+
+	var response = clampf(delta * FOLLOW_RESPONSE, 0.0, 1.0)
+	linear_velocity = linear_velocity.lerp(desired_velocity, response)
+	angular_velocity = 0.0
 
 func _on_pickup_area_body_entered(body) -> void:
 	if body.has_method("add_nearby_gem"):
