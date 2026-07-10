@@ -651,7 +651,7 @@ func level_up() -> void:
 	if hud and hud.has_method("update_xp"):
 		hud.update_xp(level, xp, max_xp)
 	get_tree().paused = true
-	var menu_scene = preload("res://level_up_menu.tscn")
+	var menu_scene = preload("res://scenes/ui/overlays/level_up/level_up_menu.tscn")
 	var menu = menu_scene.instantiate()
 	get_parent().add_child(menu)
 	menu.setup(stomp_level > 0)
