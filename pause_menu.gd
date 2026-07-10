@@ -10,7 +10,7 @@ func _on_button_resume_pressed() -> void:
 
 
 func _on_button_controls_pressed() -> void:
-	var controls = preload("res://controls_menu.tscn").instantiate()
+	var controls = preload("res://scenes/menus/controls/controls_menu.tscn").instantiate()
 	add_child(controls)
 	controls.tree_exited.connect(func(): $Panel/VBoxContainer/ButtonControls.grab_focus())
 

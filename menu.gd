@@ -79,6 +79,6 @@ func _on_vs_online_pressed() -> void:
 	add_child(h)
 
 func _on_controls_pressed() -> void:
-	var controls = preload("res://controls_menu.tscn").instantiate()
+	var controls = preload("res://scenes/menus/controls/controls_menu.tscn").instantiate()
 	add_child(controls)
 	controls.tree_exited.connect(func(): $ControlsButton.grab_focus())
