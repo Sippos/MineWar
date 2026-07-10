@@ -4,6 +4,7 @@
 ;
 ; Format:
 ;   [section] ; section goes between []
+;   param=value
 
 config_version=5
 
@@ -22,6 +23,7 @@ HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
 UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
 MatchFlow="*res://match_flow.gd"
 PeonCoordinator="*res://peon_coordinator.gd"
+EconomyClarity="*res://economy_clarity.gd"
 
 [display]
 
@@ -47,4 +49,4 @@ textures/canvas_textures/default_texture_filter=0
 2d/snap/snap_2d_vertices_to_pixel=true
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"}
+renderer/rendering_method.mobile="gl_compatibility"
