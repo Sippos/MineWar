@@ -7,6 +7,7 @@ const MAP_TOP := -10
 const MAP_BOTTOM_EXCLUSIVE := 30
 const BORDER_THICKNESS := 2
 const BOUNDARY_SOURCE_ID := 3
+const CAMERA_SMOOTHING_SPEED := 9.0
 
 func _ready() -> void:
 	# The world builds its generated tiles and AStar grid in the parent _ready().
@@ -59,7 +60,14 @@ func _limit_player_camera(world: Node) -> void:
 	camera.limit_right = MAP_RIGHT_EXCLUSIVE * CELL_SIZE + CELL_SIZE / 2
 	camera.limit_top = (MAP_TOP - 1) * CELL_SIZE - CELL_SIZE / 2
 	camera.limit_bottom = MAP_BOTTOM_EXCLUSIVE * CELL_SIZE + CELL_SIZE / 2
-	camera.limit_smoothed = false
+
+	# The previous hard-locked camera exposed every single physics correction.
+	# Physics-timed smoothing preserves responsiveness while removing the
+	# browser-game-like camera judder at direction changes and map limits.
+	camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = CAMERA_SMOOTHING_SPEED
+	camera.limit_smoothed = true
 	camera.reset_smoothing()
 
 func _trim_astar_to_playable_map(world: Node, block_layer: TileMapLayer) -> void:
