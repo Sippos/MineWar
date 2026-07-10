@@ -1,5 +1,7 @@
 extends Control
 
+const COMPACT_VS_MENU = preload("res://compact_vs_upgrade_menu.gd")
+
 @onready var level1 = $HBoxContainer/SubViewportContainer1/SubViewport1/Level1
 @onready var level2 = $HBoxContainer/SubViewportContainer2/SubViewport2/Level2
 
@@ -10,15 +12,25 @@ func _ready() -> void:
 	level2.is_vs_mode = true
 	_refresh_level_base(level1)
 	_refresh_level_base(level2)
-	
-	# Connect sending enemies
-	var hud1 = level1.get_node_or_null("UpgradeMenu")
-	if hud1:
-		hud1.connect("send_enemy", Callable(self, "_on_p1_send_enemy"))
-		
-	var hud2 = level2.get_node_or_null("UpgradeMenu")
-	if hud2:
-		hud2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
+	_attach_compact_upgrade_menu(level1)
+	_attach_compact_upgrade_menu(level2)
+
+	var menu1 = level1.get_node_or_null("UpgradeMenu")
+	if menu1:
+		menu1.connect("send_enemy", Callable(self, "_on_p1_send_enemy"))
+	var menu2 = level2.get_node_or_null("UpgradeMenu")
+	if menu2:
+		menu2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
+
+func _attach_compact_upgrade_menu(level) -> void:
+	var menu = level.get_node_or_null("UpgradeMenu")
+	if menu == null or menu.get_node_or_null("CompactVSUpgradeMenu"):
+		return
+	var compact := CanvasLayer.new()
+	compact.name = "CompactVSUpgradeMenu"
+	compact.set_script(COMPACT_VS_MENU)
+	menu.add_child(compact)
+	compact.call_deferred("setup", menu)
 
 func _refresh_level_base(level) -> void:
 	var base = level.get_node_or_null("Base")
@@ -26,10 +38,8 @@ func _refresh_level_base(level) -> void:
 		base.call_deferred("refresh_base_sprite")
 
 func _on_p1_send_enemy(enemy_type: int) -> void:
-	print("p1 sending enemy type ", enemy_type)
 	level1.income += enemy_type + 1
 	var e = level2.ENEMY_SCENE.instantiate()
-	# spawn on level2
 	var target_cell = level2.get_farthest_open_cell()
 	e.global_position = level2.block_layer.to_global(level2.block_layer.map_to_local(target_cell))
 	level2.add_child(e)
