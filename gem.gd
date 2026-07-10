@@ -1,12 +1,14 @@
 extends RigidBody2D
 
 const GEM_VISUAL_OFFSET = Vector2(0, -8)
-const FOLLOW_DISTANCE = 26.0
-const SLOT_BACK_SPACING = 4.0
-const SLOT_SIDE_OFFSET = 5.0
-const FOLLOW_RESPONSE = 16.0
-const MAX_FOLLOW_SPEED = 600.0
-const SNAP_DISTANCE = 96.0
+const FOLLOW_DISTANCE = 32.0
+const SLOT_BACK_SPACING = 5.0
+const SLOT_SIDE_OFFSET = 6.0
+const FOLLOW_RESPONSE = 6.0
+const MAX_FOLLOW_SPEED = 320.0
+const SNAP_DISTANCE = 220.0
+const LOOSE_Z_INDEX = -1
+const CARRIED_Z_INDEX = 1
 
 var tethered_to = null
 var _follow_direction := Vector2.DOWN
@@ -14,7 +16,7 @@ var _last_tether_position := Vector2.ZERO
 
 func _ready() -> void:
 	add_to_group("gems")
-	z_index = 1
+	z_index = LOOSE_Z_INDEX
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	
 	# Gems are collectible markers, not movable world physics objects. Keeping
@@ -42,13 +44,13 @@ func tether_to(player) -> bool:
 		_follow_direction = player.velocity.normalized()
 	
 	# Carried gems are moved explicitly as lightweight followers instead of by
-	# forces. This lets them flow around sharp turns without getting caught on
-	# tunnel collision shapes.
+	# forces. A gentler response gives them a soft trailing motion while still
+	# allowing them to follow the player through narrow tunnel turns.
 	freeze = true
 	sleeping = true
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
-	z_index = 1
+	z_index = CARRIED_Z_INDEX
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	return true
 
@@ -58,7 +60,8 @@ func untether() -> void:
 	sleeping = true
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
-	z_index = 1
+	# Loose gems sit visually on the tunnel floor and must not cover the player.
+	z_index = LOOSE_Z_INDEX
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 
 func _set_visual_offset(offset: Vector2) -> void:
@@ -91,8 +94,8 @@ func _physics_process(delta: float) -> void:
 	var to_target := target_position - global_position
 	var distance := to_target.length()
 	
-	# Snap only when a gem has fallen far behind (for example after a frame
-	# hitch). Normal movement uses exponential smoothing for a stable float.
+	# Only recover instantly after a very large separation. Normal following is
+	# deliberately slower so the gems drift behind the player instead of snapping.
 	if distance > SNAP_DISTANCE:
 		global_position = target_position
 	elif distance > 0.01:
