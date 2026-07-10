@@ -1,7 +1,7 @@
 extends Node
 
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 const FRAME_LAYER_NAME := "RuntimeSectionFrames"
 
 var _panel_texture: Texture2D

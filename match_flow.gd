@@ -2,8 +2,8 @@ extends Node
 
 const FINAL_WAVE := 10
 const RESULT_OVERLAY_NAME := "MatchResultOverlay"
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const MENU_BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 
 var active_world: Node = null
 var result_shown := false

@@ -64,8 +64,8 @@ const HUD_STACK_LABEL_LEFT := 30.0
 const HUD_STATS_HEIGHT := 36.0
 const HUD_HEALTH_BAR_OFFSET_Y := 18.0
 const HUD_HEALTH_MODULE_HEIGHT := 66.0
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const MENU_BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 
 func _ready():
 	run_started_msec = Time.get_ticks_msec()

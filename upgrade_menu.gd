@@ -12,8 +12,8 @@ const SINGLE_MENU_MARGIN := 18.0
 const SINGLE_MENU_MIN_SCALE := 0.34
 const SINGLE_MENU_MAX_SCALE := 0.56
 const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.46
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const ENEMY_BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const ENEMY_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 const GOLD_ICON_TEXTURE := "res://GoldCoin.png"
 
 var healthbar_unlocked = false
@@ -374,7 +374,7 @@ func _create_vs_panels():
 	lbl2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox2.add_child(lbl2)
 	
-	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://character_sprites/rat_walk_pixelart_spritesheet.png")
+	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png")
 	btn_rat.pressed.connect(Callable(self, "_on_send_rat"))
 	vbox2.add_child(btn_rat)
 	

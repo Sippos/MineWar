@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const MENU_TEX = preload("res://MenuPanel.png")
+const MENU_TEX = preload("res://assets/sprites/ui/common/MenuPanel.png")
 
 var upgrade_menu: CanvasLayer
 var panel: Control
@@ -119,7 +119,7 @@ func _rebuild_buttons() -> void:
 	_add("Base HP", "_on_unlock_base_health_pressed", "res://DwarfBase.png", "10 gold")
 	_add("XP Bar", "_on_unlock_xp_pressed", "res://HealthBarPurple.png", "10 gold")
 	_add("Minimap", "_on_unlock_minimap_pressed", "res://icon.svg", "20 gold")
-	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://character_sprites/rat_walk_pixelart_spritesheet.png", "50 gold")
+	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", "50 gold")
 	if hero == "Dwarf":
 		_add("Buy Rail", "_on_buy_rail_pressed", "res://rail_item_placeholder.png", "10 gold")
 		_add("Buy Minecart", "_on_buy_minecart_pressed", "res://character_sprites/minecart_spritesheet_25d.png", "50 gold")

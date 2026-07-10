@@ -1,7 +1,7 @@
 extends Node
 
 const PANEL_NAME := "InvestmentPanel"
-const MENU_BUTTON_TEXTURE := "res://Button.png"
+const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 const REFRESH_INTERVAL := 0.15
 
 var active_world: Node = null

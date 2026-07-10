@@ -112,7 +112,7 @@ func hide_and_unpause() -> void:
 
 level_up_menu_tscn = """[gd_scene load_steps=2 format=3 uid="uid://lvlupmenu"]
 
-[ext_resource type="Script" path="res://level_up_menu.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/menus/level_up/level_up_menu.gd" id="1_script"]
 
 [node name="LevelUpMenu" type="CanvasLayer"]
 script = ExtResource("1_script")

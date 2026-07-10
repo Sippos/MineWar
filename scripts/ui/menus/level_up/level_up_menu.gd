@@ -2,7 +2,7 @@ extends CanvasLayer
 
 signal upgrade_selected(upgrade_type: String)
 const HERO_SCRIPT = preload("res://hero_abilities.gd")
-const MENU_TEX = preload("res://MenuPanel.png")
+const MENU_TEX = preload("res://assets/sprites/ui/common/MenuPanel.png")
 
 var player: Node
 var controller: Node
