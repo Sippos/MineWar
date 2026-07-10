@@ -4,8 +4,7 @@ Status: authoritative restart point
 
 Updated: 2026-07-11
 
-Baseline: `main` at `aba8253` after PR #16, successful Godot 4.7 validation,
-Web export, and itch.io deployment.
+Baseline: `main` at `8f33c82` after the validated `MOV-011` merge and push.
 
 ## Purpose
 
@@ -16,10 +15,10 @@ and Git history differ.
 
 ## Current repository state
 
-- Documentation recovery was completed in commit `2daab5d` on branch `refactor/recover-refactor-docs`.
-- `MOV-011` is completed on branch `refactor/mov-011-minecart`: the minecart scene, script, and UID moved to their transport directories, and all required paths were updated.
+- Documentation recovery landed in commit `2daab5d`.
+- `MOV-011` landed in commit `f16f045` and was merged into `main` as `8f33c82`.
 - The unrelated local Git MCP connector files remain preserved only in ignored `.godot/refactor_recovery_20260711/` storage and are not part of the refactor commits.
-- Local `main` and `origin/main` remain at `aba8253` until explicit merge confirmation.
+- Local `main` and `origin/main` are synchronized at `8f33c82`.
 - The reconciled history is preserved by PR #16.
 - The validated startup corrections are commit `4f5e269`.
 - The working baseline previously launched the configured router, main menu,
@@ -56,7 +55,7 @@ and Git history differ.
 | `MOV-008` | Complete | `dd6fbcc` | Dwarf art family moved. |
 | `MOV-009` | Complete | `ad6d6de` | Rat art family moved. |
 | `MOV-010` | Complete | `6481f0f` | Lexicon scene/controller moved and probes updated. |
-| `MOV-011` | Complete on task branch | `refactor/mov-011-minecart` | Scene/script/UID moved; Base preload and scene script path updated; Godot scan, scene load, script outline, and level load passed for changed resources. |
+| `MOV-011` | Complete and merged | `f16f045`, merge `8f33c82` | Scene/script/UID moved; Base preload and scene script path updated; Godot scan, scene load, script outline, and level load passed for changed resources. |
 | `MOV-012` | Blocked | Backlog only | Requires `AUD-009` and any resulting focused Peon regression repair. |
 | `MOV-013`–`MOV-029` | Pending | Backlog only | Do not infer readiness from task numbering. Apply each task's prerequisites. |
 
@@ -77,6 +76,12 @@ through a new focused task against the current validated branch.
 - Godot resource search resolves the moved scene and script at their new paths.
 - Existing editor errors concern unrelated baseline scripts/imports; no new error references the moved minecart paths.
 
+## Upgrade-menu baseline batch
+
+Branch `refactor/upgrade-menu-baseline` inspects the current menu before structural cleanup. The scene contains deeply duplicated `GoldPileIcon` and `BranchTitle` descendants that require a separate hierarchy cleanup after usage is mapped.
+
+The first focused repair adds explicit `Rect2` and `Vector2` types in `upgrade_menu_ui_styler.gd`, resolving the current type-inference parse failure without changing layout or gameplay behavior.
+
 ## Recommended next task
 
-Do not start another migration until `refactor/mov-011-minecart` has been reviewed and explicitly approved for merge. After merge, reassess the priority between upgrade-menu stabilization and the blocked Peon characterization track.
+Validate and merge the upgrade-menu baseline repair. Then create a separate scene-hierarchy cleanup batch that removes only proven duplicate decorative nodes while preserving all script-referenced cost labels.

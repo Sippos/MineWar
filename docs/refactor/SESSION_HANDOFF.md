@@ -6,15 +6,6 @@ Updated: 2026-07-11
 
 This file is the durable restart point for continuing MineWars work from a phone while the laptop hosts the local filesystem, Godot, and Git MCP servers.
 
-## Connection model
-
-- Repository: `/home/sebastian-berger/mining`.
-- `localFS` must expose `/home/sebastian-berger/mining`.
-- `localGD` must report a ready Godot session for project `Mining`.
-- `localGit` must report the same repository and expected branch.
-- Quick Tunnel URLs change after restart; update the matching ChatGPT connector whenever a tunnel URL changes.
-- The laptop must remain awake, online, and running Godot plus the MCP/tunnel processes.
-
 ## Mandatory restart procedure
 
 Before changing files in a new chat:
@@ -29,50 +20,33 @@ Before changing files in a new chat:
 8. Preserve unrelated changes and work in one focused batch.
 9. Prefer a task branch; do not edit directly on `main`.
 
-## Current branch state
+## Current repository state
 
-- Documentation recovery commit: `2daab5d` on `refactor/recover-refactor-docs`, pushed to origin.
-- Active task branch: `refactor/mov-011-minecart`.
-- The task branch starts from `2daab5d`, not directly from `main`.
-- `main` and `origin/main` remain at `aba8253` until explicit merge confirmation.
+- `main` and `origin/main` are synchronized at merge commit `8f33c82`.
+- Documentation recovery is commit `2daab5d`.
+- The minecart transport move is commit `f16f045` and is merged into `main`.
+- Active task branch: `refactor/upgrade-menu-baseline`.
+- Ignored recovery material remains under `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
-## MOV-011 completed scope
+## Upgrade-menu baseline findings
 
-The task branch moves only:
+- `upgrade_menu.tscn` opens in Godot 4.7.
+- The scene has 61 visible hierarchy entries in the inspection depth, including deeply nested duplicate `GoldPileIcon` and `BranchTitle` chains.
+- `upgrade_menu.gd` directly references some of those nested labels for stat costs, so duplicate-node deletion must not be done blindly.
+- `upgrade_menu_ui_styler.gd` had a type-inference parse failure for local rectangle calculations.
+- The focused repair adds explicit `Rect2` and `Vector2` types only; it does not change menu layout, node names, prices, or gameplay behavior.
 
-- `minecart.tscn` to `res://scenes/entities/transport/minecart/minecart.tscn`
-- `minecart.gd` and its UID to `res://scripts/gameplay/transport/minecart/`
-- the Base preload path
-- the scene-to-script resource path
-- the progress ledger and this handoff
+## Validation required before commit
 
-Rails, rail art, minecart art, connector tooling, and unrelated cleanup are outside the batch.
+1. Scan the Godot filesystem and wait for it to settle.
+2. Confirm `upgrade_menu_ui_styler.gd` outlines successfully.
+3. Open `upgrade_menu.tscn` and inspect the hierarchy.
+4. Check editor logs and confirm no new error references the changed lines after reload; the Errors dock may retain stale baseline rows.
+5. Inspect the complete Git diff and staged diff.
+6. Confirm only the styler and the two refactor documents are included.
+7. Commit with a focused message and push `refactor/upgrade-menu-baseline`.
+8. Do not merge into `main` without explicit confirmation.
 
-## Validation completed
+## Next structural batch
 
-- Godot 4.7 filesystem scan completed and settled.
-- The moved minecart scene opened successfully and retained its expected five-node hierarchy.
-- The moved script parsed for symbols and retained 28 functions.
-- `level.tscn` opened successfully after the move.
-- Godot resource search finds the moved scene and script only at their new paths.
-- Current editor errors are pre-existing baseline errors in unrelated scripts/imports; no error references the moved minecart paths.
-
-## Preserved unrelated material
-
-Ignored recovery material remains under:
-
-`.godot/refactor_recovery_20260711/`
-
-It includes the unrelated local Git MCP connector files. Never commit `.godot/` content.
-
-## Next required actions
-
-1. Inspect the complete unstaged diff and confirm only the intended `MOV-011` files are present.
-2. Commit with a focused message.
-3. Push `refactor/mov-011-minecart`.
-4. Stop for explicit confirmation before merging into `main`.
-5. After confirmation, merge carefully, inspect the merge result, and only then push `main` with explicit confirmation.
-
-## Merge rule
-
-Do not merge either `refactor/recover-refactor-docs` or `refactor/mov-011-minecart` into `main` without explicit user confirmation. Because the minecart branch contains the documentation commit in its ancestry, merging the minecart branch should include both focused commits; do not merge both branches separately unless Git history is reviewed first.
+After this baseline repair is merged, create a separate upgrade-menu hierarchy cleanup branch. First map every script-referenced node path, then remove only proven decorative duplicates while preserving cost labels, button signals, focus behavior, and visible layout.
