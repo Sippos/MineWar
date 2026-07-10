@@ -1,19 +1,32 @@
 extends RigidBody2D
 
 const GEM_VISUAL_OFFSET = Vector2(0, -8)
-const FOLLOW_DISTANCE = 40.0
-const FOLLOW_SPEED_GAIN = 8.0
-const MAX_FOLLOW_SPEED = 260.0
-const FOLLOW_RESPONSE = 10.0
-const SEPARATION_DISTANCE = 14.0
-const MAX_SEPARATION_SPEED = 24.0
+const FOLLOW_DISTANCE = 26.0
+const SLOT_BACK_SPACING = 4.0
+const SLOT_SIDE_OFFSET = 5.0
+const FOLLOW_RESPONSE = 16.0
+const MAX_FOLLOW_SPEED = 600.0
+const SNAP_DISTANCE = 96.0
 
 var tethered_to = null
+var _follow_direction := Vector2.DOWN
+var _last_tether_position := Vector2.ZERO
 
 func _ready() -> void:
 	add_to_group("gems")
 	z_index = 1
 	_set_visual_offset(GEM_VISUAL_OFFSET)
+	
+	# Gems are collectible markers, not movable world physics objects. Keeping
+	# the body frozen and on no collision layers prevents players from pushing
+	# loose gems around while the child Area2D still handles pickup detection.
+	collision_layer = 0
+	collision_mask = 0
+	freeze = true
+	sleeping = true
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	
 	var area = get_node_or_null("PickupArea")
 	if area:
 		if not area.body_exited.is_connected(_on_pickup_area_body_exited):
@@ -22,17 +35,29 @@ func _ready() -> void:
 func tether_to(player) -> bool:
 	if tethered_to != null and is_instance_valid(tethered_to) and tethered_to != player:
 		return false
+	
 	tethered_to = player
-	if player is PhysicsBody2D:
-		add_collision_exception_with(player)
+	_last_tether_position = player.global_position
+	if player is CharacterBody2D and player.velocity.length_squared() > 16.0:
+		_follow_direction = player.velocity.normalized()
+	
+	# Carried gems are moved explicitly as lightweight followers instead of by
+	# forces. This lets them flow around sharp turns without getting caught on
+	# tunnel collision shapes.
+	freeze = true
+	sleeping = true
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
 	z_index = 1
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	return true
 
 func untether() -> void:
-	if tethered_to != null and tethered_to is PhysicsBody2D:
-		remove_collision_exception_with(tethered_to)
 	tethered_to = null
+	freeze = true
+	sleeping = true
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
 	z_index = 1
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 
@@ -42,33 +67,50 @@ func _set_visual_offset(offset: Vector2) -> void:
 		sprite.position = offset
 
 func _physics_process(delta: float) -> void:
-	var desired_velocity = Vector2.ZERO
+	if tethered_to == null:
+		return
+	if not is_instance_valid(tethered_to):
+		untether()
+		return
+	
+	var player_position: Vector2 = tethered_to.global_position
+	var player_motion := player_position - _last_tether_position
+	if tethered_to is CharacterBody2D and tethered_to.velocity.length_squared() > 16.0:
+		player_motion = tethered_to.velocity
+	if player_motion.length_squared() > 1.0:
+		_follow_direction = player_motion.normalized()
+	_last_tether_position = player_position
+	
+	var slot := _get_carry_slot()
+	var back_distance := FOLLOW_DISTANCE + float(min(slot, 2)) * SLOT_BACK_SPACING
+	var side_offset := 0.0
+	if slot > 0:
+		side_offset = SLOT_SIDE_OFFSET if slot % 2 == 1 else -SLOT_SIDE_OFFSET
+	var perpendicular := Vector2(-_follow_direction.y, _follow_direction.x)
+	var target_position := player_position - _follow_direction * back_distance + perpendicular * side_offset
+	var to_target := target_position - global_position
+	var distance := to_target.length()
+	
+	# Snap only when a gem has fallen far behind (for example after a frame
+	# hitch). Normal movement uses exponential smoothing for a stable float.
+	if distance > SNAP_DISTANCE:
+		global_position = target_position
+	elif distance > 0.01:
+		var response := 1.0 - exp(-FOLLOW_RESPONSE * delta)
+		var movement := to_target * response
+		var max_step := MAX_FOLLOW_SPEED * delta
+		if movement.length() > max_step:
+			movement = movement.normalized() * max_step
+		global_position += movement
+	
+	rotation = 0.0
 
-	if tethered_to != null and is_instance_valid(tethered_to):
-		var to_target = tethered_to.global_position - global_position
-		var dist = to_target.length()
-
-		if dist > FOLLOW_DISTANCE:
-			var follow_speed = minf((dist - FOLLOW_DISTANCE) * FOLLOW_SPEED_GAIN, MAX_FOLLOW_SPEED)
-			desired_velocity = to_target.normalized() * follow_speed
-
-		# Keep nearby carried gems apart without the strong spring forces that
-		# previously made them wobble outside narrow tunnel walls.
-		var separation_velocity = Vector2.ZERO
-		for gem in get_tree().get_nodes_in_group("gems"):
-			if gem == self or not is_instance_valid(gem) or gem.tethered_to != tethered_to:
-				continue
-			var gem_distance = global_position.distance_to(gem.global_position)
-			if gem_distance < SEPARATION_DISTANCE and gem_distance > 0.1:
-				var push_direction = gem.global_position.direction_to(global_position)
-				var separation_strength = (SEPARATION_DISTANCE - gem_distance) / SEPARATION_DISTANCE
-				separation_velocity += push_direction * separation_strength * MAX_SEPARATION_SPEED
-
-		desired_velocity += separation_velocity.limit_length(MAX_SEPARATION_SPEED)
-
-	var response = clampf(delta * FOLLOW_RESPONSE, 0.0, 1.0)
-	linear_velocity = linear_velocity.lerp(desired_velocity, response)
-	angular_velocity = 0.0
+func _get_carry_slot() -> int:
+	if tethered_to != null and "carried_gems" in tethered_to:
+		var slot: int = tethered_to.carried_gems.find(self)
+		if slot >= 0:
+			return slot
+	return 0
 
 func _on_pickup_area_body_entered(body) -> void:
 	if body.has_method("add_nearby_gem"):
