@@ -1,5 +1,8 @@
 # Refactor Plan
 
+Execution status and the authoritative restart point are tracked in
+`docs/refactor/REFACTOR_PROGRESS.md`.
+
 ## Phase 1: Stabilize the upgrade UI
 
 Status: started.
