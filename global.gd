@@ -6,8 +6,17 @@ var rtc_conn: WebRTCPeerConnection
 const DEFAULT_UNLOCKED_HEROES = ["Dwarf"]
 const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
 const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Mech"]
+const GAME_UI_THEME_PATH = "res://global_theme.tres"
+const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
+
+var _game_ui_theme: Theme
+var _game_ui_theme_enabled = false
 
 func _ready() -> void:
+	get_tree().scene_changed.connect(_on_scene_changed)
+	get_tree().node_added.connect(_on_node_added)
+	call_deferred("_refresh_scene_theme")
+	
 	# Global UI controls for menus
 	var ui_joy_buttons = {
 		"ui_left": JOY_BUTTON_DPAD_LEFT,
@@ -30,6 +39,55 @@ func _ready() -> void:
 	
 	load_game()
 	_sanitize_unlock_progress()
+
+func _on_scene_changed() -> void:
+	_refresh_scene_theme()
+
+func _refresh_scene_theme() -> void:
+	var scene = get_tree().current_scene
+	if scene == null:
+		_game_ui_theme_enabled = false
+		return
+	
+	_game_ui_theme_enabled = not SAFE_UI_SCENES.has(scene.scene_file_path)
+	if _game_ui_theme_enabled:
+		_apply_game_theme_to_branch(scene, false)
+
+func _on_node_added(node: Node) -> void:
+	if not _game_ui_theme_enabled or not (node is Control):
+		return
+	call_deferred("_apply_game_theme_to_added_control", node)
+
+func _apply_game_theme_to_added_control(control: Control) -> void:
+	if not _game_ui_theme_enabled or not is_instance_valid(control):
+		return
+	
+	var parent = control.get_parent()
+	while parent != null:
+		if parent is Control:
+			return
+		parent = parent.get_parent()
+	
+	var ui_theme = _get_game_ui_theme()
+	if ui_theme != null and control.theme == null:
+		control.theme = ui_theme
+
+func _apply_game_theme_to_branch(node: Node, has_control_ancestor: bool) -> void:
+	var node_is_control = node is Control
+	if node_is_control and not has_control_ancestor:
+		var control = node as Control
+		var ui_theme = _get_game_ui_theme()
+		if ui_theme != null and control.theme == null:
+			control.theme = ui_theme
+	
+	var child_has_control_ancestor = has_control_ancestor or node_is_control
+	for child in node.get_children():
+		_apply_game_theme_to_branch(child, child_has_control_ancestor)
+
+func _get_game_ui_theme() -> Theme:
+	if _game_ui_theme == null:
+		_game_ui_theme = load(GAME_UI_THEME_PATH) as Theme
+	return _game_ui_theme
 
 var unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
 var first_level_beaten = false
