@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" path="res://Next-Hit-Front.png" id="tex_front_dmg2"]
 [ext_resource type="Script" uid="uid://bwa3xg44g5nig" path="res://player.gd" id="2_h2yge"]
 [ext_resource type="Script" path="res://world.gd" id="1_world"]
+[ext_resource type="Script" path="res://map_bounds.gd" id="9_bounds"]
 [ext_resource type="Texture2D" path="res://solid-earthen-wall-block-tile-93e7.png" id="2_block"]
 [ext_resource type="PackedScene" uid="uid://baseuid" path="res://base.tscn" id="5_base"]
 [ext_resource type="PackedScene" uid="uid://huduid" path="res://hud.tscn" id="6_hud"]
@@ -187,7 +188,6 @@ texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 0:0/0/texture_origin = Vector2i(0, 32)
 
-
 [sub_resource type="TileSetAtlasSource" id="Source_rail"]
 texture = ExtResource("tex_rail")
 texture_region_size = Vector2i(64, 64)
@@ -252,13 +252,15 @@ fill_to = Vector2(0.8, 0.8)
 width = 48
 height = 24
 
-
 [node name="Level" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_world")
 
 [node name="CanvasModulate" type="CanvasModulate" parent="."]
 color = Color(0.01, 0.01, 0.02, 1)
+
+[node name="MapBounds" type="Node" parent="."]
+script = ExtResource("9_bounds")
 
 [node name="HUD" parent="." instance=ExtResource("6_hud")]
 
