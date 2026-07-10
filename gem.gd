@@ -9,8 +9,6 @@ const MAX_FOLLOW_SPEED = 320.0
 const SNAP_DISTANCE = 220.0
 const LOOSE_Z_INDEX = 0
 const CARRIED_Z_INDEX = 1
-const LOOSE_Y_SORT_ORIGIN = -12
-const CARRIED_Y_SORT_ORIGIN = 0
 
 var tethered_to = null
 var _follow_direction := Vector2.DOWN
@@ -53,7 +51,6 @@ func tether_to(player) -> bool:
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	z_index = CARRIED_Z_INDEX
-	y_sort_origin = CARRIED_Y_SORT_ORIGIN
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 	return true
 
@@ -67,11 +64,9 @@ func untether() -> void:
 	_set_visual_offset(GEM_VISUAL_OFFSET)
 
 func _apply_loose_sorting() -> void:
-	# Loose gems share the normal world Z layer with the player and tunnel
-	# surfaces. The slightly raised Y-sort origin makes the player win overlap
-	# ties, while the gem still renders over the exposed floor/front tiles.
+	# Loose gems share the normal world Z layer so parent Y-sorting can place
+	# them above exposed tunnel tiles but behind the player when overlapping.
 	z_index = LOOSE_Z_INDEX
-	y_sort_origin = LOOSE_Y_SORT_ORIGIN
 
 func _set_visual_offset(offset: Vector2) -> void:
 	var sprite = get_node_or_null("Sprite2D")
