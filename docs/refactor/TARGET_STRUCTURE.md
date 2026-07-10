@@ -1,6 +1,7 @@
 # MineWars Target Structure and Migration Strategy
 
-Status: planning only
+Status: active migration; authoritative execution state is recorded in
+`docs/refactor/REFACTOR_PROGRESS.md`
 
 Backlog task: `STR-001` (corresponds to audit task `AUD-004`)
 
@@ -274,6 +275,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-001 — Classify and relocate one content-check tool group
 
+- **Status:** Pending; intentionally not backfilled during the 2026-07-10 move sequence.
+
 - **Objective:** Establish `tools/content_checks/` with a small, non-runtime group after confirming their role.
 - **Files/category:** `check_content.py`, `check_grid.py`, `check_img.py`, `check_img2.py` only; do not include tests, generators, patchers, or export tools.
 - **Source → target:** root → `tools/content_checks/`.
@@ -285,6 +288,8 @@ The batches below are independently executable units, not one continuous mega-mi
 - **Rollback:** Reverse the four moves and any path-only documentation/caller edits, then rerun the searches.
 
 ### MOV-002 — Move debug weight scripts
+
+- **Status:** Pending; intentionally not backfilled during the 2026-07-10 move sequence.
 
 - **Objective:** Separate Godot debugging probes from runtime scripts.
 - **Files/category:** `debug_weights.gd` and its `.uid` only.
@@ -298,6 +303,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-003 — Move Controls menu pair
 
+- **Status:** Implemented 2026-07-10 in `2ab5d36`.
+
 - **Objective:** Prove the menu move protocol on a non-entry overlay.
 - **Files/category:** `controls_menu.tscn`, `controls_menu.gd`, `controls_menu.gd.uid`.
 - **Source → target:** `scenes/menus/controls/controls_menu.tscn`; `scripts/ui/menus/controls/controls_menu.gd` and sidecar.
@@ -309,6 +316,8 @@ The batches below are independently executable units, not one continuous mega-mi
 - **Rollback:** Restore the three files and the two original paths; reload menu.
 
 ### MOV-004 — Move Pause menu pair
+
+- **Status:** Implemented 2026-07-10 in `1b41aea`.
 
 - **Objective:** Place the pause overlay under UI without touching gameplay pause behavior.
 - **Files/category:** `pause_menu.tscn`, `pause_menu.gd`, `.uid`.
@@ -322,6 +331,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-005 — Move Level-up overlay pair
 
+- **Status:** Implemented 2026-07-10 in `8e577f5`.
+
 - **Objective:** Isolate the player-spawned level-up UI.
 - **Files/category:** `level_up_menu.tscn`, `level_up_menu.gd`, `.uid`.
 - **Source → target:** `scenes/ui/overlays/level_up/`; `scripts/ui/menus/level_up/`.
@@ -334,6 +345,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-006 — Move main-menu shared UI images
 
+- **Status:** Implemented 2026-07-10 in `61cd22e`.
+
 - **Objective:** Establish shared UI asset ownership without moving scenes or theme.
 - **Files/category:** `Button.png`, `MenuPanel.png` and their `.import` sidecars only.
 - **Source → target:** `assets/sprites/ui/common/`.
@@ -345,6 +358,8 @@ The batches below are independently executable units, not one continuous mega-mi
 - **Rollback:** Restore images/sidecars and old resource paths; reimport without committing `.godot/`.
 
 ### MOV-007 — Move collectible drop group
+
+- **Status:** Implemented 2026-07-10 in `757cb50`.
 
 - **Objective:** Group coin and XP drop scenes/scripts/art without including gems or rails.
 - **Files/category:** `coin_drop.*`, `xp_drop.*`, `xp_orb.png` and sidecar.
@@ -372,6 +387,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-009 — Move one enemy art family: Rat
 
+- **Status:** Implemented 2026-07-10 in `ad6d6de`.
+
 - **Objective:** Prove dynamic enemy texture relocation with one enemy only.
 - **Files/category:** `assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png` and sidecar; root import-only `rat_walk_spritesheet.png.import` is excluded pending classification.
 - **Source → target:** `assets/sprites/enemies/rat/`.
@@ -396,6 +413,8 @@ The batches below are independently executable units, not one continuous mega-mi
 - **Rollback:** Restore pair/UID and direct transition/test paths.
 
 ### MOV-011 — Move transport scene group
+
+- **Status:** Pending; the focused minecart characterization is now recorded in `REFACTOR_PROGRESS.md` and the `AUD-002` contract baseline is complete.
 
 - **Objective:** Group minecart scene/script only; leave rails and art for their own batch if references are not fully characterized.
 - **Files/category:** `minecart.tscn`, `minecart.gd`, `.uid`.
