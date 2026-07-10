@@ -35,7 +35,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 	var base_speed = 70.0
 	var base_xp = 5
 	var base_gold = 3
-	var tex_path = "res://character_sprites/rat_walk_pixelart_spritesheet.png"
+	var tex_path = "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"
 	
 	if is_boss:
 		base_hp = 500
@@ -48,7 +48,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 		match enemy_type:
 			EnemyType.RAT:
 				base_hp = 20; base_dmg = 2; base_speed = 70.0; base_xp = 5; base_gold = 3
-				tex_path = "res://character_sprites/rat_walk_pixelart_spritesheet.png"
+				tex_path = "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"
 			EnemyType.SPIDER:
 				base_hp = 35; base_dmg = 4; base_speed = 75.0; base_xp = 10; base_gold = 6
 				tex_path = "res://character_sprites/spider_walk_spritesheet.png"

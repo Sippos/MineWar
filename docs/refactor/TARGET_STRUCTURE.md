@@ -373,7 +373,7 @@ The batches below are independently executable units, not one continuous mega-mi
 ### MOV-009 — Move one enemy art family: Rat
 
 - **Objective:** Prove dynamic enemy texture relocation with one enemy only.
-- **Files/category:** `character_sprites/rat_walk_pixelart_spritesheet.png` and sidecar; root import-only `rat_walk_spritesheet.png.import` is excluded pending classification.
+- **Files/category:** `assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png` and sidecar; root import-only `rat_walk_spritesheet.png.import` is excluded pending classification.
 - **Source → target:** `assets/sprites/enemies/rat/`.
 - **Known references:** `enemy.gd`, `enemy.tscn`, `global.gd` encyclopedia mapping, import metadata.
 - **Prerequisites:** enemy spawn/animation/lexicon baseline; `AUD-006` if metadata paths have not otherwise been centralized; `AUD-003` decision on import-only duplicate.
