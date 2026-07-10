@@ -384,6 +384,7 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-010 — Move non-entry menu: Lexicon
 
+- **Status:** Implemented 2026-07-10.
 - **Objective:** Group the lexicon scene/controller without moving its enemy art.
 - **Files/category:** `lexikon.tscn`, `lexikon.gd`, `.uid`.
 - **Source → target:** `scenes/menus/lexicon/`; `scripts/ui/menus/lexicon/`.

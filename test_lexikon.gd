@@ -2,7 +2,7 @@ extends SceneTree
 
 func _init():
     print("Starting test...")
-    var scene = load("res://lexikon.tscn")
+    var scene = load("res://scenes/menus/lexicon/lexikon.tscn")
     if scene == null:
         print("FAILED TO LOAD SCENE")
     else:

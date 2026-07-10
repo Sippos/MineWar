@@ -66,7 +66,7 @@ func _on_single_player_pressed() -> void:
 	add_child(h)
 
 func _on_lexikon_pressed() -> void:
-	get_tree().change_scene_to_file("res://lexikon.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/lexicon/lexikon.tscn")
 
 func _on_vs_mode_pressed() -> void:
 	var h = preload("res://hero_selection_menu.tscn").instantiate()

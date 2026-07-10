@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://lexikon.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/menus/lexicon/lexikon.gd" id="1_script"]
 
 [node name="Lexikon" type="Control" unique_id=770106252]
 script = ExtResource("1_script")
