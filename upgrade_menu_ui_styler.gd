@@ -1,7 +1,7 @@
 extends Node
 
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 const FRAME_LAYER_NAME := "RuntimeSectionFrames"
 
 var _panel_texture: Texture2D
@@ -200,8 +200,9 @@ func _add_section_frame(
 		if control == null:
 			continue
 		var global_rect := control.get_global_rect()
-		var local_top_left := panel.to_local(global_rect.position)
-		var local_bottom_right := panel.to_local(global_rect.position + global_rect.size)
+		var panel_global_position := panel.get_global_rect().position
+		var local_top_left := global_rect.position - panel_global_position
+		var local_bottom_right := global_rect.end - panel_global_position
 		var local_rect := Rect2(local_top_left, local_bottom_right - local_top_left).abs()
 		if local_rect.size.x <= 1.0 or local_rect.size.y <= 1.0:
 			continue

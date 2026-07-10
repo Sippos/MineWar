@@ -2,8 +2,8 @@ extends Node
 
 const FINAL_WAVE := 10
 const RESULT_OVERLAY_NAME := "MatchResultOverlay"
-const MENU_PANEL_TEXTURE := "res://MenuPanel.png"
-const MENU_BUTTON_TEXTURE := "res://Button.png"
+const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
+const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
 
 var active_world: Node = null
 var result_shown := false
@@ -116,8 +116,8 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	overlay.add_child(dim)
 	
 	var viewport_size := get_viewport().get_visible_rect().size
-	var panel_width := min(viewport_size.x * 0.82, 720.0)
-	var panel_height := min(viewport_size.y * 0.86, 570.0)
+	var panel_width: float = min(viewport_size.x * 0.82, 720.0)
+	var panel_height: float = min(viewport_size.y * 0.86, 570.0)
 	var panel := Panel.new()
 	panel.name = "Panel"
 	panel.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -187,7 +187,7 @@ func _add_result_stats(stats: GridContainer, victory: bool, hud: Node) -> void:
 	var base := active_world.get_node_or_null("Base")
 	var player := active_world.get_node_or_null("Player")
 	var wave_reached := FINAL_WAVE if victory else int(hud.get("last_wave_reached"))
-	var base_health := max(0, int(base.get("health"))) if base else 0
+	var base_health: int = max(0, int(base.get("health"))) if base else 0
 	var hero_level := int(player.get("level")) if player else 1
 	var hero_name := str(player.get("current_hero_name")) if player else "Hero"
 	
@@ -214,7 +214,7 @@ func _add_stat_row(stats: GridContainer, stat_name: String, stat_value: String) 
 
 func _format_elapsed_time(hud: Node) -> String:
 	var started := int(hud.get("run_started_msec"))
-	var elapsed := max(0, int((Time.get_ticks_msec() - started) / 1000))
+	var elapsed: int = max(0, int((Time.get_ticks_msec() - started) / 1000))
 	return "%02d:%02d" % [int(elapsed / 60), elapsed % 60]
 
 func _make_texture_style(texture_path: String) -> StyleBox:

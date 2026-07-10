@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://baoy5teter3yp"]
 
 [ext_resource type="Texture2D" uid="uid://fw3ll5jcj64i" path="res://MainMenuBackground.png" id="2_mae5d"]
-[ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://MenuPanel.png" id="2_muqf4"]
+[ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://assets/sprites/ui/common/MenuPanel.png" id="2_muqf4"]
 [ext_resource type="Texture2D" uid="uid://bi6220dhdgqdk" path="res://Beastary.png" id="3_4hy44"]
 
 [node name="MenuFree" type="Control" unique_id=1791637519]

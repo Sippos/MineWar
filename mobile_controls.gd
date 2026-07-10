@@ -144,7 +144,7 @@ func _open_pause_menu() -> void:
 	if root.get_node_or_null("PauseMenu"):
 		return
 	get_tree().paused = true
-	var pause_menu = preload("res://pause_menu.tscn").instantiate()
+	var pause_menu = preload("res://scenes/ui/overlays/pause/pause_menu.tscn").instantiate()
 	pause_menu.name = "PauseMenu"
 	root.add_child(pause_menu)
 

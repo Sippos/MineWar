@@ -97,8 +97,8 @@ var hero_p2 = "Dwarf"
 
 var hero_data = {
 	"Dwarf": {
-		"walk": "res://character_sprites/dwarf_walk_highres_spritesheet.png",
-		"attack": "res://character_sprites/dwarf_attack_pixelart_spritesheet.png"
+		"walk": "res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png",
+		"attack": "res://assets/sprites/characters/dwarf/dwarf_attack_pixelart_spritesheet.png"
 	},
 	"Mech": {
 		"walk": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
@@ -117,7 +117,7 @@ var hero_data = {
 var seen_monsters = []
 
 var monster_data = {
-	"Rat": "res://character_sprites/rat_walk_pixelart_spritesheet.png",
+	"Rat": "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png",
 	"Orc": "res://character_sprites/orc_walk_pixelart_spritesheet.png",
 	"Mech": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
 	"Spider": "res://character_sprites/spider_walk_spritesheet.png",

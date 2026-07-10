@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://baseuid" path="res://base.tscn" id="5_base"]
 [ext_resource type="PackedScene" uid="uid://huduid" path="res://hud.tscn" id="6_hud"]
 [ext_resource type="PackedScene" uid="uid://b4q4firriech2" path="res://upgrade_menu.tscn" id="7_menu"]
-[ext_resource type="Texture2D" path="res://character_sprites/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
 
 [ext_resource type="Texture2D" path="res://Black_BG_TransparentBorder.png" id="tex_bg"]
 [ext_resource type="Texture2D" path="res://Easy_Brick.png" id="tex_easy"]

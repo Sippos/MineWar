@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const MENU_TEX = preload("res://MenuPanel.png")
+const MENU_TEX = preload("res://assets/sprites/ui/common/MenuPanel.png")
 
 var upgrade_menu: CanvasLayer
 var panel: Control
@@ -108,7 +108,7 @@ func _rebuild_buttons() -> void:
 		return
 	for child in grid.get_children():
 		child.queue_free()
-	var hero := upgrade_menu._get_menu_hero() if upgrade_menu.has_method("_get_menu_hero") else "Hero"
+	var hero: String = str(upgrade_menu._get_menu_hero()) if upgrade_menu.has_method("_get_menu_hero") else "Hero"
 	title.text = "%s Base Upgrades" % hero
 	_add("STR +1", "_on_upgrade_strength_pressed", "res://Strenght.png", _gem_cost("strength"))
 	_add("AGI +1", "_on_upgrade_agility_pressed", "res://Agility.png", _gem_cost("agility"))
@@ -119,7 +119,7 @@ func _rebuild_buttons() -> void:
 	_add("Base HP", "_on_unlock_base_health_pressed", "res://DwarfBase.png", "10 gold")
 	_add("XP Bar", "_on_unlock_xp_pressed", "res://HealthBarPurple.png", "10 gold")
 	_add("Minimap", "_on_unlock_minimap_pressed", "res://icon.svg", "20 gold")
-	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://character_sprites/rat_walk_pixelart_spritesheet.png", "50 gold")
+	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", "50 gold")
 	if hero == "Dwarf":
 		_add("Buy Rail", "_on_buy_rail_pressed", "res://rail_item_placeholder.png", "10 gold")
 		_add("Buy Minecart", "_on_buy_minecart_pressed", "res://character_sprites/minecart_spritesheet_25d.png", "50 gold")
@@ -161,7 +161,7 @@ func _button(text_value: String, method_name: String, icon_path: String = "") ->
 	b.add_theme_font_size_override("font_size", 15)
 	b.add_theme_color_override("font_color", Color(1.0, 0.9, 0.7))
 	b.expand_icon = true
-	b.icon_max_width = 44
+	b.add_theme_constant_override("icon_max_width", 44)
 	b.icon = _icon_texture(icon_path)
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.12, 0.07, 0.035, 0.95)

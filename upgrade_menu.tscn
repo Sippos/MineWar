@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://upgrade_menu.gd" id="1_script"]
 
-[ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://MenuPanel.png" id="1_nuldh"]
+[ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://assets/sprites/ui/common/MenuPanel.png" id="1_nuldh"]
 [ext_resource type="Texture2D" uid="uid://otbqbgm08ok3" path="res://GoldCoinPile.png" id="2_goldpile"]
 [ext_resource type="Texture2D" uid="uid://b5dg8rc6veim7" path="res://Healthbar.png" id="4_healthbar"]
 [ext_resource type="Texture2D" uid="uid://bfqjvrrqremcr" path="res://Strenght.png" id="5_str"]
