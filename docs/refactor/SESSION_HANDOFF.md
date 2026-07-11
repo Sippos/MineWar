@@ -17,40 +17,55 @@ Before changing files in a new chat:
 
 ## Current repository state
 
-- `main` and `origin/main` are synchronized at `d53b792`.
-- Active task branch: `refactor/upgrade-menu-hierarchy`.
-- The branch starts from `d53b792`.
-- Ignored recovery material remains under `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
+- `main` and `origin/main` are synchronized at `a2527ac`.
+- Active branch: `fix/vs-compact-button-focus`.
+- This focused branch starts from compact unlock-state repair `27dc424`, which itself builds on integration commit `73fad96`.
+- Neither focused branch has been merged into `main`.
+- Godot AI reinstall material remains under ignored `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
-## Upgrade-menu hierarchy cleanup
+## Upgrade-menu hierarchy
 
-The legacy decorative hierarchy in `upgrade_menu.tscn` has been flattened while preserving panel-relative positions.
+The flattened upgrade menu remains merged in `main` at `a2527ac`:
 
-- The scene contains 61 nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
-- No panel child contains nested decorative label or icon descendants.
-- Anonymous `BranchTitle*` and `GoldPileIcon*` chains were replaced with descriptive direct-child names such as `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
-- `upgrade_menu.gd` now references the stable direct paths for stat costs and wave-timer visibility.
-- `upgrade_menu_ui_styler.gd` now references `HealthTitle` directly.
-- Button nodes and signal connections were not changed.
-- Currency values, gameplay prices, menu layout scale, and upgrade behavior were not changed.
+- 61 scene nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
+- Stable direct-child names include `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
+- No nested decorative `BranchTitle*` or `GoldPileIcon*` chains remain.
 
-## Validation completed
+## Focused fixes present on this integration branch
 
-- `upgrade_menu.tscn` saved and force-reloaded successfully.
-- The flat hierarchy remained intact after reload.
-- `upgrade_menu.gd` parses with 47 functions and the `send_enemy` signal.
-- `upgrade_menu_ui_styler.gd` parses with 12 functions.
-- A full Godot filesystem scan completed and settled.
-- No changed resource path was introduced.
+### Deferred runtime styling
 
-## Next required actions
+Commit `a35f1a9` changes `upgrade_menu_ui_styler.gd` to defer a node instance ID, resolve it with `instance_from_id()`, and skip nodes freed before the deferred call. This prevents stale-object conversion errors during scene transitions.
 
-1. Inspect the complete Git diff and staged diff.
-2. Confirm only `upgrade_menu.tscn`, `upgrade_menu.gd`, `upgrade_menu_ui_styler.gd`, and the two refactor documents are included.
-3. Commit with a focused message.
-4. Push `refactor/upgrade-menu-hierarchy`.
-5. Do not merge into `main` without explicit confirmation.
+### Player 2 ability inputs
 
-## Recommended next batch after merge
+Commit `f750a1e` changes `hero_abilities.gd` to remember which player ID its secondary and ultimate actions were configured for. If the owning Player receives a different ID after `_ready()`, the controller refreshes its actions for that final ID.
 
-Run the upgrade menu inside a playable single-player and VS session. Record any remaining visual, focus, visibility, or purchasing defects as separate focused fixes rather than combining them with additional hierarchy changes.
+Isolated validation confirmed:
+
+- `hero_abilities.gd` retains all 81 functions.
+- Local VS creates `p1_secondary`, `p1_ultimate`, `p2_secondary`, and `p2_ultimate`.
+- Controller configuration matches Player 1 ID 1 and Player 2 ID 2.
+- Missing Player 2 action spam no longer occurs.
+
+## Local VS integration validation
+
+- Local VS launched with no stale styler errors and no missing Player 2 action errors.
+- Player 1 Dwarf and Player 2 Shaman controls were present as expected.
+- Wave-timer controls were absent from the compact VS menu.
+- Dwarf showed Rail and Minecart; Shaman showed Peon.
+- Stat cost text and gold/gem deductions passed.
+- Closing restored movement on both sides.
+- The VS prompt focused a button correctly.
+
+A concrete defect was confirmed: compact one-time unlock buttons remained enabled after purchase. Branch `fix/vs-compact-unlock-states` now disables Player HP, Base HP, XP Bar, and Minimap after unlock; gates See Enemies until Minimap is unlocked; and disables See Enemies after its one-time upgrade. Both Dwarf and Shaman runtime checks passed with correct deductions.
+
+## Compact focus repair
+
+`_rebuild_buttons()` previously queued old buttons for deletion without removing them from the grid. `show_compact()` therefore focused the old first child, which disappeared at frame end and left no focus owner.
+
+The focused repair removes each old child from the grid before queuing it for deletion. Runtime validation confirmed that the new `STR +1` button becomes the actual focus owner in both Local VS subviewports, with no fresh game errors.
+
+## Next required action
+
+Commit and push `fix/vs-compact-button-focus`. Do not merge any branch into `main` without explicit confirmation.

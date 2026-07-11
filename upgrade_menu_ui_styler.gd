@@ -26,7 +26,14 @@ func _style_branch(node: Node) -> void:
 
 
 func _on_node_added(node: Node) -> void:
-	call_deferred("_try_style_node", node)
+	call_deferred("_try_style_node_by_id", node.get_instance_id())
+
+
+func _try_style_node_by_id(instance_id: int) -> void:
+	var node := instance_from_id(instance_id) as Node
+	if node == null:
+		return
+	_try_style_node(node)
 
 
 func _try_style_node(node: Node) -> void:

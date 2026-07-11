@@ -107,6 +107,7 @@ func _rebuild_buttons() -> void:
 	if grid == null or upgrade_menu == null:
 		return
 	for child in grid.get_children():
+		grid.remove_child(child)
 		child.queue_free()
 	var hero: String = str(upgrade_menu._get_menu_hero()) if upgrade_menu.has_method("_get_menu_hero") else "Hero"
 	title.text = "%s Base Upgrades" % hero
@@ -115,11 +116,11 @@ func _rebuild_buttons() -> void:
 	_add("INT +1", "_on_upgrade_intelligence_pressed", "res://Int.png", _gem_cost("intelligence"))
 	_add("+20 Max HP", "_on_upgrade_max_health_pressed", "res://Healthbar.png", "15 gold")
 	_add("Heal +20", "_on_heal_player_pressed", "res://Healthbar.png", "10 gold")
-	_add("Player HP", "_on_unlock_healthbar_pressed", "res://Healthbar.png", "10 gold")
-	_add("Base HP", "_on_unlock_base_health_pressed", "res://DwarfBase.png", "10 gold")
-	_add("XP Bar", "_on_unlock_xp_pressed", "res://HealthBarPurple.png", "10 gold")
-	_add("Minimap", "_on_unlock_minimap_pressed", "res://icon.svg", "20 gold")
-	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", "50 gold")
+	_add("Player HP", "_on_unlock_healthbar_pressed", "res://Healthbar.png", "10 gold", bool(upgrade_menu.get("healthbar_unlocked")))
+	_add("Base HP", "_on_unlock_base_health_pressed", "res://DwarfBase.png", "10 gold", bool(upgrade_menu.get("base_health_unlocked")))
+	_add("XP Bar", "_on_unlock_xp_pressed", "res://HealthBarPurple.png", "10 gold", bool(upgrade_menu.get("xp_unlocked")))
+	_add("Minimap", "_on_unlock_minimap_pressed", "res://icon.svg", "20 gold", bool(upgrade_menu.get("minimap_unlocked")))
+	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", "50 gold", not bool(upgrade_menu.get("minimap_unlocked")) or bool(upgrade_menu.get("minimap_upgraded")))
 	if hero == "Dwarf":
 		_add("Buy Rail", "_on_buy_rail_pressed", "res://rail_item_placeholder.png", "10 gold")
 		_add("Buy Minecart", "_on_buy_minecart_pressed", "res://character_sprites/minecart_spritesheet_25d.png", "50 gold")
@@ -133,8 +134,10 @@ func _gem_cost(stat: String) -> String:
 	var level_value := int(p.get(stat))
 	return "%d gems" % max(1, level_value * 2 - 1)
 
-func _add(label_text: String, method_name: String, icon_path: String, cost: String) -> void:
-	grid.add_child(_button("%s\n%s" % [label_text, cost], method_name, icon_path))
+func _add(label_text: String, method_name: String, icon_path: String, cost: String, disabled: bool = false) -> void:
+	var button := _button("%s\n%s" % [label_text, cost], method_name, icon_path)
+	button.disabled = disabled
+	grid.add_child(button)
 
 func _icon_texture(icon_path: String) -> Texture2D:
 	if icon_path == "" or not ResourceLoader.exists(icon_path):
