@@ -171,7 +171,7 @@ func _style_upgrade_menu(menu: Node) -> void:
 	], Vector2(20, 18))
 
 	_add_section_frame(panel, frame_layer, "HealthFrame", [
-		NodePath("MiscTitle/MiscTitle"),
+		NodePath("HealthTitle"),
 		NodePath("UpgradeMaxHealth"),
 		NodePath("HealPlayer")
 	], Vector2(20, 18))

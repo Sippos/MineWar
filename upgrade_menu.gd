@@ -36,21 +36,21 @@ func get_upgrade_cost(stat_level: int) -> int:
 func update_button_texts():
 	var str_cost = get_upgrade_cost(player.strength)
 	$Panel/UpgradeStrength.text = ""
-	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(str_cost)
+	$Panel/StrengthCost.text = str(str_cost)
 	
 	var agi_cost = get_upgrade_cost(player.agility)
 	$Panel/UpgradeAgility.text = ""
-	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(agi_cost)
+	$Panel/AgilityCost.text = str(agi_cost)
 	
 	var int_cost = get_upgrade_cost(player.intelligence)
 	$Panel/UpgradeIntelligence.text = ""
-	$Panel/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4/BranchTitle4.text = str(int_cost)
+	$Panel/IntelligenceCost.text = str(int_cost)
 	
 	var vs_mode = _is_vs_mode()
 	$Panel/UnlockWaveTimer.visible = not vs_mode
 	$Panel/UnlockWaveTimer.disabled = vs_mode or wave_timer_unlocked
-	$Panel/GoldPileIcon4.visible = not vs_mode
-	$Panel/BranchTitle6.visible = not vs_mode
+	$Panel/WaveTimerGoldIcon.visible = not vs_mode
+	$Panel/WaveTimerCost.visible = not vs_mode
 	
 	$Panel/UpgradeSpikes.visible = false
 	$Panel/UpgradeSpikes.disabled = true
