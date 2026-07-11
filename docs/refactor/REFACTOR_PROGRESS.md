@@ -4,79 +4,79 @@ Status: authoritative restart point
 
 Updated: 2026-07-11
 
-Baseline: `main` at `a2527ac` after the upgrade-menu hierarchy cleanup merge.
+Baseline: `main` and `origin/main` at merge commit `597eba6`.
 
 ## Current repository state
 
-- Local `main` and `origin/main` are synchronized at `a2527ac`.
-- Runtime-styler repair: `a35f1a9` on `test/upgrade-menu-runtime`.
-- Player 2 ability-input repair: `f750a1e` on `fix/p2-ability-inputs`.
-- Integration commit: `73fad96` on `test/upgrade-menu-runtime-integration`.
-- Compact unlock-state repair: `27dc424` on `fix/vs-compact-unlock-states`.
-- Active focused branch: `fix/vs-compact-button-focus`, based on `27dc424`.
-- No branch has been merged into `main` after `a2527ac`.
+- Active task branch: `audit/peon-characterization`.
+- The branch starts from `main` at `597eba6`.
+- No Peon gameplay source file is changed in this batch.
+- The batch adds one deterministic test suite and Peon behavior documentation.
 
-## Upgrade-menu hierarchy cleanup
+## Upgrade-menu refactor — merged
 
-The hierarchy cleanup is merged and validated statically:
+The upgrade-menu stabilization track is complete and merged into `main` through `597eba6`.
 
-- 61 nodes total: the CanvasLayer, Panel, and 59 direct panel children.
-- No nested decorative descendants remain.
-- Stable direct paths are used for stat costs, currency icons, section titles, and wave-timer controls.
-- `upgrade_menu.gd` retains 47 functions and `send_enemy`.
+Included work:
 
-## Runtime-styler repair
+- hierarchy flattening to 61 nodes,
+- explicit styler geometry types,
+- safe deferred styling through instance IDs,
+- Player 2 ability-action refresh after late player-ID assignment,
+- compact VS one-time unlock disabled states,
+- compact VS first-button focus.
 
-Commit `a35f1a9` prevents deferred styling from retaining a node object that may be freed before the message queue executes. It defers the instance ID and resolves the node safely.
+Runtime validation passed in single-player and Local VS for layout, focus, hero-specific controls, costs, deductions, unlock states, menu closing, and return to gameplay.
 
-Isolated validation completed:
+## Peon characterization — complete on task branch
 
-- `upgrade_menu_ui_styler.gd` outlines with 13 functions.
-- Single-player Dwarf menu opening/closing, Close focus, layout, wave-timer visibility, rail/minecart visibility, stat costs, currency deductions, one-time unlock disabling, and movement restoration passed.
-- The stale deferred-node conversion error did not recur after the repair.
+Added:
 
-## Player 2 ability-input repair
+- `tests/test_peon_characterization.gd`
+- `docs/refactor/PEON_CHARACTERIZATION.md`
 
-Commit `f750a1e` fixes Local VS initialization order. Both HeroAbilities controllers initially run while their Player still has the default ID 1; the parent VS scene assigns Player 2 afterward. The controller now refreshes secondary and ultimate actions when its owning Player ID changes.
+The suite validates current behavior against a deterministic synthetic world without editing:
 
-Isolated validation completed:
+- `peon.gd`
+- `peon_coordinator.gd`
+- `base.gd`
+- `world.gd`
 
-- `hero_abilities.gd` retains all 81 functions.
-- Local VS reached `VSMode`.
-- `p1_secondary`, `p1_ultimate`, `p2_secondary`, and `p2_ultimate` all existed.
-- Controller configuration matched final player IDs 1 and 2.
-- Repeated missing Player 2 action errors did not recur.
+Final result:
 
-## Integration validation
+- 5 tests
+- 32 assertions
+- 0 failures
+- 0 skipped
+- no fresh editor errors on the final run
 
-Commit `73fad96` combines `a35f1a9` and `f750a1e` without changing `main`.
+Covered contracts:
 
-Validated:
+1. Reachable-gem paths use only non-solid, dug cells.
+2. Disconnected gems are ignored.
+3. Pickup enters return-to-base and deposits exactly once.
+4. Coordinator reconciliation leaves only one duplicate target owner.
+5. Invalid targets reset the Peon to `IDLE` with an empty path and zero velocity.
 
-- Local VS launched with neither prior runtime error class.
-- Dwarf Rail/Minecart and Shaman Peon visibility passed.
-- Compact VS omitted Wave Timer as intended.
-- Stat costs, gold/gem deductions, prompt focus, closing, and movement restoration passed.
+## Peon gaps recorded for later work
 
-## Compact unlock-state repair
+- Future path cells are not explicitly invalidated or rebuilt when terrain changes.
+- Target reservations are reconciled after independent target selection.
+- Gem deletion happens before return-path success is known.
+- No stuck/progress watchdog exists.
+- Runtime evidence is still needed for the reported upward/through-wall movement symptom.
 
-Branch `fix/vs-compact-unlock-states` fixes one-time buttons that stayed enabled after purchase.
+## Next refactor task
 
-Validated on both Dwarf and Shaman sides:
+Create a focused runtime-reproduction branch for the Peon tunnel-navigation defect only after this characterization branch is reviewed and merged.
 
-- Player HP, Base HP, XP Bar, and Minimap start enabled and disable after unlock.
-- See Enemies starts disabled, enables after Minimap unlock, and disables after its one-time upgrade.
-- Four unlocks deduct 50 gold total; See Enemies deducts another 50 gold.
-- No fresh game errors occurred.
+The next batch must:
 
-## Compact focus repair
+- begin with the green characterization suite,
+- reproduce one concrete navigation invariant violation,
+- add one regression test,
+- change one defect only,
+- validate in both the suite and real single-player Shaman runtime,
+- and avoid unrelated worker-framework redesign.
 
-The compact menu rebuilt its grid by queuing old buttons for deletion while leaving them attached until frame end. `show_compact()` then selected the stale first child, so focus disappeared when that child was freed.
-
-The focused repair removes old grid children before queueing them for deletion. Runtime validation confirmed the new `STR +1` button owns focus in both Local VS subviewports, and the game log remained clean.
-
-Do not merge into `main` without explicit confirmation.
-
-## Other refactor work
-
-Existing audit, migration, minecart, Peon, and deployment records remain governed by the earlier sections and commits in repository history. Do not infer completion of pending tasks from this upgrade-menu validation track.
+Do not merge any task branch into `main` without explicit confirmation.
