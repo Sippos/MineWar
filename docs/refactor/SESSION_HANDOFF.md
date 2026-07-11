@@ -18,8 +18,8 @@ Before changing files in a new chat:
 ## Current repository state
 
 - `main` and `origin/main` are synchronized at `a2527ac`.
-- Active branch: `fix/vs-compact-unlock-states`.
-- This focused branch starts from integration commit `73fad96`, which combines runtime-styler repair `a35f1a9` and Player 2 input repair `f750a1e`.
+- Active branch: `fix/vs-compact-button-focus`.
+- This focused branch starts from compact unlock-state repair `27dc424`, which itself builds on integration commit `73fad96`.
 - Neither focused branch has been merged into `main`.
 - Godot AI reinstall material remains under ignored `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
@@ -60,6 +60,12 @@ Isolated validation confirmed:
 
 A concrete defect was confirmed: compact one-time unlock buttons remained enabled after purchase. Branch `fix/vs-compact-unlock-states` now disables Player HP, Base HP, XP Bar, and Minimap after unlock; gates See Enemies until Minimap is unlocked; and disables See Enemies after its one-time upgrade. Both Dwarf and Shaman runtime checks passed with correct deductions.
 
+## Compact focus repair
+
+`_rebuild_buttons()` previously queued old buttons for deletion without removing them from the grid. `show_compact()` therefore focused the old first child, which disappeared at frame end and left no focus owner.
+
+The focused repair removes each old child from the grid before queuing it for deletion. Runtime validation confirmed that the new `STR +1` button becomes the actual focus owner in both Local VS subviewports, with no fresh game errors.
+
 ## Next required action
 
-The compact panel's first upgrade button still does not gain focus after `show_compact()`. Handle that as a separate focused fix. Do not merge any branch into `main` without explicit confirmation.
+Commit and push `fix/vs-compact-button-focus`. Do not merge any branch into `main` without explicit confirmation.

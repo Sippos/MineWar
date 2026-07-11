@@ -107,6 +107,7 @@ func _rebuild_buttons() -> void:
 	if grid == null or upgrade_menu == null:
 		return
 	for child in grid.get_children():
+		grid.remove_child(child)
 		child.queue_free()
 	var hero: String = str(upgrade_menu._get_menu_hero()) if upgrade_menu.has_method("_get_menu_hero") else "Hero"
 	title.text = "%s Base Upgrades" % hero

@@ -12,7 +12,8 @@ Baseline: `main` at `a2527ac` after the upgrade-menu hierarchy cleanup merge.
 - Runtime-styler repair: `a35f1a9` on `test/upgrade-menu-runtime`.
 - Player 2 ability-input repair: `f750a1e` on `fix/p2-ability-inputs`.
 - Integration commit: `73fad96` on `test/upgrade-menu-runtime-integration`.
-- Active focused branch: `fix/vs-compact-unlock-states`, based on `73fad96`.
+- Compact unlock-state repair: `27dc424` on `fix/vs-compact-unlock-states`.
+- Active focused branch: `fix/vs-compact-button-focus`, based on `27dc424`.
 - No branch has been merged into `main` after `a2527ac`.
 
 ## Upgrade-menu hierarchy cleanup
@@ -68,7 +69,13 @@ Validated on both Dwarf and Shaman sides:
 - Four unlocks deduct 50 gold total; See Enemies deducts another 50 gold.
 - No fresh game errors occurred.
 
-The compact panel's first button still fails to gain focus after opening. Treat that as the next separate focused defect. Do not merge into `main` without explicit confirmation.
+## Compact focus repair
+
+The compact menu rebuilt its grid by queuing old buttons for deletion while leaving them attached until frame end. `show_compact()` then selected the stale first child, so focus disappeared when that child was freed.
+
+The focused repair removes old grid children before queueing them for deletion. Runtime validation confirmed the new `STR +1` button owns focus in both Local VS subviewports, and the game log remained clean.
+
+Do not merge into `main` without explicit confirmation.
 
 ## Other refactor work
 
