@@ -17,10 +17,10 @@ Before changing files in a new chat:
 
 ## Current repository state
 
-- `main` and `origin/main` are synchronized at `d53b792`.
-- Active task branch: `refactor/upgrade-menu-hierarchy`.
-- The branch starts from `d53b792`.
-- Ignored recovery material remains under `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
+- `main` and `origin/main` are synchronized at `a2527ac`.
+- Active task branch: `test/upgrade-menu-runtime`.
+- The branch started from `a2527ac` and contains the focused runtime-styler repair batch documented below.
+- Godot AI reinstall artifacts are preserved under ignored `.godot/refactor_recovery_20260711/runtime_connector_reinstall/`; never commit `.godot/` content.
 
 ## Upgrade-menu hierarchy cleanup
 
@@ -34,23 +34,22 @@ The legacy decorative hierarchy in `upgrade_menu.tscn` has been flattened while 
 - Button nodes and signal connections were not changed.
 - Currency values, gameplay prices, menu layout scale, and upgrade behavior were not changed.
 
-## Validation completed
+## Runtime validation completed
 
-- `upgrade_menu.tscn` saved and force-reloaded successfully.
-- The flat hierarchy remained intact after reload.
-- `upgrade_menu.gd` parses with 47 functions and the `send_enemy` signal.
-- `upgrade_menu_ui_styler.gd` parses with 12 functions.
-- A full Godot filesystem scan completed and settled.
-- No changed resource path was introduced.
+- The restarted Godot 4.7 editor connected successfully and `_mcp_game_helper` became live from the main-project launch.
+- All six required scripts read and outlined successfully through Godot.
+- Single-player Dwarf validation passed for menu opening/closing, Close focus, layout, wave-timer visibility, rail/minecart visibility, hidden Peon option, stat-cost labels, gold/gem deductions, one-time unlock disabling, and movement restoration.
+- Runtime styling exposed a concrete stale deferred-node defect in `upgrade_menu_ui_styler.gd`.
+- The styler now defers an instance ID, resolves it with `instance_from_id()`, and safely skips nodes freed before the deferred call. The script outlines with 13 functions and the stale-object error did not recur after relaunch.
+- Local VS reached `VSMode`, but full upgrade-menu validation is blocked by repeated pre-existing errors because `p2_secondary` and `p2_ultimate` are absent from the InputMap.
 
 ## Next required actions
 
 1. Inspect the complete Git diff and staged diff.
-2. Confirm only `upgrade_menu.tscn`, `upgrade_menu.gd`, `upgrade_menu_ui_styler.gd`, and the two refactor documents are included.
-3. Commit with a focused message.
-4. Push `refactor/upgrade-menu-hierarchy`.
-5. Do not merge into `main` without explicit confirmation.
+2. Confirm only `upgrade_menu_ui_styler.gd` and the two refactor documents are included.
+3. Commit with a focused message and push the task branch.
+4. Do not merge into `main` without explicit confirmation.
 
-## Recommended next batch after merge
+## Recommended next batch
 
-Run the upgrade menu inside a playable single-player and VS session. Record any remaining visual, focus, visibility, or purchasing defects as separate focused fixes rather than combining them with additional hierarchy changes.
+Create a separate focused fix for missing Player 2 secondary/ultimate InputMap actions, then resume Local VS upgrade-menu validation from a fresh log cursor.

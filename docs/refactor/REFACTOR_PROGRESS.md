@@ -4,7 +4,7 @@ Status: authoritative restart point
 
 Updated: 2026-07-11
 
-Baseline: `main` at `d53b792` after the upgrade-menu baseline repair merge and push.
+Baseline: `main` at `a2527ac` after the upgrade-menu hierarchy cleanup merge and push.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ and Git history differ.
 - Documentation recovery landed in commit `2daab5d`.
 - `MOV-011` landed in commit `f16f045` and was merged into `main` as `8f33c82`.
 - The unrelated local Git MCP connector files remain preserved only in ignored `.godot/refactor_recovery_20260711/` storage and are not part of the refactor commits.
-- Local `main` and `origin/main` are synchronized at `d53b792`.
+- Local `main` and `origin/main` are synchronized at `a2527ac`.
 - The reconciled history is preserved by PR #16.
 - The validated startup corrections are commit `4f5e269`.
 - The working baseline previously launched the configured router, main menu,
@@ -95,6 +95,18 @@ Validation completed:
 - `upgrade_menu_ui_styler.gd` parses with all 12 functions.
 - A full Godot filesystem scan completed and settled.
 
+## Upgrade-menu runtime validation
+
+Branch `test/upgrade-menu-runtime` launched the main project with the Godot AI runtime helper live and validated the flattened menu in single-player.
+
+Completed checks:
+
+- The six required scripts read and outlined through Godot after a settled filesystem scan.
+- Single-player Dwarf menu opening/closing, Close focus, layout, wave-timer visibility, Dwarf rail/minecart visibility, hidden Shaman Peon option, stat costs, gold/gem deductions, one-time unlock disabling, and gameplay movement restoration passed.
+- A stale deferred-node error in `upgrade_menu_ui_styler.gd` was reproduced during scene transition.
+- The focused repair defers a node instance ID and resolves it safely before styling; freed nodes are ignored. The stale-object conversion error did not recur after relaunch.
+- Local VS reached `VSMode`, but repeated missing InputMap errors for `p2_secondary` and `p2_ultimate` prevented clean completion of VS menu validation.
+
 ## Recommended next task
 
-Review and merge the hierarchy cleanup. After merge, run the menu inside a playable level and capture any remaining visual or focus defects as separate focused UI fixes.
+Land the focused styler runtime repair. Then create a separate Player 2 InputMap fix batch and resume Local VS upgrade-menu validation without combining it with other defects.
