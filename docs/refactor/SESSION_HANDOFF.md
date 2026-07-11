@@ -7,65 +7,86 @@ Updated: 2026-07-11
 Before changing files in a new chat:
 
 1. Read `AGENTS.md`.
-2. Read this file and `REFACTOR_PROGRESS.md`.
+2. Read this file, `REFACTOR_PROGRESS.md`, and `PEON_CHARACTERIZATION.md`.
 3. Confirm `localFS`, `localGD`, and `localGit` are connected.
-4. Inspect the active Godot session and open scenes.
-5. Fetch `origin`, then inspect branch, status, remotes, and latest commit.
-6. Review every staged, unstaged, and untracked change before editing.
+4. Confirm the active Godot session points to `/home/sebastian-berger/mining/` and no game process is running.
+5. Fetch `origin`.
+6. Inspect branch, status, remotes, latest commit, staged changes, unstaged changes, and untracked files.
 7. Preserve unrelated changes and work in one focused batch.
-8. Prefer a task branch; do not edit directly on `main`.
+8. Do not edit `main` directly.
 
 ## Current repository state
 
-- `main` and `origin/main` are synchronized at `a2527ac`.
-- Active branch: `fix/vs-compact-button-focus`.
-- This focused branch starts from compact unlock-state repair `27dc424`, which itself builds on integration commit `73fad96`.
-- Neither focused branch has been merged into `main`.
+- Repository: `/home/sebastian-berger/mining`
+- `main` and `origin/main` are synchronized at merge commit `597eba6`.
+- Upgrade-menu runtime fixes are merged into `main`.
+- Active task branch: `audit/peon-characterization`, created from `597eba6`.
+- The task branch contains only Peon characterization tests and refactor documentation.
 - Godot AI reinstall material remains under ignored `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
-## Upgrade-menu hierarchy
+## Upgrade-menu refactor status
 
-The flattened upgrade menu remains merged in `main` at `a2527ac`:
+The complete validated chain is merged into `main` through `597eba6`:
 
-- 61 scene nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
-- Stable direct-child names include `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
-- No nested decorative `BranchTitle*` or `GoldPileIcon*` chains remain.
+- flattened 61-node upgrade-menu hierarchy,
+- deferred styler instance-ID safety,
+- Player 2 secondary/ultimate action refresh,
+- compact VS one-time unlock disabled states,
+- compact VS first-button focus.
 
-## Focused fixes present on this integration branch
+Validated single-player and Local VS flows included layout, focus, hero-specific options, costs, deductions, unlock states, closing, and movement restoration.
 
-### Deferred runtime styling
+## Peon characterization batch
 
-Commit `a35f1a9` changes `upgrade_menu_ui_styler.gd` to defer a node instance ID, resolve it with `instance_from_id()`, and skip nodes freed before the deferred call. This prevents stale-object conversion errors during scene transitions.
+Files added:
 
-### Player 2 ability inputs
+- `tests/test_peon_characterization.gd`
+- `docs/refactor/PEON_CHARACTERIZATION.md`
 
-Commit `f750a1e` changes `hero_abilities.gd` to remember which player ID its secondary and ultimate actions were configured for. If the owning Player receives a different ID after `_ready()`, the controller refreshes its actions for that final ID.
+The deterministic suite uses a synthetic world and validates current behavior without modifying Peon gameplay code.
 
-Isolated validation confirmed:
+Final validation:
 
-- `hero_abilities.gd` retains all 81 functions.
-- Local VS creates `p1_secondary`, `p1_ultimate`, `p2_secondary`, and `p2_ultimate`.
-- Controller configuration matches Player 1 ID 1 and Player 2 ID 2.
-- Missing Player 2 action spam no longer occurs.
+- suite: `peon_characterization`
+- 5 tests
+- 32 assertions
+- 0 failures
+- 0 skipped
+- 0 fresh errors on the final run
 
-## Local VS integration validation
+Locked contracts:
 
-- Local VS launched with no stale styler errors and no missing Player 2 action errors.
-- Player 1 Dwarf and Player 2 Shaman controls were present as expected.
-- Wave-timer controls were absent from the compact VS menu.
-- Dwarf showed Rail and Minecart; Shaman showed Peon.
-- Stat cost text and gold/gem deductions passed.
-- Closing restored movement on both sides.
-- The VS prompt focused a button correctly.
+- reachable paths stay on open, dug cells,
+- unreachable gems are ignored,
+- pickup returns to Base and deposits once,
+- duplicate targets are reduced to one Peon,
+- invalid targets recover to `IDLE`.
 
-A concrete defect was confirmed: compact one-time unlock buttons remained enabled after purchase. Branch `fix/vs-compact-unlock-states` now disables Player HP, Base HP, XP Bar, and Minimap after unlock; gates See Enemies until Minimap is unlocked; and disables See Enemies after its one-time upgrade. Both Dwarf and Shaman runtime checks passed with correct deductions.
+## Known Peon gaps
 
-## Compact focus repair
+Do not treat these as fixed:
 
-`_rebuild_buttons()` previously queued old buttons for deletion without removing them from the grid. `show_compact()` therefore focused the old first child, which disappeared at frame end and left no focus owner.
+- No explicit path cancellation/rebuild when a future path cell becomes solid.
+- Duplicate target selection can occur before coordinator reconciliation.
+- The gem is deleted before a return path is guaranteed.
+- No stuck/progress watchdog exists.
+- The reported runtime symptom of Peons appearing to move upward or through walls has not yet been reproduced in a focused fixture.
 
-The focused repair removes each old child from the grid before queuing it for deletion. Runtime validation confirmed that the new `STR +1` button becomes the actual focus owner in both Local VS subviewports, with no fresh game errors.
+## Next focused batch
 
-## Next required action
+Reproduce the real single-player Shaman Peon navigation defect before changing gameplay code.
 
-Commit and push `fix/vs-compact-button-focus`. Do not merge any branch into `main` without explicit confirmation.
+Required sequence:
+
+1. Start from clean `main` after the characterization branch is merged, or create a dedicated fix branch from the characterization branch when explicitly requested.
+2. Run `peon_characterization` first.
+3. Launch a single-player Shaman game with the MCP helper live.
+4. Buy or spawn multiple Peons.
+5. Observe actual Peon cell, path, state, target, `last_walkable_cell`, and BlockLayer/A* walkability while reproducing the upward/through-wall symptom.
+6. Capture one concrete invariant violation.
+7. Add one failing regression test for that violation.
+8. Make one focused fix only.
+9. Run the characterization suite and a real runtime check.
+10. Update all three refactor documents, commit, and push the task branch.
+
+Do not merge into `main` without explicit confirmation.
