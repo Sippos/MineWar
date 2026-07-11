@@ -4,7 +4,7 @@ Status: authoritative restart point
 
 Updated: 2026-07-11
 
-Baseline: `main` at `d53b792` after the upgrade-menu baseline repair merge and push.
+Baseline: `main` at `a2527ac` after the upgrade-menu hierarchy cleanup merge and push.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ and Git history differ.
 - Documentation recovery landed in commit `2daab5d`.
 - `MOV-011` landed in commit `f16f045` and was merged into `main` as `8f33c82`.
 - The unrelated local Git MCP connector files remain preserved only in ignored `.godot/refactor_recovery_20260711/` storage and are not part of the refactor commits.
-- Local `main` and `origin/main` are synchronized at `d53b792`.
+- Local `main` and `origin/main` are synchronized at `a2527ac`.
 - The reconciled history is preserved by PR #16.
 - The validated startup corrections are commit `4f5e269`.
 - The working baseline previously launched the configured router, main menu,
@@ -95,6 +95,22 @@ Validation completed:
 - `upgrade_menu_ui_styler.gd` parses with all 12 functions.
 - A full Godot filesystem scan completed and settled.
 
+## Player 2 ability-input repair
+
+Branch `fix/p2-ability-inputs` addresses the Local VS initialization-order defect where both `HeroAbilities` controllers configured Player 1 secondary/ultimate actions before the parent VS scene assigned Player 2's final ID.
+
+The controller now remembers the player ID used for input setup and re-runs `_ensure_inputs()` when the owning Player's ID changes.
+
+Validation completed:
+
+- `hero_abilities.gd` retained all 81 functions and passed Godot read/outline validation.
+- A full filesystem scan completed and settled.
+- Local VS reached `VSMode`.
+- All four runtime actions existed: `p1_secondary`, `p1_ultimate`, `p2_secondary`, and `p2_ultimate`.
+- Controller configuration matched final player IDs for both players.
+- The repeated missing Player 2 action errors did not recur.
+- The branch intentionally excludes the separate runtime-styler fix `a35f1a9`; the known stale deferred-node errors therefore remain on this isolated branch.
+
 ## Recommended next task
 
-Review and merge the hierarchy cleanup. After merge, run the menu inside a playable level and capture any remaining visual or focus defects as separate focused UI fixes.
+Commit and push `fix/p2-ability-inputs`. Then create an integration validation branch from `test/upgrade-menu-runtime`, merge the Player 2 input branch there, and finish Local VS upgrade-menu validation with both fixes present. Do not merge into `main` without explicit confirmation.
