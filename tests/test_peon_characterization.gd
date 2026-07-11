@@ -171,3 +171,21 @@ func test_invalid_target_recovers_to_idle() -> void:
 	assert_eq(peon.target_gem, null)
 	assert_eq(peon.astar_path.size(), 0)
 	assert_eq(peon.velocity, Vector2.ZERO)
+
+func test_cached_path_stops_before_newly_solid_next_cell() -> void:
+	var setup_data := _make_world([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	assert_false(setup_data.is_empty(), "An edited scene is required")
+	if setup_data.is_empty():
+		return
+	var peon := _add_peon(setup_data.world, Vector2i(0, 0))
+	peon.state = "MOVE_TO_GEM"
+	peon.astar_path = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	peon.path_index = 1
+	var start_position: Vector2 = peon.global_position
+	setup_data.world.astar.set_point_solid(Vector2i(1, 0), true)
+
+	peon.move_along_path(0.016)
+
+	assert_eq(peon.global_position, start_position, "Peon must not advance toward a newly solid path cell")
+	assert_eq(peon.velocity, Vector2.ZERO, "Peon must stop when its next path cell becomes solid")
+	assert_eq(peon.astar_path.size(), 0, "Invalid cached path should be cancelled for rebuilding")

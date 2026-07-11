@@ -264,8 +264,12 @@ func move_along_path(_delta):
 		return
 	
 	var target_cell = astar_path[path_index]
-	if _is_walkable_cell(target_cell):
-		last_walkable_cell = target_cell
+	if not _is_walkable_cell(target_cell):
+		astar_path.clear()
+		path_index = 0
+		velocity = Vector2.ZERO
+		return
+	last_walkable_cell = target_cell
 	var target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 	# Walk near the lower half of the cleared tile so the peon appears grounded.
 	target_pos.y += 16
@@ -276,8 +280,12 @@ func move_along_path(_delta):
 			velocity = Vector2.ZERO
 			return
 		target_cell = astar_path[path_index]
-		if _is_walkable_cell(target_cell):
-			last_walkable_cell = target_cell
+		if not _is_walkable_cell(target_cell):
+			astar_path.clear()
+			path_index = 0
+			velocity = Vector2.ZERO
+			return
+		last_walkable_cell = target_cell
 		target_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 		target_pos.y += 16
 	
