@@ -18,8 +18,8 @@ Before changing files in a new chat:
 ## Current repository state
 
 - `main` and `origin/main` are synchronized at `a2527ac`.
-- Active branch: `test/upgrade-menu-runtime-integration`.
-- This integration-only branch starts from runtime-styler repair `a35f1a9` and merges Player 2 input repair `f750a1e`.
+- Active branch: `fix/vs-compact-unlock-states`.
+- This focused branch starts from integration commit `73fad96`, which combines runtime-styler repair `a35f1a9` and Player 2 input repair `f750a1e`.
 - Neither focused branch has been merged into `main`.
 - Godot AI reinstall material remains under ignored `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
@@ -48,13 +48,18 @@ Isolated validation confirmed:
 - Controller configuration matches Player 1 ID 1 and Player 2 ID 2.
 - Missing Player 2 action spam no longer occurs.
 
-## Integration validation next
+## Local VS integration validation
 
-1. Complete the documentation-only merge resolution.
-2. Clear MCP logs and Debugger rows.
-3. Run a full Godot filesystem scan and capture a fresh editor cursor.
-4. Launch the main project with `_mcp_game_helper` live.
-5. Enter Local VS and verify no styler or Player 2 input errors occur.
-6. Validate the VS prompt, upgrade-panel flow, focus, wave-timer hiding, Dwarf/Shaman faction controls, costs, deductions, one-time unlock disabling, closing, and return to gameplay.
-7. Update both handoff documents with the integration result.
-8. Push only the integration branch. Do not merge into `main` without explicit confirmation.
+- Local VS launched with no stale styler errors and no missing Player 2 action errors.
+- Player 1 Dwarf and Player 2 Shaman controls were present as expected.
+- Wave-timer controls were absent from the compact VS menu.
+- Dwarf showed Rail and Minecart; Shaman showed Peon.
+- Stat cost text and gold/gem deductions passed.
+- Closing restored movement on both sides.
+- The VS prompt focused a button correctly.
+
+A concrete defect was confirmed: compact one-time unlock buttons remained enabled after purchase. Branch `fix/vs-compact-unlock-states` now disables Player HP, Base HP, XP Bar, and Minimap after unlock; gates See Enemies until Minimap is unlocked; and disables See Enemies after its one-time upgrade. Both Dwarf and Shaman runtime checks passed with correct deductions.
+
+## Next required action
+
+The compact panel's first upgrade button still does not gain focus after `show_compact()`. Handle that as a separate focused fix. Do not merge any branch into `main` without explicit confirmation.

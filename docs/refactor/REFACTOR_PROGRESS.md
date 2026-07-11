@@ -11,8 +11,8 @@ Baseline: `main` at `a2527ac` after the upgrade-menu hierarchy cleanup merge.
 - Local `main` and `origin/main` are synchronized at `a2527ac`.
 - Runtime-styler repair: `a35f1a9` on `test/upgrade-menu-runtime`.
 - Player 2 ability-input repair: `f750a1e` on `fix/p2-ability-inputs`.
-- Active integration branch: `test/upgrade-menu-runtime-integration`.
-- The integration branch combines both focused fixes for validation only.
+- Integration commit: `73fad96` on `test/upgrade-menu-runtime-integration`.
+- Active focused branch: `fix/vs-compact-unlock-states`, based on `73fad96`.
 - No branch has been merged into `main` after `a2527ac`.
 
 ## Upgrade-menu hierarchy cleanup
@@ -48,16 +48,27 @@ Isolated validation completed:
 
 ## Integration validation
 
-Branch `test/upgrade-menu-runtime-integration` combines `a35f1a9` and `f750a1e` without changing `main`.
+Commit `73fad96` combines `a35f1a9` and `f750a1e` without changing `main`.
 
-Required next checks:
+Validated:
 
-- Resolve and commit the documentation-only merge conflict.
-- Clear logs and run a settled filesystem scan.
-- Launch with `_mcp_game_helper` live.
-- Enter Local VS and confirm both prior error classes are absent.
-- Validate VS prompt and upgrade-panel flow, focus, wave-timer hiding, hero-specific faction controls, stat costs, deductions, one-time unlock states, closing, and movement restoration.
-- Push the integration branch only. Do not merge into `main` without explicit confirmation.
+- Local VS launched with neither prior runtime error class.
+- Dwarf Rail/Minecart and Shaman Peon visibility passed.
+- Compact VS omitted Wave Timer as intended.
+- Stat costs, gold/gem deductions, prompt focus, closing, and movement restoration passed.
+
+## Compact unlock-state repair
+
+Branch `fix/vs-compact-unlock-states` fixes one-time buttons that stayed enabled after purchase.
+
+Validated on both Dwarf and Shaman sides:
+
+- Player HP, Base HP, XP Bar, and Minimap start enabled and disable after unlock.
+- See Enemies starts disabled, enables after Minimap unlock, and disables after its one-time upgrade.
+- Four unlocks deduct 50 gold total; See Enemies deducts another 50 gold.
+- No fresh game errors occurred.
+
+The compact panel's first button still fails to gain focus after opening. Treat that as the next separate focused defect. Do not merge into `main` without explicit confirmation.
 
 ## Other refactor work
 
