@@ -18,38 +18,43 @@ Before changing files in a new chat:
 ## Current repository state
 
 - `main` and `origin/main` are synchronized at `a2527ac`.
-- Active task branch: `test/upgrade-menu-runtime`.
-- The branch started from `a2527ac` and contains the focused runtime-styler repair batch documented below.
-- Godot AI reinstall artifacts are preserved under ignored `.godot/refactor_recovery_20260711/runtime_connector_reinstall/`; never commit `.godot/` content.
+- Active branch: `test/upgrade-menu-runtime-integration`.
+- This integration-only branch starts from runtime-styler repair `a35f1a9` and merges Player 2 input repair `f750a1e`.
+- Neither focused branch has been merged into `main`.
+- Godot AI reinstall material remains under ignored `.godot/refactor_recovery_20260711/`; never commit `.godot/` content.
 
-## Upgrade-menu hierarchy cleanup
+## Upgrade-menu hierarchy
 
-The legacy decorative hierarchy in `upgrade_menu.tscn` has been flattened while preserving panel-relative positions.
+The flattened upgrade menu remains merged in `main` at `a2527ac`:
 
-- The scene contains 61 nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
-- No panel child contains nested decorative label or icon descendants.
-- Anonymous `BranchTitle*` and `GoldPileIcon*` chains were replaced with descriptive direct-child names such as `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
-- `upgrade_menu.gd` now references the stable direct paths for stat costs and wave-timer visibility.
-- `upgrade_menu_ui_styler.gd` now references `HealthTitle` directly.
-- Button nodes and signal connections were not changed.
-- Currency values, gameplay prices, menu layout scale, and upgrade behavior were not changed.
+- 61 scene nodes total: `UpgradeMenu`, `Panel`, and 59 direct panel children.
+- Stable direct-child names include `StrengthCost`, `AgilityCost`, `IntelligenceCost`, `WaveTimerCost`, `StrengthGemIcon`, and `RailGoldIcon`.
+- No nested decorative `BranchTitle*` or `GoldPileIcon*` chains remain.
 
-## Runtime validation completed
+## Focused fixes present on this integration branch
 
-- The restarted Godot 4.7 editor connected successfully and `_mcp_game_helper` became live from the main-project launch.
-- All six required scripts read and outlined successfully through Godot.
-- Single-player Dwarf validation passed for menu opening/closing, Close focus, layout, wave-timer visibility, rail/minecart visibility, hidden Peon option, stat-cost labels, gold/gem deductions, one-time unlock disabling, and movement restoration.
-- Runtime styling exposed a concrete stale deferred-node defect in `upgrade_menu_ui_styler.gd`.
-- The styler now defers an instance ID, resolves it with `instance_from_id()`, and safely skips nodes freed before the deferred call. The script outlines with 13 functions and the stale-object error did not recur after relaunch.
-- Local VS reached `VSMode`, but full upgrade-menu validation is blocked by repeated pre-existing errors because `p2_secondary` and `p2_ultimate` are absent from the InputMap.
+### Deferred runtime styling
 
-## Next required actions
+Commit `a35f1a9` changes `upgrade_menu_ui_styler.gd` to defer a node instance ID, resolve it with `instance_from_id()`, and skip nodes freed before the deferred call. This prevents stale-object conversion errors during scene transitions.
 
-1. Inspect the complete Git diff and staged diff.
-2. Confirm only `upgrade_menu_ui_styler.gd` and the two refactor documents are included.
-3. Commit with a focused message and push the task branch.
-4. Do not merge into `main` without explicit confirmation.
+### Player 2 ability inputs
 
-## Recommended next batch
+Commit `f750a1e` changes `hero_abilities.gd` to remember which player ID its secondary and ultimate actions were configured for. If the owning Player receives a different ID after `_ready()`, the controller refreshes its actions for that final ID.
 
-Create a separate focused fix for missing Player 2 secondary/ultimate InputMap actions, then resume Local VS upgrade-menu validation from a fresh log cursor.
+Isolated validation confirmed:
+
+- `hero_abilities.gd` retains all 81 functions.
+- Local VS creates `p1_secondary`, `p1_ultimate`, `p2_secondary`, and `p2_ultimate`.
+- Controller configuration matches Player 1 ID 1 and Player 2 ID 2.
+- Missing Player 2 action spam no longer occurs.
+
+## Integration validation next
+
+1. Complete the documentation-only merge resolution.
+2. Clear MCP logs and Debugger rows.
+3. Run a full Godot filesystem scan and capture a fresh editor cursor.
+4. Launch the main project with `_mcp_game_helper` live.
+5. Enter Local VS and verify no styler or Player 2 input errors occur.
+6. Validate the VS prompt, upgrade-panel flow, focus, wave-timer hiding, Dwarf/Shaman faction controls, costs, deductions, one-time unlock disabling, closing, and return to gameplay.
+7. Update both handoff documents with the integration result.
+8. Push only the integration branch. Do not merge into `main` without explicit confirmation.

@@ -91,6 +91,7 @@ var ability_bar: HBoxContainer
 var ability_slots := {}
 var icon_cache := {}
 var current_hud_hero := ""
+var configured_input_player_id := 0
 
 func _ready() -> void:
 	player = get_parent() as CharacterBody2D
@@ -113,6 +114,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
+	if configured_input_player_id != _player_id():
+		_ensure_inputs()
 	_ensure_hud()
 	_update_facing_direction()
 	_tick_cooldowns(delta)
@@ -142,10 +145,12 @@ func _action(suffix: String) -> String:
 	return "p%d_%s" % [_player_id(), suffix]
 
 func _ensure_inputs() -> void:
-	var secondary_key: Key = KEY_F if _player_id() == 1 else KEY_KP_1
-	var ultimate_key: Key = KEY_T if _player_id() == 1 else KEY_KP_2
+	var current_player_id := _player_id()
+	var secondary_key: Key = KEY_F if current_player_id == 1 else KEY_KP_1
+	var ultimate_key: Key = KEY_T if current_player_id == 1 else KEY_KP_2
 	_ensure_input_action(_action("secondary"), secondary_key, JOY_BUTTON_RIGHT_SHOULDER)
 	_ensure_input_action(_action("ultimate"), ultimate_key, JOY_BUTTON_LEFT_SHOULDER)
+	configured_input_player_id = current_player_id
 
 func _ensure_input_action(action_name: String, keycode: Key, joy_button: JoyButton) -> void:
 	if not InputMap.has_action(action_name):
