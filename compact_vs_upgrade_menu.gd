@@ -111,14 +111,14 @@ func _rebuild_buttons() -> void:
 		child.queue_free()
 	var hero: String = str(upgrade_menu._get_menu_hero()) if upgrade_menu.has_method("_get_menu_hero") else "Hero"
 	title.text = "%s Base Upgrades" % hero
-	_add("STR +1", "_on_upgrade_strength_pressed", "res://Strenght.png", _gem_cost("strength"))
-	_add("AGI +1", "_on_upgrade_agility_pressed", "res://Agility.png", _gem_cost("agility"))
-	_add("INT +1", "_on_upgrade_intelligence_pressed", "res://Int.png", _gem_cost("intelligence"))
-	_add("+20 Max HP", "_on_upgrade_max_health_pressed", "res://Healthbar.png", "15 gold")
-	_add("Heal +20", "_on_heal_player_pressed", "res://Healthbar.png", "10 gold")
-	_add("Player HP", "_on_unlock_healthbar_pressed", "res://Healthbar.png", "10 gold", bool(upgrade_menu.get("healthbar_unlocked")))
+	_add("STR +1", "_on_upgrade_strength_pressed", "res://assets/sprites/ui/common/stats/Strenght.png", _gem_cost("strength"))
+	_add("AGI +1", "_on_upgrade_agility_pressed", "res://assets/sprites/ui/common/stats/Agility.png", _gem_cost("agility"))
+	_add("INT +1", "_on_upgrade_intelligence_pressed", "res://assets/sprites/ui/common/stats/Int.png", _gem_cost("intelligence"))
+	_add("+20 Max HP", "_on_upgrade_max_health_pressed", "res://assets/sprites/ui/common/stats/Healthbar.png", "15 gold")
+	_add("Heal +20", "_on_heal_player_pressed", "res://assets/sprites/ui/common/stats/Healthbar.png", "10 gold")
+	_add("Player HP", "_on_unlock_healthbar_pressed", "res://assets/sprites/ui/common/stats/Healthbar.png", "10 gold", bool(upgrade_menu.get("healthbar_unlocked")))
 	_add("Base HP", "_on_unlock_base_health_pressed", "res://DwarfBase.png", "10 gold", bool(upgrade_menu.get("base_health_unlocked")))
-	_add("XP Bar", "_on_unlock_xp_pressed", "res://HealthBarPurple.png", "10 gold", bool(upgrade_menu.get("xp_unlocked")))
+	_add("XP Bar", "_on_unlock_xp_pressed", "res://assets/sprites/ui/common/stats/HealthBarPurple.png", "10 gold", bool(upgrade_menu.get("xp_unlocked")))
 	_add("Minimap", "_on_unlock_minimap_pressed", "res://icon.svg", "20 gold", bool(upgrade_menu.get("minimap_unlocked")))
 	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", "50 gold", not bool(upgrade_menu.get("minimap_unlocked")) or bool(upgrade_menu.get("minimap_upgraded")))
 	if hero == "Dwarf":

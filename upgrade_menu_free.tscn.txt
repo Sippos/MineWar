@@ -2,11 +2,11 @@
 
 [ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://assets/sprites/ui/common/MenuPanel.png" id="1_nuldh"]
 [ext_resource type="Texture2D" uid="uid://otbqbgm08ok3" path="res://GoldCoinPile.png" id="2_goldpile"]
-[ext_resource type="Texture2D" uid="uid://b5dg8rc6veim7" path="res://Healthbar.png" id="4_healthbar"]
-[ext_resource type="Texture2D" uid="uid://bfqjvrrqremcr" path="res://Strenght.png" id="5_str"]
-[ext_resource type="Texture2D" uid="uid://dw48465ik5sbr" path="res://Agility.png" id="6_agi"]
-[ext_resource type="Texture2D" uid="uid://o2r73wjtn3cr" path="res://Int.png" id="7_int"]
-[ext_resource type="Texture2D" uid="uid://cwq2ecylosvfk" path="res://HealthBarPurple.png" id="7_nv8yg"]
+[ext_resource type="Texture2D" uid="uid://b5dg8rc6veim7" path="res://assets/sprites/ui/common/stats/Healthbar.png" id="4_healthbar"]
+[ext_resource type="Texture2D" uid="uid://bfqjvrrqremcr" path="res://assets/sprites/ui/common/stats/Strenght.png" id="5_str"]
+[ext_resource type="Texture2D" uid="uid://dw48465ik5sbr" path="res://assets/sprites/ui/common/stats/Agility.png" id="6_agi"]
+[ext_resource type="Texture2D" uid="uid://o2r73wjtn3cr" path="res://assets/sprites/ui/common/stats/Int.png" id="7_int"]
+[ext_resource type="Texture2D" uid="uid://cwq2ecylosvfk" path="res://assets/sprites/ui/common/stats/HealthBarPurple.png" id="7_nv8yg"]
 
 [node name="UpgradeMenuFree" type="Control" unique_id=1217060327]
 layout_mode = 3

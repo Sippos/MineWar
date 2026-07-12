@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwq2ecylosvfk"
-path="res://.godot/imported/HealthBarPurple.png-ebce08fd5719b74a845226a594851907.ctex"
+uid="uid://dw48465ik5sbr"
+path="res://.godot/imported/Agility.png-1f4b6d87b9d63b3c01da6e85e10e83eb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://HealthBarPurple.png"
-dest_files=["res://.godot/imported/HealthBarPurple.png-ebce08fd5719b74a845226a594851907.ctex"]
+source_file="res://assets/sprites/ui/common/stats/Agility.png"
+dest_files=["res://.godot/imported/Agility.png-1f4b6d87b9d63b3c01da6e85e10e83eb.ctex"]
 
 [params]
 

@@ -102,3 +102,8 @@ Relocated the inheritance-coupled collectible group without behavior changes:
 - `rail_item.gd` and UID → `scripts/gameplay/collectibles/rail_items/`
 
 All runtime, scene, test, tool, documentation, and path-based inheritance references were updated atomically. The collectible suite passed 4/4 tests with 23 assertions, and the full discovered suite passed 10/10 tests.
+
+
+## MOV-014 — HUD stat and health asset relocation
+
+Implemented on branch `refactor/mov-014-hud-assets`. Seven image/sidecar pairs were relocated using the frozen manifest in `docs/refactor/MOV_014_ASSET_MANIFEST.md`. Gold coin assets and world assets with misleading stat/resource names were excluded after ownership audit. This is a path-only change.
