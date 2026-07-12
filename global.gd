@@ -97,29 +97,29 @@ var hero_p2 = "Dwarf"
 
 var hero_data = {
 	"Dwarf": {
-		"walk": "res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png",
-		"attack": "res://assets/sprites/characters/dwarf/dwarf_attack_pixelart_spritesheet.png"
+		"walk": preload("res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png"),
+		"attack": preload("res://assets/sprites/characters/dwarf/dwarf_attack_pixelart_spritesheet.png")
 	},
 	"Mech": {
-		"walk": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
-		"attack": "res://character_sprites/mech_walk_pixelart_spritesheet.png"
+		"walk": preload("res://character_sprites/mech_walk_pixelart_spritesheet.png"),
+		"attack": preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
 	},
 	"Shaman": {
-		"walk": "res://character_sprites/shaman_walk_spritesheet_25d.png",
-		"attack": "res://character_sprites/shaman_attack_spritesheet_25d.png"
+		"walk": preload("res://character_sprites/shaman_walk_spritesheet_25d.png"),
+		"attack": preload("res://character_sprites/shaman_attack_spritesheet_25d.png")
 	},
 	"Nerubian": {
-		"walk": "res://character_sprites/nerubian_walk_spritesheet_25d.png",
-		"attack": "res://character_sprites/nerubian_attack_spritesheet_25d.png"
+		"walk": preload("res://character_sprites/nerubian_walk_spritesheet_25d.png"),
+		"attack": preload("res://character_sprites/nerubian_attack_spritesheet_25d.png")
 	},
 	"Druid": {
-		"walk": "res://character_sprites/druid_walk_spritesheet_25d.png",
-		"attack": "res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d.png",
-		"mole": "res://character_sprites/druid_mole_crawl_spritesheet_25d.png"
+		"walk": preload("res://character_sprites/druid_walk_spritesheet_25d.png"),
+		"attack": preload("res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d.png"),
+		"mole": preload("res://character_sprites/druid_mole_crawl_spritesheet_25d.png")
 	},
 	"Undead King": {
-		"walk": "res://character_sprites/undead_king_float_idle_spritesheet_25d.png",
-		"attack": "res://character_sprites/undead_king_staff_cast_spritesheet_25d.png"
+		"walk": preload("res://character_sprites/undead_king_float_idle_spritesheet_25d.png"),
+		"attack": preload("res://character_sprites/undead_king_staff_cast_spritesheet_25d.png")
 	}
 }
 

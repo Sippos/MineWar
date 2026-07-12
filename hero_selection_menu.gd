@@ -228,7 +228,7 @@ func _is_hero_playable(hero_name: String) -> bool:
 func update_ui(player_id: int) -> void:
 	var h_name = available_heroes[p1_index] if player_id == 1 else available_heroes[p2_index]
 	var is_unlocked = _is_hero_playable(h_name)
-	var tex = load(Global.hero_data[h_name].walk)
+	var tex = Global.hero_data[h_name]["walk"] as Texture2D
 	
 	if player_id == 1:
 		p1_label.text = h_name if is_unlocked else (h_name + " (Locked)")

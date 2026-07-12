@@ -14,8 +14,8 @@ func _on_back_pressed():
 func populate_heroes():
 	for hero_name in Global.hero_data.keys():
 		var is_unlocked = Global.unlocked_heroes.has(hero_name)
-		var texture_path = Global.hero_data[hero_name]["walk"]
-		var icon = create_icon(texture_path, is_unlocked)
+		var texture = Global.hero_data[hero_name]["walk"] as Texture2D
+		var icon = create_icon_from_texture(texture, is_unlocked)
 		$VBoxContainer/ScrollContainer/VBoxContainer/HeroesGrid.add_child(icon)
 
 func populate_monsters():
@@ -26,7 +26,9 @@ func populate_monsters():
 		$VBoxContainer/ScrollContainer/VBoxContainer/MonstersGrid.add_child(icon)
 
 func create_icon(texture_path: String, is_revealed: bool) -> Control:
-	var tex = load(texture_path)
+	return create_icon_from_texture(load(texture_path) as Texture2D, is_revealed)
+
+func create_icon_from_texture(tex: Texture2D, is_revealed: bool) -> Control:
 	var rect = TextureRect.new()
 	rect.custom_minimum_size = Vector2(80, 80)
 	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

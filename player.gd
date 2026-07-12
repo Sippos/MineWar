@@ -161,9 +161,9 @@ func update_hero_sprites() -> void:
 	if Global.hero_data.has(h_name):
 		current_hero_name = h_name
 		var data = Global.hero_data[h_name]
-		tex_walk = load(data["walk"])
-		tex_attack = load(data["attack"])
-		tex_druid_mole = load(data["mole"]) if data.has("mole") else null
+		tex_walk = data["walk"] as Texture2D
+		tex_attack = data["attack"] as Texture2D
+		tex_druid_mole = data["mole"] as Texture2D if data.has("mole") else null
 		druid_mole_active = false
 		if has_node("Sprite2D"):
 			$Sprite2D.texture = tex_walk
