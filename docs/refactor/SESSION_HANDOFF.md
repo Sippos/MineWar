@@ -95,3 +95,7 @@ Do not treat these as fixed:
 - No stuck/progress watchdog exists.
 
 Do not merge this branch into `main` without explicit confirmation.
+
+## MOV-012 completion
+
+Completed on 2026-07-12 on branch . Final paths:  and . The focused Peon suite passed 6/6 tests with 36 assertions and the project launched successfully. Next planned work is AUD-012 collectible characterization before MOV-013.

@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://peonuid"]
 
-[ext_resource type="Script" path="res://scripts/gameplay/peon/peon.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/gameplay/workers/peon/peon.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://character_sprites/peon_walk_spritesheet_25d.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_peon"]

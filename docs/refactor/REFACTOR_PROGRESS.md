@@ -78,3 +78,7 @@ The previously reproduced movement toward the newly solid cell is cancelled.
 Future Peon work should remain one defect per focused branch, with a regression test, the full characterization suite, real single-player Shaman runtime validation, a fresh editor-error check, and a full Git diff review.
 
 Do not merge any task branch into `main` without explicit confirmation.
+
+## MOV-012 — Peon worker relocation
+
+Completed on 2026-07-12. The Peon scene and script now live at  and . All known runtime, test, and maintenance-script references were updated. Validation: Peon characterization 6/6 tests, 36 assertions; project launch successful; no new MOV-012 errors.
