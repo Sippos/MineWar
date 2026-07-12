@@ -42,7 +42,7 @@ def create_edge_atlas(source_file, output_file):
     atlas.save(output_file)
     print(f"Generated {output_file} pure!")
 
-create_edge_atlas("Easy_Brick_Border_gradient.png", "Easy_Edge_Atlas.png")
-create_edge_atlas("Middle_Brick_Border_Gradient.png", "Medium_Edge_Atlas.png")
-create_edge_atlas("Hard_Brick_Border_Gradient.png", "Hard_Edge_Atlas.png")
+create_edge_atlas("Easy_Brick_Border_gradient.png", "assets/sprites/world/terrain/edges/Easy_Edge_Atlas.png")
+create_edge_atlas("Middle_Brick_Border_Gradient.png", "assets/sprites/world/terrain/edges/Medium_Edge_Atlas.png")
+create_edge_atlas("Hard_Brick_Border_Gradient.png", "assets/sprites/world/terrain/edges/Hard_Edge_Atlas.png")
 

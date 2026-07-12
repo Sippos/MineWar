@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xqwlaaxd76ho"
-path="res://.godot/imported/Medium_Edge_Atlas.png-2739839112f68b5b1f6636314d74f04e.ctex"
+uid="uid://dicx4ww0i4uue"
+path="res://.godot/imported/Easy_Edge_Atlas.png-df78dd6cafc315fd0118e8461455e5b1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Medium_Edge_Atlas.png"
-dest_files=["res://.godot/imported/Medium_Edge_Atlas.png-2739839112f68b5b1f6636314d74f04e.ctex"]
+source_file="res://assets/sprites/world/terrain/edges/Easy_Edge_Atlas.png"
+dest_files=["res://.godot/imported/Easy_Edge_Atlas.png-df78dd6cafc315fd0118e8461455e5b1.ctex"]
 
 [params]
 
