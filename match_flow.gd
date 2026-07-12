@@ -24,9 +24,14 @@ func _process(_delta: float) -> void:
 		return
 	
 	var base := active_world.get_node_or_null("Base")
-	if base and int(base.get("health")) <= 0:
-		_finish_match(false)
-		return
+	if base:
+		# Do not interpret a missing property as zero. A resource/script load
+		# failure can leave the Base node present without base.gd attached;
+		# int(null) becomes 0 and previously caused an immediate false defeat.
+		var base_health = base.get("health")
+		if base_health != null and int(base_health) <= 0:
+			_finish_match(false)
+			return
 	
 	var current_wave := int(active_world.get("current_wave_number"))
 	if current_wave > FINAL_WAVE and _count_world_enemies(active_world) == 0:
@@ -187,7 +192,7 @@ func _add_result_stats(stats: GridContainer, victory: bool, hud: Node) -> void:
 	var base := active_world.get_node_or_null("Base")
 	var player := active_world.get_node_or_null("Player")
 	var wave_reached := FINAL_WAVE if victory else int(hud.get("last_wave_reached"))
-	var base_health: int = max(0, int(base.get("health"))) if base else 0
+	var base_health: int = max(0, int(base.get("health"))) if base and base.get("health") != null else 0
 	var hero_level := int(player.get("level")) if player else 1
 	var hero_name := str(player.get("current_hero_name")) if player else "Hero"
 	
