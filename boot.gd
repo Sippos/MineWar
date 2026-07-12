@@ -27,7 +27,7 @@ func _on_start_pressed() -> void:
 	Global.hero_p1 = "Dwarf"
 	Global.hero_p2 = "Dwarf"
 	Global.current_hero = "Dwarf"
-	get_tree().change_scene_to_file("res://main.tscn")
+	get_tree().change_scene_to_file("res://scenes/boot/main.tscn")
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")

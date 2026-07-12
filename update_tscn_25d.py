@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Add ext_resources for fronts
@@ -63,7 +63,7 @@ tile_set = SubResource("TileSet_main")"""
 
 content = content.replace(old_map_layers, new_map_layers)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn for 2.5D")

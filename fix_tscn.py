@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Add ext_resources
@@ -92,7 +92,7 @@ tile_set = SubResource("TileSet_main")"""
 
 content = re.sub(r'\[node name="TileMapLayer" type="TileMapLayer" parent="\."\]\ntile_set = SubResource\("TileSet_block"\)', layers_node, content)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn")

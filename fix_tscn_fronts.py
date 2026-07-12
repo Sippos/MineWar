@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Replace the texture paths for front walls
@@ -32,7 +32,7 @@ for source in sources_to_modify:
         
     content = re.sub(pattern, repl, content, flags=re.DOTALL)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn with new gradients and texture_origin offset!")

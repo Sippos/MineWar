@@ -21,4 +21,4 @@ func _on_button_main_menu_pressed() -> void:
 		multiplayer.multiplayer_peer = null
 	hide()
 	queue_free()
-	get_tree().change_scene_to_file("res://menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")

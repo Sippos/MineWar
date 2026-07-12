@@ -61,7 +61,7 @@ func _on_peer_connected(id):
 func _on_peer_disconnected(id):
 	status_label.text = "Player %d disconnected." % id
 	# Go back to menu if disconnected mid-game
-	get_tree().change_scene_to_file("res://menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")
 
 func _on_connected_to_server():
 	status_label.text = "Connected! Waiting for host to start..."
@@ -225,7 +225,7 @@ with open("vs_online.tscn", "w") as f:
     f.write(vs_online_tscn)
 
 # 5. Modify menu.tscn to add Online VS Button
-with open("menu.tscn", "r") as f:
+with open("scenes/menus/main/menu.tscn", "r") as f:
     menu_tscn = f.read()
 
 btn_insert = """
@@ -237,11 +237,11 @@ text = "VS Mode (Online)"
 if "VSOnlineButton" not in menu_tscn:
     menu_tscn = menu_tscn.replace('[node name="LexikonButton"', btn_insert + '\n[node name="LexikonButton"')
 
-with open("menu.tscn", "w") as f:
+with open("scenes/menus/main/menu.tscn", "w") as f:
     f.write(menu_tscn)
 
 # 6. Modify menu.gd to handle new button
-with open("menu.gd", "r") as f:
+with open("scripts/ui/menus/main/menu.gd", "r") as f:
     menu_gd = f.read()
 
 if "VSOnlineButton" not in menu_gd:
@@ -251,5 +251,5 @@ func _on_vs_online_pressed() -> void:
 	get_tree().change_scene_to_file("res://online_lobby.tscn")
 """
 
-with open("menu.gd", "w") as f:
+with open("scripts/ui/menus/main/menu.gd", "w") as f:
     f.write(menu_gd)

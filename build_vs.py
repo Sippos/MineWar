@@ -103,16 +103,16 @@ with open("vs_mode.tscn", "w") as f:
     f.write(vs_mode_tscn)
 
 # 3. Patch menu.tscn
-with open("menu.tscn", "r") as f:
+with open("scenes/menus/main/menu.tscn", "r") as f:
     menu_tscn = f.read()
 
 menu_tscn = menu_tscn.replace('disabled = true\ntext = "VS Mode (Coming Soon)"', 'text = "VS Mode (Local Split-Screen)"')
 
-with open("menu.tscn", "w") as f:
+with open("scenes/menus/main/menu.tscn", "w") as f:
     f.write(menu_tscn)
 
 # 4. Patch menu.gd
-with open("menu.gd", "r") as f:
+with open("scripts/ui/menus/main/menu.gd", "r") as f:
     menu_gd = f.read()
 
 menu_gd = menu_gd.replace('func _ready() -> void:', 'func _ready() -> void:\n\t$VBoxContainer/VSModeButton.pressed.connect(_on_vs_mode_pressed)')
@@ -121,7 +121,7 @@ func _on_vs_mode_pressed() -> void:
 	get_tree().change_scene_to_file("res://vs_mode.tscn")
 """
 
-with open("menu.gd", "w") as f:
+with open("scripts/ui/menus/main/menu.gd", "w") as f:
     f.write(menu_gd)
 
 # 5. Patch upgrade_menu.gd

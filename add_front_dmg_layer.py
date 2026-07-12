@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # 1. Add ext_resource for the new textures at the top
@@ -41,7 +41,7 @@ tile_set = SubResource("TileSet_main")
 """
 content = re.sub(r'(\[node name="DamageLayer" type="TileMapLayer" parent="MapLayers"\]\ntile_set = SubResource\("TileSet_main"\)\n)', r'\1\n' + layer_node, content)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Added FrontDamageLayer and new sources to main.tscn")

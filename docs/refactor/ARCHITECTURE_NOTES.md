@@ -31,7 +31,7 @@ statically and behavior remains runtime-unverified.
 `run/main_scene`. `launch_router.tscn` is a `Node` using `launch_router.gd`.
 After `_ready()`, the router defers one scene change:
 
-- ordinary desktop, Web, and iPad-like Web clients -> `res://menu.tscn`;
+- ordinary desktop, Web, and iPad-like Web clients -> `res://scenes/menus/main/menu.tscn`;
 - native iOS, real iPhone/iPod Web user agents, and a constrained small mobile
   Web heuristic -> `res://boot.tscn`;
 - `boot.tscn` exposes stable paths `Center/VBox/StartButton` and
@@ -66,7 +66,7 @@ Menu overlays and exits are also path contracts: Controls is
 `res://scenes/ui/overlays/pause/pause_menu.tscn`, and level-up is
 `res://scenes/ui/overlays/level_up/level_up_menu.tscn`. Menu, pause, lexicon,
 online-lobby back, HUD game-over, and match-result exits use
-`res://menu.tscn` directly.
+`res://scenes/menus/main/menu.tscn` directly.
 
 ## 3. Autoload contracts
 

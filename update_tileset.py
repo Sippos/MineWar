@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Replace the texture paths back to original
@@ -30,7 +30,7 @@ content = revert_source("Source_edge_med", content)
 content = revert_source("Source_edge_hard", content)
 content = revert_source("Source_fog", content)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Reverted main.tscn to 16-tile definitions!")

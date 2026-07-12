@@ -25,7 +25,7 @@ for f in files:
     process_image(f)
 
 # Now fix main.tscn back so top blocks use original flat bricks
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # We need to change the path for tex_easy, tex_med, tex_hard back to original
@@ -38,7 +38,7 @@ content = re.sub(r'path="res://Easy_Brick_Gradient\.png" id="tex_easy"', 'path="
 content = re.sub(r'path="res://Middle_Brick_Gradient\.png" id="tex_med"', 'path="res://Medium_Brick.png" id="tex_med"', content)
 content = re.sub(r'path="res://Hard_Brick_Gradient\.png" id="tex_hard"', 'path="res://Hard_Brick.png" id="tex_hard"', content)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn top blocks back to flat bricks.")

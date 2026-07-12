@@ -112,3 +112,8 @@ Implemented on branch `refactor/mov-014-hud-assets`. Seven image/sidecar pairs w
 ## MOV-015 — Global theme relocation
 
 Implemented on branch `refactor/mov-015-global-theme`. `global_theme.tres` moved to `assets/themes/global/global_theme.tres`; all active exact runtime paths and relevant structural documentation were updated. This is a path-only change.
+
+
+## MOV-016 — Boot and main-menu relocation
+
+Implemented on branch `refactor/mov-016-boot-main-menu`. The main menu scene/controller and thin gameplay wrapper were relocated using the frozen manifest in `docs/refactor/MOV_016_BOOT_MENU_MANIFEST.md`. `launch_router.tscn` remains the configured project entry point. This is a path-only change.

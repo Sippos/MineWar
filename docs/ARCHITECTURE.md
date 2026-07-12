@@ -2,9 +2,9 @@
 
 ## Current Godot entry points
 
-- `project.godot` starts at `res://menu.tscn`.
-- `menu.tscn` uses `menu.gd` and opens hero selection, controls, lexicon, VS local, or VS online.
-- `main.tscn` instances `level.tscn`.
+- `project.godot` starts at `res://launch_router.tscn`, which routes ordinary clients to `res://scenes/menus/main/menu.tscn`.
+- `scenes/menus/main/menu.tscn` uses `scripts/ui/menus/main/menu.gd` and opens hero selection, controls, lexicon, VS local, or VS online.
+- `scenes/boot/main.tscn` instances `level.tscn`.
 - `vs_mode.tscn` instances two copies of `level.tscn` inside subviewports.
 - `level.tscn` owns the core runtime objects: `World`, `HUD`, `UpgradeMenu`, `Base`, `BlockLayer`, `Player`, and related TileMap layers.
 
