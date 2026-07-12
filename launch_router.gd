@@ -1,6 +1,6 @@
 extends Node
 
-const DEFAULT_SCENE = "res://menu.tscn"
+const DEFAULT_SCENE = "res://scenes/menus/main/menu.tscn"
 const IPHONE_SAFE_SCENE = "res://boot.tscn"
 
 func _ready() -> void:

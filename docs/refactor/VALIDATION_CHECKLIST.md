@@ -20,13 +20,13 @@ Record what was actually run. Never infer a pass from static inspection or from 
 | --- | --- |
 | Required Godot version | Godot 4.7, from `config/features`; CI downloads Godot 4.7 stable. Local executable: `/home/sebastian-berger/.local/bin/godot`, reporting `4.7.stable.mono.official.5b4e0cb0f`. |
 | Renderer | GL Compatibility (`renderer/rendering_method` and mobile variant are `gl_compatibility`). Windows rendering-device driver is configured as D3D12. |
-| Entry scene | `res://menu.tscn` (`run/main_scene`). Single-player then enters `res://main.tscn`, which instances `res://level.tscn`. |
+| Entry scene | `res://launch_router.tscn` (`run/main_scene`), routing ordinary clients to `res://scenes/menus/main/menu.tscn`. Single-player then enters `res://scenes/boot/main.tscn`, which instances `res://level.tscn`. |
 | Autoloads | `Global` → `res://global.gd`; `_mcp_game_helper` → `res://addons/godot_ai/runtime/game_helper.gd`. The `godot_ai` editor plugin is enabled. |
 | Expected development/deployment platform | Local development platform is not documented. Current environment is Linux. CI runs Ubuntu and exports Web to `build/web/index.html`; `main` is deployed to itch.io. |
 | Launch command | `/home/sebastian-berger/.local/bin/godot --path .` |
 | Short headless launch | `/home/sebastian-berger/.local/bin/godot --headless --path . --quit-after 3 --log-file /tmp/minewars-launch-check.log` |
 | Editor parse/import check | `/home/sebastian-berger/.local/bin/godot --headless --path . --editor --quit --log-file /tmp/minewars-editor-check.log` |
-| Scene-specific launch | `/home/sebastian-berger/.local/bin/godot --path . --scene res://menu.tscn` (or add `--headless --quit-after 3` for a noninteractive load probe). |
+| Scene-specific launch | `/home/sebastian-berger/.local/bin/godot --path . --scene res://scenes/menus/main/menu.tscn` (or add `--headless --quit-after 3` for a noninteractive load probe). |
 | Web export | CI uses the `Web` preset with Godot 4.7 and export templates. Local command, only when templates are already installed: `/home/sebastian-berger/.local/bin/godot --headless --path . --export-debug Web build/web/index.html`. Export writes generated output, so review/revert it after validation. |
 | External dependencies | Godot 4.7 and matching Web export templates for local export. Online signaling uses Node.js plus npm package `ws` via `package.json`; it is not required for single-player. The installed Mono binary currently also attempts to locate .NET host libraries even though no C# source was identified. Do not install dependencies as part of validation. |
 | Automated tests | No unified, documented first-party test runner. Root `test_*.gd`, `run_test*.gd/.tscn`, and Python probes are ad hoc and must not be treated as a passing suite without reviewing and invoking each relevant probe explicitly. The addon contains its own testing utilities. |

@@ -1,6 +1,6 @@
 import re
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Replace external resources section
@@ -144,7 +144,7 @@ sources/9 = SubResource("Source_fog")"""
 
 content = content.replace(old_subres, new_subres)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn with new tile IDs.")

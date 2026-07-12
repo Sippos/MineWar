@@ -83,7 +83,7 @@ func _handle_signaling_message(msg: Dictionary):
 	elif msg.type == "peer_disconnected":
 		if Global.rtc_peer == null or Global.rtc_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
 			status_label.text = "Opponent disconnected"
-			get_tree().change_scene_to_file("res://menu.tscn")
+			get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")
 
 func _create_rtc_connection(id: int):
 	Global.rtc_conn = WebRTCPeerConnection.new()
@@ -126,4 +126,4 @@ func _on_back_pressed():
 	if ws: ws.close()
 	if Global.rtc_peer: Global.rtc_peer.close()
 	multiplayer.multiplayer_peer = null
-	get_tree().change_scene_to_file("res://menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")

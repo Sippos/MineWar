@@ -6,7 +6,7 @@ This audit records the repository as inspected on 2026-07-10. It is a static ana
 
 - **Engine:** Godot `4.7` (`config_version=5`, GL Compatibility renderer). The installed local binary reports `4.7.stable.mono`, while CI downloads standard Godot 4.7 and its export templates.
 - **Project identity:** `project.godot` names the application `Mining`; repository documentation calls it MineWar/MineWars.
-- **Entry point:** `res://menu.tscn`.
+- **Entry point:** `res://launch_router.tscn`, which routes ordinary clients to `res://scenes/menus/main/menu.tscn`.
 - **Primary target:** Web export to `build/web/index.html`, deployed from `main` to itch.io by `.github/workflows/deploy.yml`.
 - **Core loop:** select a hero, enter a generated mine, dig blocks, collect/deposit gems, purchase upgrades, and survive enemy waves. Local and experimental online VS modes add enemy purchasing and income.
 - **Autoloads:** `Global` (`global.gd`) stores hero selection, unlocks, encyclopedia data, WebRTC objects, input setup, and save access. `_mcp_game_helper` belongs to the enabled `addons/godot_ai` editor/runtime integration.

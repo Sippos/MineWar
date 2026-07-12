@@ -1,4 +1,4 @@
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Replace tex_fog path
@@ -32,7 +32,7 @@ texture_region_size = Vector2i(64, 64)
 
 content = content.replace(old_fog_source, new_fog_source)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn to use fog atlas")

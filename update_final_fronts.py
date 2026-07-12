@@ -21,7 +21,7 @@ front_files = [
 for f in front_files:
     process_image(f)
 
-with open("main.tscn", "r") as f:
+with open("scenes/boot/main.tscn", "r") as f:
     content = f.read()
 
 # Replace the texture paths for front walls to point to the new files!
@@ -29,7 +29,7 @@ content = re.sub(r'path="res://Easy_Brick_Gradient\.png" id="tex_front_easy"', '
 content = re.sub(r'path="res://Middle_Brick_Gradient\.png" id="tex_front_med"', 'path="res://Medium-Brick-Front.png" id="tex_front_med"', content)
 content = re.sub(r'path="res://Hard_Brick_Gradient\.png" id="tex_front_hard"', 'path="res://Hard-Brick-Front.png" id="tex_front_hard"', content)
 
-with open("main.tscn", "w") as f:
+with open("scenes/boot/main.tscn", "w") as f:
     f.write(content)
 
 print("Updated main.tscn to use new dedicated Front files.")

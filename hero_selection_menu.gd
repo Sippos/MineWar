@@ -126,7 +126,7 @@ func _on_start_pressed() -> void:
 		Global.hero_p2 = Global.hero_p1
 		
 	if current_mode == Mode.SINGLE_PLAYER:
-		get_tree().change_scene_to_file("res://main.tscn")
+		get_tree().change_scene_to_file("res://scenes/boot/main.tscn")
 	elif current_mode == Mode.VS_LOCAL:
 		get_tree().change_scene_to_file("res://vs_mode.tscn")
 	elif current_mode == Mode.VS_ONLINE:

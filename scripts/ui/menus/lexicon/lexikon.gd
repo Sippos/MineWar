@@ -9,7 +9,7 @@ func _ready():
 	populate_monsters()
 
 func _on_back_pressed():
-	get_tree().change_scene_to_file("res://menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")
 
 func populate_heroes():
 	for hero_name in Global.hero_data.keys():

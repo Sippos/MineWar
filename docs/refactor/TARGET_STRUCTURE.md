@@ -225,8 +225,8 @@ An asset that appears duplicated is not deletion-ready. The similarly named bric
 - `.tres` and text `.res` files may reference scripts, textures, shaders, or other resources. Binary `.res` cannot be safely updated by blind text replacement and should be moved through Godot with load validation.
 - `preload()` paths are parse-time dependencies; broken paths can prevent scripts from parsing. Runtime `load()` paths may be dictionary values or dynamically composed and need explicit searches and flow checks.
 - `.import` sidecars describe source import settings and remap to `.godot/imported/`. Move source plus sidecar through a controlled Godot-aware workflow, then allow `.godot/` to regenerate. Never commit `.godot/imported/` merely to repair a move.
-- `project.godot` directly references `res://menu.tscn`, `res://icon.svg`, `res://global.gd`, the addon autoload, and plugin configuration. The global theme is applied by `global.gd`, preloaded by `menu.gd`, and referenced by the Controls scene; those paths are release-critical.
-- The main scene is `menu.tscn`, while runtime flow also depends on the thin `main.tscn` wrapper and direct scene changes from menu/pause/game-over/lexicon code. Entry-scene moves require all transition references and export startup checks.
+- `project.godot` directly references `res://launch_router.tscn`, `res://icon.svg`, `res://global.gd`, the addon autoloads, and plugin configuration. `launch_router.gd` routes ordinary clients to `res://scenes/menus/main/menu.tscn`; the global theme is applied by `global.gd`, preloaded by the relocated menu controller, and referenced by the Controls scene. Those paths are release-critical.
+- The configured main scene is `launch_router.tscn`. Runtime flow then depends on the relocated main menu and thin gameplay wrapper plus direct scene changes from menu/pause/game-over/lexicon code. Entry-flow moves require all transition references and export startup checks.
 - No first-party `.gdshader` was found. Future shader moves must check material resources, inline ShaderMaterials, and code loads; shader include paths are also path-sensitive.
 - `level.tscn` embeds TileSet data, source IDs, atlas coordinates, collision data, layers, and texture dependencies. Terrain atlas moves can load successfully yet still render or collide incorrectly.
 - Animation libraries may store external texture/resource references and track node paths. Current animations embedded in scenes must be checked for both after moving an entity scene or art.
@@ -482,10 +482,12 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-016 — Move boot and main-menu group
 
+- **Status:** Implemented 2026-07-12 on `refactor/mov-016-boot-main-menu`. Frozen manifest: `docs/refactor/MOV_016_BOOT_MENU_MANIFEST.md`.
+
 - **Objective:** Relocate startup scenes/controllers only after the protocol is proven.
 - **Files/category:** `menu.tscn`, `menu.gd`, `.uid`, `main.tscn`; main-menu-only background/lexicon button art may be a separate follow-up, not part of this batch.
 - **Source → target:** `scenes/menus/main/menu.tscn`; `scripts/ui/menus/main/menu.gd`; `scenes/boot/main.tscn`.
-- **Known references:** `project.godot` main scene; direct returns from pause/HUD/lexicon; hero/controls preloads; `main.tscn` level instance; tests.
+- **Known references:** `launch_router.gd` and `boot.gd`; direct returns from pause/HUD/lexicon; hero/controls preloads; `main.tscn` level instance; tests. `project.godot` remains pointed at `launch_router.tscn`.
 - **Prerequisites:** `MOV-003`, `MOV-004`, `MOV-010`; `AUD-002`; successful launch/menu baseline.
 - **Risk/scope:** High; entry flow only, no behavior changes.
 - **Validation commands:** all exact menu/main paths, `run/main_scene`, change-scene/preload, UID, and test searches; project and both scene loads; common checks.
