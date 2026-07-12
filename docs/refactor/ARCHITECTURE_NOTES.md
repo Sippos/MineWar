@@ -130,7 +130,7 @@ valid or be updated atomically with a move:
   `upgrade_menu.tscn`, `rail_item.tscn`, `peon.tscn`, `minecart.tscn`;
 - abilities: `hero_abilities.gd`, `shaman_totem.tscn`,
   `spider_minion.tscn`, `enemy_status.gd`, and `ability_icons/*.svg`;
-- inheritance: `rail_item.gd` extends the concrete path `res://gem.gd`;
+- inheritance: `rail_item.gd` extends the concrete path `res://scripts/gameplay/collectibles/gems/gem.gd`;
 - UI/theme: `global_theme.tres`,
   `assets/sprites/ui/common/MenuPanel.png`, and
   `assets/sprites/ui/common/Button.png`;

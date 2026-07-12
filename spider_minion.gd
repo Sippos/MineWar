@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-const GEM_SCENE = preload("res://gem.tscn")
+const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const INVALID_CELL = Vector2i(999999, 999999)
 const TARGET_SEARCH_RADIUS = 9
 const WANDER_RADIUS = 7

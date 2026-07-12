@@ -1,4 +1,4 @@
-extends "res://gem.gd"
+extends "res://scripts/gameplay/collectibles/gems/gem.gd"
 
 func _ready() -> void:
 	add_to_group("rails")

@@ -14,7 +14,7 @@ var base_dig_time = 0.4
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 
-const GEM_SCENE = preload("res://gem.tscn")
+const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SHAMAN_TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const SHAMAN_TOTEM_COOLDOWN = 6.0
@@ -24,6 +24,8 @@ const NERUBIAN_MAX_SPIDERS = 5
 
 var tex_walk: Texture2D
 var tex_attack: Texture2D
+var tex_druid_mole: Texture2D
+var druid_mole_active := false
 
 var health = 30
 var max_health = 30
@@ -41,11 +43,52 @@ var stomp_cooldown_timer = 0.0
 var dig_timer = 0.0
 var currently_digging_cell = null
 var walk_timer = 0.0
+var action_anim_timer = 0.0
+var action_anim_active = false
 var current_anim_row = 0
 
 var current_hero_name = "Dwarf"
 var current_sprite_scale = Vector2(0.85, 0.85)
 var current_sprite_position = Vector2(0, -24)
+
+const HERO_ANIMATIONS = {
+	"Dwarf": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 20.0
+	},
+	"Mech": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 12.0
+	},
+	"Shaman": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 8.0
+	},
+	"Nerubian": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 8.0
+	},
+	"Druid": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 12.0
+	},
+	"Undead King": {
+		"walk_frames": 8,
+		"walk_fps": 12.0,
+		"attack_frames": 8,
+		"attack_fps": 12.0
+	}
+}
 
 const HERO_VISUALS = {
 	"Dwarf": {
@@ -62,6 +105,13 @@ const HERO_VISUALS = {
 		"walk_scale": Vector2(0.46, 0.46),
 		"attack_scale": Vector2(0.52, 0.52),
 		"sprite_position": Vector2(0, -14)
+	},
+	"Druid": {
+		"walk_scale": Vector2(0.62, 0.62),
+		"attack_scale": Vector2(0.62, 0.62),
+		"sprite_position": Vector2(0, -4),
+		"mole_scale": Vector2(0.56, 0.56),
+		"mole_position": Vector2(0, -9)
 	}
 }
 
@@ -70,8 +120,10 @@ var currently_attacking_enemy = null
 var shaman_wheel_open = false
 var selected_shaman_totem = "dig"
 var shaman_spell_cooldown_timer = 0.0
-var magic_orb_timer = 0.0
+var magic_orb_last_animation_cycle := -1
 var nerubian_spawn_cooldown_timer = 0.0
+var nerubian_cast_timer = 0.0
+var undead_cast_timer = 0.0
 
 var carried_gems = []
 var nearby_gems = []
@@ -111,9 +163,15 @@ func update_hero_sprites() -> void:
 		var data = Global.hero_data[h_name]
 		tex_walk = load(data["walk"])
 		tex_attack = load(data["attack"])
+		tex_druid_mole = load(data["mole"]) if data.has("mole") else null
+		druid_mole_active = false
 		if has_node("Sprite2D"):
 			$Sprite2D.texture = tex_walk
 			_apply_sprite_visuals(false)
+			_reset_action_animation()
+
+func _get_hero_animation_settings() -> Dictionary:
+	return HERO_ANIMATIONS.get(current_hero_name, HERO_ANIMATIONS["Dwarf"])
 
 func _get_hero_visuals() -> Dictionary:
 	return HERO_VISUALS.get(current_hero_name, HERO_VISUALS["Dwarf"])
@@ -122,6 +180,14 @@ func _apply_sprite_visuals(is_attack: bool) -> void:
 	var visuals = _get_hero_visuals()
 	current_sprite_scale = visuals["attack_scale"] if is_attack else visuals["walk_scale"]
 	current_sprite_position = visuals["sprite_position"]
+	if has_node("Sprite2D"):
+		$Sprite2D.scale = current_sprite_scale
+		$Sprite2D.position = current_sprite_position
+
+func _apply_druid_mole_visuals() -> void:
+	var visuals = _get_hero_visuals()
+	current_sprite_scale = visuals.get("mole_scale", visuals["attack_scale"])
+	current_sprite_position = visuals.get("mole_position", visuals["sprite_position"])
 	if has_node("Sprite2D"):
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
@@ -206,10 +272,12 @@ var can_move = true
 func _physics_process(delta: float) -> void:
 	if shaman_spell_cooldown_timer > 0.0:
 		shaman_spell_cooldown_timer -= delta
-	if magic_orb_timer > 0.0:
-		magic_orb_timer -= delta
 	if nerubian_spawn_cooldown_timer > 0.0:
 		nerubian_spawn_cooldown_timer -= delta
+	if nerubian_cast_timer > 0.0:
+		nerubian_cast_timer = max(0.0, nerubian_cast_timer - delta)
+	if undead_cast_timer > 0.0:
+		undead_cast_timer = max(0.0, undead_cast_timer - delta)
 	_update_shaman_totem_hud()
 	
 	if Input.is_action_just_pressed("p%d_interact" % player_id):
@@ -316,6 +384,7 @@ func _physics_process(delta: float) -> void:
 		if currently_attacking_enemy != enemy_hit:
 			currently_attacking_enemy = enemy_hit
 			attack_timer = 0.0
+			_reset_action_animation()
 		attack_timer += delta
 		var attack_interval = base_dig_time * pow(0.9, agility - 1)
 		if attack_timer >= attack_interval:
@@ -323,6 +392,8 @@ func _physics_process(delta: float) -> void:
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
 			attack_timer = 0.0
+		if current_hero_name == "Druid" and not druid_mole_active:
+			_maybe_shoot_magic_orb(enemy_hit.global_position + Vector2(0, 8), true)
 	else:
 		currently_attacking_enemy = null
 		attack_timer = 0.0
@@ -332,11 +403,20 @@ func _physics_process(delta: float) -> void:
 		walk_timer = 0.0
 		$Sprite2D.frame = current_anim_row * 8
 
-	if currently_attacking_enemy != null or currently_digging_cell != null:
+	var is_performing_action = nerubian_cast_timer > 0.0 if current_hero_name == "Nerubian" else currently_attacking_enemy != null or currently_digging_cell != null
+	if druid_mole_active and tex_druid_mole != null:
+		if $Sprite2D.texture != tex_druid_mole:
+			$Sprite2D.texture = tex_druid_mole
+			_apply_druid_mole_visuals()
+		_update_action_animation(delta)
+	elif is_performing_action:
 		if $Sprite2D.texture != tex_attack:
 			$Sprite2D.texture = tex_attack
 			_apply_sprite_visuals(true)
+		_update_action_animation(delta)
 	else:
+		if action_anim_active:
+			_reset_action_animation()
 		if $Sprite2D.texture != tex_walk:
 			$Sprite2D.texture = tex_walk
 			_apply_sprite_visuals(false)
@@ -361,8 +441,28 @@ func _update_directional_animation(direction: Vector2, delta: float) -> void:
 	elif angle > -3 * PI_8 and angle <= -PI_8:
 		current_anim_row = 5
 	$Sprite2D.flip_h = false
-	walk_timer += delta * 12.0
-	$Sprite2D.frame = current_anim_row * 8 + (int(walk_timer) % 8)
+	var settings = _get_hero_animation_settings()
+	var walk_frames = max(1, int(settings.get("walk_frames", 8)))
+	var walk_fps = float(settings.get("walk_fps", 12.0))
+	walk_timer += delta * walk_fps
+	$Sprite2D.frame = current_anim_row * walk_frames + (int(walk_timer) % walk_frames)
+
+func _update_action_animation(delta: float) -> void:
+	var settings = _get_hero_animation_settings()
+	var attack_frames = max(1, int(settings.get("attack_frames", 8)))
+	var attack_fps = float(settings.get("attack_fps", 12.0))
+	action_anim_active = true
+	action_anim_timer += delta * attack_fps
+	$Sprite2D.frame = current_anim_row * attack_frames + (int(action_anim_timer) % attack_frames)
+
+func _reset_action_animation() -> void:
+	action_anim_timer = 0.0
+	action_anim_active = false
+	magic_orb_last_animation_cycle = -1
+	if has_node("Sprite2D"):
+		var settings = _get_hero_animation_settings()
+		var attack_frames = max(1, int(settings.get("attack_frames", 8)))
+		$Sprite2D.frame = current_anim_row * attack_frames
 
 func handle_digging(delta: float) -> void:
 	if current_hero_name == "Nerubian":
@@ -400,6 +500,8 @@ func handle_digging(delta: float) -> void:
 					dig_timer += delta
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
+					if current_hero_name == "Druid" and druid_mole_active:
+						calculated_dig_time *= 0.55
 					var current_target_dig_time = calculated_dig_time
 					var block_id = tile_map.get_cell_source_id(cell)
 					if block_id == 2: current_target_dig_time = calculated_dig_time * 2.0
@@ -432,8 +534,11 @@ func handle_digging(delta: float) -> void:
 	else:
 		_stop_digging()
 
-	if current_hero_name == "Shaman" and currently_digging_cell != null and active_ray:
-		_maybe_shoot_magic_orb(active_ray.get_collision_point())
+	if currently_digging_cell != null and active_ray:
+		if current_hero_name == "Shaman":
+			_maybe_shoot_magic_orb(active_ray.get_collision_point())
+		elif current_hero_name == "Druid" and not druid_mole_active:
+			_maybe_shoot_magic_orb(active_ray.get_collision_point(), true)
 
 func _stop_digging() -> void:
 	if currently_digging_cell != null:
@@ -466,6 +571,8 @@ func _try_spawn_spider_minion() -> void:
 	spider.owner_player = self
 	spider.global_position = global_position + Vector2(randf_range(-18, 18), randf_range(-10, 10))
 	get_parent().add_child(spider)
+	nerubian_cast_timer = 1.0
+	_reset_action_animation()
 	nerubian_spawn_cooldown_timer = max(1.25, NERUBIAN_SPAWN_COOLDOWN - (intelligence - 1) * 0.2)
 	if hud and hud.has_method("show_notice"):
 		hud.show_notice("Spawned Brood Spider")
@@ -585,13 +692,16 @@ func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
 		gem.global_position = spawn_pos + Vector2(randf_range(-12, 12), randf_range(-8, 8))
 		get_parent().call_deferred("add_child", gem)
 
-func _maybe_shoot_magic_orb(target_pos: Vector2) -> void:
-	if magic_orb_timer > 0.0:
+func _maybe_shoot_magic_orb(target_pos: Vector2, green_orb := false) -> void:
+	var settings = _get_hero_animation_settings()
+	var attack_frames = max(1, int(settings.get("attack_frames", 8)))
+	var animation_cycle = int(action_anim_timer / float(attack_frames))
+	if animation_cycle == magic_orb_last_animation_cycle:
 		return
-	magic_orb_timer = 0.16
+	magic_orb_last_animation_cycle = animation_cycle
 	var orb = Sprite2D.new()
 	orb.z_index = 7
-	orb.texture = _make_magic_orb_texture()
+	orb.texture = _make_magic_orb_texture(green_orb)
 	orb.scale = Vector2(0.32, 0.32)
 	orb.global_position = global_position + Vector2(0, -24)
 	get_parent().add_child(orb)
@@ -608,21 +718,28 @@ func _maybe_shoot_magic_orb(target_pos: Vector2) -> void:
 	trail.damping_max = 40.0
 	trail.scale_amount_min = 1.5
 	trail.scale_amount_max = 4.0
-	trail.color = Color(0.2, 0.65, 1.0, 0.8)
+	trail.color = Color(0.25, 1.0, 0.35, 0.85) if green_orb else Color(0.2, 0.65, 1.0, 0.8)
 	orb.add_child(trail)
 	var tween = create_tween()
 	tween.tween_property(orb, "global_position", target_pos, 0.14)
 	tween.parallel().tween_property(orb, "scale", Vector2(0.08, 0.08), 0.14)
 	tween.tween_callback(orb.queue_free)
 
-func _make_magic_orb_texture() -> Texture2D:
+func _make_magic_orb_texture(green_orb := false) -> Texture2D:
 	var gradient = Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
-	gradient.colors = PackedColorArray([
-		Color(0.9, 1.0, 1.0, 1.0),
-		Color(0.2, 0.7, 1.0, 0.9),
-		Color(0.0, 0.15, 0.8, 0.0)
-	])
+	if green_orb:
+		gradient.colors = PackedColorArray([
+			Color(0.95, 1.0, 0.9, 1.0),
+			Color(0.25, 0.95, 0.35, 0.95),
+			Color(0.0, 0.3, 0.05, 0.0)
+		])
+	else:
+		gradient.colors = PackedColorArray([
+			Color(0.9, 1.0, 1.0, 1.0),
+			Color(0.2, 0.7, 1.0, 0.9),
+			Color(0.0, 0.15, 0.8, 0.0)
+		])
 	var texture = GradientTexture2D.new()
 	texture.width = 32
 	texture.height = 32

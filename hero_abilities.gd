@@ -3,9 +3,13 @@ extends Node
 const HERO_DWARF := "Dwarf"
 const HERO_SHAMAN := "Shaman"
 const HERO_NERUBIAN := "Nerubian"
+const HERO_DRUID := "Druid"
+const HERO_UNDEAD_KING := "Undead King"
 
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SPIDER_MINION_SCENE = preload("res://spider_minion.tscn")
+const UNDEAD_MINION_SCENE = preload("res://undead_minion.tscn")
+const UNDEAD_MINION_LIMIT := 3
 const ENEMY_STATUS_SCRIPT = preload("res://enemy_status.gd")
 
 const MAX_BASIC_LEVEL := 3
@@ -24,7 +28,9 @@ const ICON_PATHS := {
 	"brood": "res://ability_icons/placeholder_brood.svg",
 	"web": "res://ability_icons/placeholder_web.svg",
 	"carapace": "res://ability_icons/placeholder_carapace.svg",
-	"broodmother": "res://ability_icons/placeholder_broodmother.svg"
+	"broodmother": "res://ability_icons/placeholder_broodmother.svg",
+	"mole": "res://ability_icons/placeholder_avatar.svg",
+	"raise_dead": "res://ability_icons/placeholder_brood.svg"
 }
 
 const STOMP_KNOWN_PATHS := [
@@ -86,6 +92,14 @@ var broodmother_duration := 0.0
 var broodmother_active := false
 var carapace_regen_tick := 0.0
 
+var mole_level := 1
+var mole_cooldown := 0.0
+var mole_duration := 0.0
+var mole_active := false
+
+var undead_summon_level := 1
+var undead_summon_cooldown := 0.0
+
 var facing_direction := Vector2.DOWN
 var ability_bar: HBoxContainer
 var ability_slots := {}
@@ -133,6 +147,10 @@ func _physics_process(delta: float) -> void:
 			_process_shaman(delta)
 		HERO_NERUBIAN:
 			_process_nerubian(delta)
+		HERO_DRUID:
+			_process_druid()
+		HERO_UNDEAD_KING:
+			_process_undead_king()
 	_update_ability_hud()
 
 func _hero_name() -> String:
@@ -191,6 +209,12 @@ func _tick_cooldowns(delta: float) -> void:
 	brood_cooldown = max(0.0, brood_cooldown - delta)
 	web_cooldown = max(0.0, web_cooldown - delta)
 	broodmother_cooldown = max(0.0, broodmother_cooldown - delta)
+	mole_cooldown = max(0.0, mole_cooldown - delta)
+	undead_summon_cooldown = max(0.0, undead_summon_cooldown - delta)
+	if mole_active:
+		mole_duration = max(0.0, mole_duration - delta)
+		if mole_duration <= 0.0:
+			_end_mole_form()
 	if avatar_active:
 		avatar_duration = max(0.0, avatar_duration - delta)
 		if avatar_duration <= 0.0:
@@ -663,6 +687,58 @@ func _end_ascendance() -> void:
 	ascendance_speed_bonus = 0.0
 	_refresh_stats_hud()
 
+func _process_druid() -> void:
+	if Input.is_action_just_pressed(_action("stomp")):
+		_try_cast_mole_form()
+
+func _try_cast_mole_form() -> void:
+	if mole_cooldown > 0.0:
+		_show_notice("Mole Form ready in %.1fs" % mole_cooldown, 0.8)
+		return
+	mole_active = true
+	mole_duration = 6.0 + float(mole_level) * 2.0
+	mole_cooldown = max(8.0, 16.0 - float(mole_level))
+	player.set("druid_mole_active", true)
+	_show_notice("Mole Form!")
+
+func _end_mole_form() -> void:
+	if not mole_active:
+		return
+	mole_active = false
+	player.set("druid_mole_active", false)
+
+func _process_undead_king() -> void:
+	if Input.is_action_just_pressed(_action("stomp")):
+		_try_summon_undead_minion()
+
+func _try_summon_undead_minion() -> void:
+	if undead_summon_cooldown > 0.0:
+		_show_notice("Raise Dead ready in %.1fs" % undead_summon_cooldown, 0.8)
+		return
+	if world == null:
+		return
+	if _owned_undead_minions().size() >= UNDEAD_MINION_LIMIT:
+		_show_notice("Undead minion limit reached", 0.8)
+		return
+	var minion = UNDEAD_MINION_SCENE.instantiate()
+	minion.set("owner_player", player)
+	minion.set("max_lifetime", 36.0 + float(int(player.get("intelligence")) - 1) * 2.0)
+	minion.set("attack_damage", 10 + int(player.get("intelligence")) * 4)
+	minion.global_position = player.global_position + _cardinal_direction() * 42.0
+	world.add_child(minion)
+	player.set("undead_cast_timer", 8.0 / 12.0)
+	player.call("_reset_action_animation")
+	undead_summon_cooldown = max(5.0, 11.0 - float(int(player.get("intelligence")) - 1) * 0.25)
+	_spawn_burst(minion.global_position, Color(0.55, 0.25, 0.8, 0.9), 28)
+	_show_notice("Raised Undead Minion!")
+
+func _owned_undead_minions() -> Array:
+	var result := []
+	for minion in get_tree().get_nodes_in_group("undead_minions"):
+		if is_instance_valid(minion) and minion.get("owner_player") == player:
+			result.append(minion)
+	return result
+
 func _process_nerubian(delta: float) -> void:
 	if Input.is_action_just_pressed(_action("stomp")):
 		_try_spawn_brood(false)
@@ -906,6 +982,8 @@ func _cancel_temporary_forms() -> void:
 		_end_ascendance()
 	if broodmother_active:
 		_end_broodmother()
+	if mole_active:
+		_end_mole_form()
 
 func get_level_up_options() -> Array:
 	var options := []
@@ -1038,6 +1116,14 @@ func _rebuild_hud() -> void:
 				["carapace", "Chitinous Carapace", "PASSIVE"],
 				["broodmother", "Broodmother", "T / LB"]
 			]
+		HERO_DRUID:
+			definitions = [
+				["mole", "Mole Form", "R / X"]
+			]
+		HERO_UNDEAD_KING:
+			definitions = [
+				["raise_dead", "Raise Dead", "R / X"]
+			]
 	ability_bar.visible = definitions.size() > 0
 	for definition in definitions:
 		ability_slots[definition[0]] = _create_ability_slot(definition[0], definition[1], definition[2])
@@ -1139,6 +1225,10 @@ func _update_ability_hud() -> void:
 			_update_slot("web", web_level, web_cooldown, max(5.5, 10.5 - web_level * 1.1 - carapace_level * 0.2))
 			_update_slot("carapace", carapace_level, 0.0, 1.0, "PASSIVE" if carapace_level > 0 else "LOCKED")
 			_update_slot("broodmother", broodmother_level, broodmother_cooldown, 70.0, "LVL 6" if broodmother_level <= 0 else ("%.1f" % broodmother_duration if broodmother_active else ""), broodmother_active)
+		HERO_DRUID:
+			_update_slot("mole", mole_level, mole_cooldown, max(8.0, 16.0 - float(mole_level)), "%.1f" % mole_duration if mole_active else "", mole_active)
+		HERO_UNDEAD_KING:
+			_update_slot("raise_dead", undead_summon_level, undead_summon_cooldown, max(5.0, 11.0 - float(int(player.get("intelligence")) - 1) * 0.25), "%d/%d" % [_owned_undead_minions().size(), UNDEAD_MINION_LIMIT])
 
 func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldown: float, override_text: String = "", active: bool = false) -> void:
 	var slot = ability_slots.get(ability)
