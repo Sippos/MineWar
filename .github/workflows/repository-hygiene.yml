@@ -1,0 +1,23 @@
+name: Repository hygiene
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  reject-local-development-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject forbidden tracked paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden=$(git ls-files --             'addons/godot_ai/**'             'godot-ai-LICENSE.txt'             'pixel_sprite_output/**'             '**/__pycache__/**'             '*.pyc' '*.pyo' '*.pyd')
+          if [ -n "$forbidden" ]; then
+            echo "Forbidden local/development artifacts are tracked:"
+            echo "$forbidden"
+            exit 1
+          fi

@@ -5,6 +5,7 @@
 
 # Local Godot editor tooling
 /addons/godot_ai/
+godot-ai-LICENSE.txt
 
 # Local environment files and secrets
 .env
@@ -16,3 +17,7 @@
 
 # Python scripts generated
 __pycache__/
+*.py[cod]
+
+# Generated/local development output
+pixel_sprite_output/
