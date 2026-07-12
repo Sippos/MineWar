@@ -38,17 +38,35 @@ jobs:
             echo "Skipping stale commit $GITHUB_SHA because latest main is $latest"
           fi
 
-      - name: Export Godot Game (Web)
+      - name: Install Godot 4.7 and export templates
         if: steps.freshness.outputs.is_latest == 'true'
-        uses: firebelley/godot-export@v5.2.1
-        with:
-          godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz
-          relative_project_path: ./
-          archive_output: false
-          use_preset_export_path: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/godot .ci/templates "$HOME/.local/share/godot/export_templates/4.7.stable"
+          curl -fL https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip -o .ci/godot.zip
+          unzip -q .ci/godot.zip -d .ci/godot
+          chmod +x .ci/godot/Godot_v4.7-stable_linux.x86_64
+          curl -fL https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz -o .ci/templates.tpz
+          unzip -q .ci/templates.tpz -d .ci/templates
+          cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
+
+      - name: Validate versioned import cache
+        if: steps.freshness.outputs.is_latest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d .godot/imported
+          count="$(find .godot/imported -type f | wc -l)"
+          test "$count" -gt 0
+          echo "Using $count versioned Godot import artifacts"
+
+      - name: Export and validate Godot Web build
+        if: steps.freshness.outputs.is_latest == 'true'
+        shell: bash
         env:
-          GODOT_EXPORT_PRESET: Web
+          GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
+        run: bash ./export_web.sh
 
       - name: Publish to itch.io
         if: steps.freshness.outputs.is_latest == 'true'

@@ -1,5 +1,7 @@
 # Godot 4+ specific ignores
-.godot/
+.godot/*
+!.godot/imported/
+!.godot/imported/**
 *.translation
 # export_presets.cfg
 
@@ -21,3 +23,4 @@ __pycache__/
 
 # Generated/local development output
 pixel_sprite_output/
+build/
