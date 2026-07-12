@@ -25,7 +25,7 @@
 [ext_resource type="Texture2D" path="res://Easy_Brick-Front.png" id="tex_front_easy"]
 [ext_resource type="Texture2D" path="res://Medium-Brick-Front.png" id="tex_front_med"]
 [ext_resource type="Texture2D" path="res://Hard-Brick-Front.png" id="tex_front_hard"]
-[ext_resource type="Texture2D" path="res://rail_trail_atlas.png" id="tex_rail"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/rails/rail_trail_atlas.png" id="tex_rail"]
 
 [sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_tile"]
 polygon = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
