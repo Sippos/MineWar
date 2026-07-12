@@ -440,6 +440,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-013 — Move gem and rail-item inheritance group
 
+- **Status:** Implemented 2026-07-12.
+
 - **Objective:** Relocate the inheritance-coupled collectible pair while preserving behavior.
 - **Files/category:** `gem.*`, `rail_item.*`, their UIDs; rail item placeholder art only if classified as active and owned by the item.
 - **Source → target:** scenes → `scenes/entities/collectibles/{gems,rail_items}/`; scripts → `scripts/gameplay/collectibles/{gems,rail_items}/`; active art → matching asset owner.

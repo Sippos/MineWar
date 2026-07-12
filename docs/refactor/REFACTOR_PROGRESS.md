@@ -89,3 +89,17 @@ Completed on 2026-07-12. The Peon scene and script now live at  and . All known 
 - Full discovered suite: 10 tests, 0 failures.
 - Documented contracts in .
 - MOV-013 is now unblocked as a path-only inheritance-coupled move.
+
+## MOV-013 — Gem and rail-item relocation
+
+Completed on branch `refactor/mov-013-collectibles`.
+
+Relocated the inheritance-coupled collectible group without behavior changes:
+
+- `gem.tscn` → `scenes/entities/collectibles/gems/gem.tscn`
+- `gem.gd` and UID → `scripts/gameplay/collectibles/gems/`
+- `rail_item.tscn` → `scenes/entities/collectibles/rail_items/rail_item.tscn`
+- `rail_item.gd` and UID → `scripts/gameplay/collectibles/rail_items/`
+
+All runtime, scene, test, tool, documentation, and path-based inheritance references were updated atomically. The collectible suite passed 4/4 tests with 23 assertions, and the full discovered suite passed 10/10 tests.
+
