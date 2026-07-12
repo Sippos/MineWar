@@ -4,7 +4,7 @@ import os
 files_to_resize = [
     "Easy_Brick.png", "Medium_Brick.png", "Hard_Brick.png",
     "Easy_Brick_Border.png", "Medium_Brick_Border.png", "Hard_Brick_Border.png",
-    "Black_BG.png", "Black_BG_TransparentBorder.png",
+    "Black_BG.png", "assets/sprites/world/terrain/Black_BG_TransparentBorder.png",
     "First_Hitting.png", "Second_Hitting.png"
 ]
 
