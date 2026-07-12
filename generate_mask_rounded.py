@@ -44,4 +44,4 @@ def create_mask_atlas(output_file):
     atlas.save(output_file)
     print(f"Restored {output_file} to the working rounded version!")
 
-create_mask_atlas("fog_mask_atlas.png")
+create_mask_atlas("assets/sprites/world/fog/fog_mask_atlas.png")

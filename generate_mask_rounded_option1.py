@@ -49,4 +49,4 @@ def create_mask_atlas(output_file):
     atlas.save(output_file)
     print(f"Generated {output_file} with Option 1: Rounded Extensions!")
 
-create_mask_atlas("fog_mask_atlas.png")
+create_mask_atlas("assets/sprites/world/fog/fog_mask_atlas.png")

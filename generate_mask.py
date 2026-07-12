@@ -26,5 +26,5 @@ for i in range(16):
     if left_open:
         draw.rectangle([x_offset, y_offset, x_offset + 11, y_offset + 63], fill=(0, 0, 0, 0))
 
-atlas.save('fog_mask_atlas.png')
-print("Updated fog_mask_atlas.png with thicker borders")
+atlas.save('assets/sprites/world/fog/fog_mask_atlas.png')
+print("Updated assets/sprites/world/fog/fog_mask_atlas.png with thicker borders")

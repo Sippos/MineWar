@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dv4nl6lcai5mk"
-path="res://.godot/imported/fog_mask_atlas.png-134658881a5cce4b2385ea987c29f170.ctex"
+path="res://.godot/imported/fog_mask_atlas.png-9bd01d58ffc18fa3ca9ede8eee9504e7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://fog_mask_atlas.png"
-dest_files=["res://.godot/imported/fog_mask_atlas.png-134658881a5cce4b2385ea987c29f170.ctex"]
+source_file="res://assets/sprites/world/fog/fog_mask_atlas.png"
+dest_files=["res://.godot/imported/fog_mask_atlas.png-9bd01d58ffc18fa3ca9ede8eee9504e7.ctex"]
 
 [params]
 
