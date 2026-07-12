@@ -32,10 +32,10 @@ func untether() -> void:
 			queue_free()
 """
 
-with open("rail_item.gd", "w") as f:
+with open("scripts/gameplay/collectibles/rail_items/rail_item.gd", "w") as f:
     f.write(rail_item_gd)
 
-gem_tscn_path = "gem.tscn"
+gem_tscn_path = "scenes/entities/collectibles/gems/gem.tscn"
 with open(gem_tscn_path, "r") as f:
     gem_tscn = f.read()
 
@@ -43,7 +43,7 @@ rail_tscn = gem_tscn.replace('path="res://scripts/gameplay/collectibles/gems/gem
 rail_tscn = rail_tscn.replace('path="res://StatRessources.png" id="2_tex"', 'path="res://rail_item_placeholder.png" id="2_tex"')
 rail_tscn = rail_tscn.replace('[node name="Gem" type="RigidBody2D"]', '[node name="RailItem" type="RigidBody2D"]')
 
-with open("rail_item.tscn", "w") as f:
+with open("scenes/entities/collectibles/rail_items/rail_item.tscn", "w") as f:
     f.write(rail_tscn)
 
 peon_gd = """extends CharacterBody2D

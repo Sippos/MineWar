@@ -102,7 +102,7 @@ Completed on 2026-07-12 on branch . Final paths:  and . The focused Peon suite p
 
 ## Current next task
 
-AUD-012 collectible characterization is complete on . The next structural task is MOV-013, moving  and  together with all exact path updates and no behavior changes.
+MOV-013 collectible relocation is complete on `refactor/mov-013-collectibles`. The next structural task is MOV-014, relocating the frozen HUD stat and health asset manifest without behavior changes.
 
 ## MOV-013 status
 

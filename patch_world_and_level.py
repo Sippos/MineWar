@@ -76,7 +76,7 @@ if "update_rail_autotile" not in world_gd:
         f.write(world_gd)
 
 # In rail_item.gd we also need to change the source id to 15 instead of 0
-rail_item_gd_path = "rail_item.gd"
+rail_item_gd_path = "scripts/gameplay/collectibles/rail_items/rail_item.gd"
 with open(rail_item_gd_path, "r") as f:
     rail_item_gd = f.read()
 
