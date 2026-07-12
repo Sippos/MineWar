@@ -185,7 +185,7 @@ MineWars/
 | Root/config | Godot entry configuration, export configuration, repository policy, deployment, licensing, and orientation. | Normal scenes/scripts/assets/tests. | Keep `project.godot`, `export_presets.cfg`, `.github/`, `AGENTS.md`, `README.md`; keep `icon.svg` at root initially because project configuration references it. |
 | Generated/ignored | `.godot/`, `build/`, `__pycache__/`, logs, export artifacts. | Authored source or manually maintained resources. | Regenerate; never migrate their contents. Tracked source-adjacent `.import` and `.gd.uid` are handled with their owners, not placed here. |
 
-`assets/audio/`, `assets/fonts/`, `assets/materials/`, and `assets/shaders/` are reserved and should be created only when the first owned file exists. The audit and repository scan found no first-party files in those categories. `global_theme.tres` is currently the only first-party standalone resource; its eventual destination is `assets/materials/themes/global_theme.tres` (or a future `assets/themes/` if theme volume warrants it), not `data/`.
+`assets/audio/`, `assets/fonts/`, `assets/materials/`, and `assets/shaders/` are reserved and should be created only when the first owned file exists. The audit and repository scan found no first-party files in those categories. `global_theme.tres` is currently the only first-party standalone resource; its eventual destination is `assets/themes/global/global_theme.tres`, not `data/`.
 
 ## 5. Scene and script ownership
 
@@ -225,7 +225,7 @@ An asset that appears duplicated is not deletion-ready. The similarly named bric
 - `.tres` and text `.res` files may reference scripts, textures, shaders, or other resources. Binary `.res` cannot be safely updated by blind text replacement and should be moved through Godot with load validation.
 - `preload()` paths are parse-time dependencies; broken paths can prevent scripts from parsing. Runtime `load()` paths may be dictionary values or dynamically composed and need explicit searches and flow checks.
 - `.import` sidecars describe source import settings and remap to `.godot/imported/`. Move source plus sidecar through a controlled Godot-aware workflow, then allow `.godot/` to regenerate. Never commit `.godot/imported/` merely to repair a move.
-- `project.godot` directly references `res://menu.tscn`, `res://icon.svg`, `res://global.gd`, `res://global_theme.tres`, the addon autoload, and plugin configuration. Those paths are release-critical.
+- `project.godot` directly references `res://menu.tscn`, `res://icon.svg`, `res://global.gd`, the addon autoload, and plugin configuration. The global theme is applied by `global.gd`, preloaded by `menu.gd`, and referenced by the Controls scene; those paths are release-critical.
 - The main scene is `menu.tscn`, while runtime flow also depends on the thin `main.tscn` wrapper and direct scene changes from menu/pause/game-over/lexicon code. Entry-scene moves require all transition references and export startup checks.
 - No first-party `.gdshader` was found. Future shader moves must check material resources, inline ShaderMaterials, and code loads; shader include paths are also path-sensitive.
 - `level.tscn` embeds TileSet data, source IDs, atlas coordinates, collision data, layers, and texture dependencies. Terrain atlas moves can load successfully yet still render or collide incorrectly.
@@ -468,15 +468,17 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-015 — Move global theme resource
 
+- **Status:** Implemented 2026-07-12 on `refactor/mov-015-global-theme`. Frozen manifest: `docs/refactor/MOV_015_THEME_MANIFEST.md`.
+
 - **Objective:** Place the shared theme after its dependent images have stable paths.
 - **Files/category:** `global_theme.tres` only.
-- **Source → target:** `assets/materials/themes/global_theme.tres`.
-- **Known references:** `project.godot` custom theme; internal Button/MenuPanel paths; UID references.
+- **Source → target:** `assets/themes/global/global_theme.tres`.
+- **Known references:** `global.gd`, `menu.gd`, `scenes/menus/controls/controls_menu.tscn`; internal Button/MenuPanel paths; UID references.
 - **Prerequisites:** `MOV-006`; reliable project load and menu/UI visual baseline.
 - **Risk/scope:** Medium; one globally shared resource and project setting.
 - **Validation commands:** exact theme path/UID and internal resources search; project/editor load; affected menu/HUD/upgrade loads; common checks.
 - **Manual checks:** All menus, overlays, HUD, and upgrade UI retain styles/focus visuals.
-- **Rollback:** Restore resource and `project.godot` theme path.
+- **Rollback:** Restore the resource and the original `global.gd`, `menu.gd`, and Controls-scene paths.
 
 ### MOV-016 — Move boot and main-menu group
 
@@ -680,6 +682,6 @@ The proposed tree covers every current major category: project/export/deployment
 - Which Python utilities are reproducible supported tooling, historical migrations, or archive candidates? `AUD-003` must answer this before `tools/` movement.
 - Are `menu_free.tscn.txt` and `upgrade_menu_free.tscn.txt` intentional source templates, archived alternatives, or generated snapshots?
 - Should faction base art be owned by `assets/sprites/base/factions/` or by each playable character? Actual future reuse should decide.
-- Should `global_theme.tres` ultimately live under `assets/materials/themes/` or a dedicated `assets/themes/` once theme/resource volume grows?
+- `global_theme.tres` ownership was resolved by `ARTIFACT_CLASSIFICATION.md`: use `assets/themes/global/` because a Godot Theme is a UI style resource, not a material.
 - Is `addons/godot_ai` required in production and Web exports, or only during development? Its enabled plugin and runtime autoload currently make the answer operationally significant.
 - Will `signaling_server.js` remain part of this repository's deployable system (`tools/networking/`) or move to a separately deployed service repository?
