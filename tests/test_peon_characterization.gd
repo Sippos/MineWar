@@ -1,7 +1,7 @@
 @tool
 extends McpTestSuite
 
-const PEON_SCRIPT := preload("res://peon.gd")
+const PEON_SCRIPT := preload("res://scripts/gameplay/peon/peon.gd")
 const COORDINATOR_SCRIPT := preload("res://peon_coordinator.gd")
 const INVALID_CELL := Vector2i(999999, 999999)
 

@@ -101,7 +101,7 @@ func spawn_rail():
 	get_parent().call_deferred("add_child", item)
 
 func spawn_peon():
-	var peon = preload("res://peon.tscn").instantiate()
+	var peon = preload("res://scenes/entities/peon/peon.tscn").instantiate()
 	peon.global_position = global_position
 	get_parent().call_deferred("add_child", peon)
 

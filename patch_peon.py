@@ -2,7 +2,7 @@ import os
 
 peon_tscn = """[gd_scene load_steps=4 format=3 uid="uid://peonuid"]
 
-[ext_resource type="Script" path="res://peon.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/gameplay/peon/peon.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://peon_walk_spritesheet_25d.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_peon"]

@@ -154,7 +154,7 @@ with open("peon.gd", "w") as f:
 
 peon_tscn = """[gd_scene load_steps=4 format=3 uid="uid://peonuid"]
 
-[ext_resource type="Script" path="res://peon.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/gameplay/peon/peon.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://peon_placeholder.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_peon"]
@@ -285,7 +285,7 @@ func spawn_rail():
 	get_parent().call_deferred("add_child", item)
 
 func spawn_peon():
-	var peon = preload("res://peon.tscn").instantiate()
+	var peon = preload("res://scenes/entities/peon/peon.tscn").instantiate()
 	peon.global_position = global_position
 	get_parent().call_deferred("add_child", peon)
 
