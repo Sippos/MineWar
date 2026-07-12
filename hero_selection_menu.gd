@@ -234,12 +234,16 @@ func update_ui(player_id: int) -> void:
 	if player_id == 1:
 		p1_label.text = h_name if is_unlocked else (h_name + " (Locked)")
 		p1_sprite.texture = tex
+		p1_sprite.frame = 0 # First frame of row 0 is the south/down-facing idle pose.
+		p1_sprite.flip_h = false
 		_apply_preview_visuals(p1_sprite, h_name, p1_sprite_container.custom_minimum_size.x)
 		_rebuild_ability_preview(p1_ability_list, h_name)
 		p1_sprite.modulate = Color(1,1,1,1) if is_unlocked else Color(0,0,0,1)
 	else:
 		p2_label.text = h_name if is_unlocked else (h_name + " (Locked)")
 		p2_sprite.texture = tex
+		p2_sprite.frame = 0 # First frame of row 0 is the south/down-facing idle pose.
+		p2_sprite.flip_h = false
 		_apply_preview_visuals(p2_sprite, h_name, p2_sprite_container.custom_minimum_size.x)
 		_rebuild_ability_preview(p2_ability_list, h_name)
 		p2_sprite.modulate = Color(1,1,1,1) if is_unlocked else Color(0,0,0,1)

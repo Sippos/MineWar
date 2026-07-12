@@ -1065,6 +1065,12 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 	_refresh_stats_hud()
 	_update_ability_hud()
 
+func _is_mobile_runtime() -> bool:
+	var is_mobile := OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+	if OS.has_feature("web"):
+		is_mobile = is_mobile or bool(JavaScriptBridge.eval("/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)"))
+	return is_mobile
+
 func _ensure_hud() -> void:
 	if world == null:
 		return
@@ -1124,7 +1130,7 @@ func _rebuild_hud() -> void:
 			definitions = [
 				["raise_dead", "Raise Dead", "R / X"]
 			]
-	ability_bar.visible = definitions.size() > 0
+	ability_bar.visible = definitions.size() > 0 and not _is_mobile_runtime()
 	for definition in definitions:
 		ability_slots[definition[0]] = _create_ability_slot(definition[0], definition[1], definition[2])
 	_update_ability_hud()
