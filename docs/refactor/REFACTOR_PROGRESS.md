@@ -82,3 +82,10 @@ Do not merge any task branch into `main` without explicit confirmation.
 ## MOV-012 — Peon worker relocation
 
 Completed on 2026-07-12. The Peon scene and script now live at  and . All known runtime, test, and maintenance-script references were updated. Validation: Peon characterization 6/6 tests, 36 assertions; project launch successful; no new MOV-012 errors.
+
+## AUD-012 collectible characterization — complete
+
+- Added : 4 tests, 23 assertions.
+- Full discovered suite: 10 tests, 0 failures.
+- Documented contracts in .
+- MOV-013 is now unblocked as a path-only inheritance-coupled move.
