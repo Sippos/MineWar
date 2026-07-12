@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init():
-	var level = load("res://level.tscn").instantiate()
+	var level = load("res://scenes/world/mine/level.tscn").instantiate()
 	root.add_child(level)
 	
 	var base = level.get_node("Base")

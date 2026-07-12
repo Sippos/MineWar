@@ -50,7 +50,7 @@ with open("vs_mode.gd", "w") as f:
 vs_mode_tscn = """[gd_scene load_steps=3 format=3 uid="uid://c8d8b2e1a2f3"]
 
 [ext_resource type="Script" path="res://vs_mode.gd" id="1_vs"]
-[ext_resource type="PackedScene" uid="uid://dl0bto1orfw6t" path="res://level.tscn" id="2_level"]
+[ext_resource type="PackedScene" uid="uid://cads35kywyo0i" path="res://scenes/world/mine/level.tscn" id="2_level"]
 
 [node name="VSMode" type="Control"]
 layout_mode = 3

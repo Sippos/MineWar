@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://First-Hit-Front.png" id="tex_front_dmg1"]
 [ext_resource type="Texture2D" path="res://Next-Hit-Front.png" id="tex_front_dmg2"]
 [ext_resource type="Script" uid="uid://bwa3xg44g5nig" path="res://player.gd" id="2_h2yge"]
-[ext_resource type="Script" path="res://world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/systems/world_generation/world.gd" id="1_world"]
 [ext_resource type="Script" path="res://map_bounds.gd" id="9_bounds"]
 [ext_resource type="Texture2D" path="res://solid-earthen-wall-block-tile-93e7.png" id="2_block"]
 [ext_resource type="PackedScene" uid="uid://baseuid" path="res://base.tscn" id="5_base"]

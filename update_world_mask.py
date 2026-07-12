@@ -1,6 +1,6 @@
 import re
 
-with open("world.gd", "r") as f:
+with open("scripts/systems/world_generation/world.gd", "r") as f:
     content = f.read()
 
 # Replace on_cell_dug completely
@@ -103,7 +103,7 @@ new_gen = """			block_layer.set_cell(cell, block_type, Vector2i(0, 0))
 
 content = content.replace(old_gen, new_gen)
 
-with open("world.gd", "w") as f:
+with open("scripts/systems/world_generation/world.gd", "w") as f:
     f.write(content)
 
 print("Updated world.gd with mask atlas logic")

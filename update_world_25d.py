@@ -1,6 +1,6 @@
 import re
 
-with open("world.gd", "r") as f:
+with open("scripts/systems/world_generation/world.gd", "r") as f:
     content = f.read()
 
 # Add front_layer reference
@@ -75,7 +75,7 @@ func update_front_wall(cell: Vector2i) -> void:
 
 content += front_wall_func
 
-with open("world.gd", "w") as f:
+with open("scripts/systems/world_generation/world.gd", "w") as f:
     f.write(content)
 
 print("Updated world.gd for 2.5D walls")

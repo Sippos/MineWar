@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://vs_online"]
 
 [ext_resource type="Script" path="res://vs_online.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://level.tscn" id="2_level"]
+[ext_resource type="PackedScene" path="res://scenes/world/mine/level.tscn" id="2_level"]
 
 [node name="VSOnline" type="Node"]
 script = ExtResource("1_script")

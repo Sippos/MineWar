@@ -1,6 +1,6 @@
 extends SceneTree
 func _init():
-    var level = preload("res://level.tscn").instantiate()
+    var level = preload("res://scenes/world/mine/level.tscn").instantiate()
     root.add_child(level)
     await create_timer(0.1).timeout
     var menu = level.get_node("UpgradeMenu")

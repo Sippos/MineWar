@@ -1,6 +1,6 @@
 import re
 
-level_tscn_path = "level.tscn"
+level_tscn_path = "scenes/world/mine/level.tscn"
 with open(level_tscn_path, "r") as f:
     level_tscn = f.read()
 
@@ -41,7 +41,7 @@ with open(level_tscn_path, "w") as f:
     f.write(level_tscn)
 
 # 5. Patch world.gd
-world_gd_path = "world.gd"
+world_gd_path = "scripts/systems/world_generation/world.gd"
 with open(world_gd_path, "r") as f:
     world_gd = f.read()
 

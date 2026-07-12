@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init():
-    var world = load("res://world.gd").new()
+    var world = load("res://scripts/systems/world_generation/world.gd").new()
     # It has astar but relies on child nodes like BlockLayer, so we need a minimal setup
     # Actually let's just make an AStarGrid2D and check Godot's behavior
     var a = AStarGrid2D.new()

@@ -1,6 +1,6 @@
 import re
 
-with open("world.gd", "r") as f:
+with open("scripts/systems/world_generation/world.gd", "r") as f:
     content = f.read()
 
 # Replace the @onready
@@ -102,7 +102,7 @@ content = content.replace(old_dug, new_dug)
 # Update spawn_wave tile_map.to_global
 content = content.replace("tile_map.to_global(tile_map.map_to_local(target_cell))", "block_layer.to_global(block_layer.map_to_local(target_cell))")
 
-with open("world.gd", "w") as f:
+with open("scripts/systems/world_generation/world.gd", "w") as f:
     f.write(content)
 
 print("Updated world.gd")

@@ -31,7 +31,7 @@ height = 24
     return "\n".join(lines)
 
 def process_level():
-    with open('level.tscn', 'r') as f:
+    with open('scenes/world/mine/level.tscn', 'r') as f:
         content = f.read()
         
     content = add_shadow_sub_resources(content)
@@ -49,7 +49,7 @@ texture = SubResource("GradientTexture2D_shadow")
 """
         content = content[:sprite_idx] + shadow_node + content[sprite_idx:]
         
-    with open('level.tscn', 'w') as f:
+    with open('scenes/world/mine/level.tscn', 'w') as f:
         f.write(content)
 
 def process_enemy():

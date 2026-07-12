@@ -91,7 +91,7 @@ with open('hud.gd', 'w') as f:
 
 
 # 3. Update world.gd
-with open('world.gd', 'r') as f:
+with open('scripts/systems/world_generation/world.gd', 'r') as f:
     world_gd = f.read()
 
 world_gd = world_gd.replace(
@@ -99,7 +99,7 @@ world_gd = world_gd.replace(
     'var max_wave_time = wave_interval if current_wave_number > 1 else 45.0\n\t\thud.update_wave_info(current_wave_number, max(wave_timer, 0.0), max_wave_time, is_boss)'
 )
 
-with open('world.gd', 'w') as f:
+with open('scripts/systems/world_generation/world.gd', 'w') as f:
     f.write(world_gd)
 
 print("Updates completed successfully.")

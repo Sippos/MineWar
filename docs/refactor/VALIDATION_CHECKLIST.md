@@ -20,7 +20,7 @@ Record what was actually run. Never infer a pass from static inspection or from 
 | --- | --- |
 | Required Godot version | Godot 4.7, from `config/features`; CI downloads Godot 4.7 stable. Local executable: `/home/sebastian-berger/.local/bin/godot`, reporting `4.7.stable.mono.official.5b4e0cb0f`. |
 | Renderer | GL Compatibility (`renderer/rendering_method` and mobile variant are `gl_compatibility`). Windows rendering-device driver is configured as D3D12. |
-| Entry scene | `res://launch_router.tscn` (`run/main_scene`), routing ordinary clients to `res://scenes/menus/main/menu.tscn`. Single-player then enters `res://scenes/boot/main.tscn`, which instances `res://level.tscn`. |
+| Entry scene | `res://launch_router.tscn` (`run/main_scene`), routing ordinary clients to `res://scenes/menus/main/menu.tscn`. Single-player then enters `res://scenes/boot/main.tscn`, which instances `res://scenes/world/mine/level.tscn`. |
 | Autoloads | `Global` → `res://global.gd`; `_mcp_game_helper` → `res://addons/godot_ai/runtime/game_helper.gd`. The `godot_ai` editor plugin is enabled. |
 | Expected development/deployment platform | Local development platform is not documented. Current environment is Linux. CI runs Ubuntu and exports Web to `build/web/index.html`; `main` is deployed to itch.io. |
 | Launch command | `/home/sebastian-berger/.local/bin/godot --path .` |

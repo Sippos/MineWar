@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init():
-	var world = load("res://world.gd").new()
+	var world = load("res://scripts/systems/world_generation/world.gd").new()
 	world.player_id = 1
 	var a = AStarGrid2D.new()
 	a.region = Rect2i(-30, -5, 60, 60)

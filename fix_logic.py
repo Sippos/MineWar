@@ -1,4 +1,4 @@
-with open("world.gd", "r") as f:
+with open("scripts/systems/world_generation/world.gd", "r") as f:
     content = f.read()
 
 # Fix world generation
@@ -55,7 +55,7 @@ new_edge = """	for n in neighbors:
 
 content = content.replace(old_edge, new_edge)
 
-with open("world.gd", "w") as f:
+with open("scripts/systems/world_generation/world.gd", "w") as f:
     f.write(content)
 
 print("Updated world.gd logic")

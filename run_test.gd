@@ -2,7 +2,7 @@ extends SceneTree
 
 func _init():
 	print("Starting Godot headless test...")
-	var packed = load("res://level.tscn")
+	var packed = load("res://scenes/world/mine/level.tscn")
 	if not packed:
 		print("Failed to load level")
 		quit()

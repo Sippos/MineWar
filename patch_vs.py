@@ -2,7 +2,7 @@ import os
 import re
 
 # 1. Update world.gd
-with open("world.gd", "r") as f:
+with open("scripts/systems/world_generation/world.gd", "r") as f:
     world_code = f.read()
 
 world_code = world_code.replace("extends Node2D", """extends Node2D
@@ -92,7 +92,7 @@ process_code = """func _process(delta: float) -> void:
 
 world_code = re.sub(r'func _process\(delta: float\) -> void:.*?(?=var hud = get_node_or_null\("HUD"\))', process_code, world_code, flags=re.DOTALL)
 
-with open("world.gd", "w") as f:
+with open("scripts/systems/world_generation/world.gd", "w") as f:
     f.write(world_code)
 
 # 2. Update player.gd
