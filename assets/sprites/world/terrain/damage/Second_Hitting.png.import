@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://i4oql01gvcj"
-path="res://.godot/imported/Second_Hitting.png-3a2a3c8f3921724e4342fae5693ab768.ctex"
+path="res://.godot/imported/Second_Hitting.png-aa7c0e9a2a4af0a0ea729ae7063f42c6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Second_Hitting.png"
-dest_files=["res://.godot/imported/Second_Hitting.png-3a2a3c8f3921724e4342fae5693ab768.ctex"]
+source_file="res://assets/sprites/world/terrain/damage/Second_Hitting.png"
+dest_files=["res://.godot/imported/Second_Hitting.png-aa7c0e9a2a4af0a0ea729ae7063f42c6.ctex"]
 
 [params]
 

@@ -5,7 +5,7 @@ files_to_resize = [
     "assets/sprites/world/terrain/bricks/Easy_Brick.png", "assets/sprites/world/terrain/bricks/Medium_Brick.png", "assets/sprites/world/terrain/bricks/Hard_Brick.png",
     "Easy_Brick_Border.png", "Medium_Brick_Border.png", "Hard_Brick_Border.png",
     "Black_BG.png", "assets/sprites/world/terrain/Black_BG_TransparentBorder.png",
-    "First_Hitting.png", "Second_Hitting.png"
+    "assets/sprites/world/terrain/damage/First_Hitting.png", "assets/sprites/world/terrain/damage/Second_Hitting.png"
 ]
 
 for file in files_to_resize:
