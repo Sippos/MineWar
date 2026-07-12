@@ -107,4 +107,3 @@ AUD-012 collectible characterization is complete on . The next structural task i
 ## MOV-013 status
 
 The gem and rail-item scene/script pairs have been relocated together on `refactor/mov-013-collectibles`. Their new paths are under `scenes/entities/collectibles/{gems,rail_items}/` and `scripts/gameplay/collectibles/{gems,rail_items}/`. The rail-item script continues to inherit from the relocated gem script by exact `res://` path. Focused collectible validation passed 4/4 tests (23 assertions), and the full discovered suite passed 10/10.
-

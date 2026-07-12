@@ -102,4 +102,3 @@ Relocated the inheritance-coupled collectible group without behavior changes:
 - `rail_item.gd` and UID → `scripts/gameplay/collectibles/rail_items/`
 
 All runtime, scene, test, tool, documentation, and path-based inheritance references were updated atomically. The collectible suite passed 4/4 tests with 23 assertions, and the full discovered suite passed 10/10 tests.
-
