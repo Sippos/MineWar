@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://g6hdmk1w4xx2"
-path="res://.godot/imported/Easy_Brick-Front.png-0555b5c7746e8db000d197fe5c08d1bf.ctex"
+uid="uid://f4q6fvcwmiwc"
+path="res://.godot/imported/Hard-Brick-Front.png-201a1e422ff816527e6b42cfd86fc6fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Easy_Brick-Front.png"
-dest_files=["res://.godot/imported/Easy_Brick-Front.png-0555b5c7746e8db000d197fe5c08d1bf.ctex"]
+source_file="res://assets/sprites/world/terrain/front_walls/Hard-Brick-Front.png"
+dest_files=["res://.godot/imported/Hard-Brick-Front.png-201a1e422ff816527e6b42cfd86fc6fc.ctex"]
 
 [params]
 
