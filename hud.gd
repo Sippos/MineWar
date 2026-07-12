@@ -41,10 +41,10 @@ const TOTEM_LABELS = {
 	"gem": "Gem"
 }
 const TOTEM_TEXTURES = {
-	"dig": "res://Shaman_Totem_DigBuff.png",
-	"heal": "res://Shaman_Totem_Healing.png",
-	"radar": "res://Shaman_Totem_Radar.png",
-	"gem": "res://Shaman_Totem_GemBuff.png"
+	"dig": preload("res://Shaman_Totem_DigBuff.png"),
+	"heal": preload("res://Shaman_Totem_Healing.png"),
+	"radar": preload("res://Shaman_Totem_Radar.png"),
+	"gem": preload("res://Shaman_Totem_GemBuff.png")
 }
 const STOMP_SPRITE_TEXTURES = [
 	"res://StompSprite.png",
@@ -54,7 +54,7 @@ const STOMP_SPRITE_TEXTURES = [
 	"res://sprites/StompSprite.png",
 	"res://assets/StompSprite.png"
 ]
-const NERUBIAN_SPIDER_TEXTURE = "res://character_sprites/spider_walk_spritesheet.png"
+const NERUBIAN_SPIDER_TEXTURE: Texture2D = preload("res://character_sprites/spider_walk_spritesheet.png")
 const NERUBIAN_MAX_SPIDER_SLOTS = 5
 const NERUBIAN_SPAWN_MAX_COOLDOWN = 3.5
 const HUD_STACK_LEFT := 20.0
@@ -64,8 +64,8 @@ const HUD_STACK_LABEL_LEFT := 30.0
 const HUD_STATS_HEIGHT := 36.0
 const HUD_HEALTH_BAR_OFFSET_Y := 18.0
 const HUD_HEALTH_MODULE_HEIGHT := 66.0
-const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
-const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
+const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
+const MENU_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 
 func _ready():
 	run_started_msec = Time.get_ticks_msec()
@@ -200,9 +200,8 @@ func _layout_health_hud_module(label_name: String, bar: Control, y: float) -> fl
 		bar.position = Vector2(HUD_STACK_LEFT, y + HUD_HEALTH_BAR_OFFSET_Y)
 	return y + HUD_HEALTH_MODULE_HEIGHT + HUD_STACK_GAP
 
-func _make_texture_style(texture_path: String) -> StyleBoxTexture:
+func _make_texture_style(texture: Texture2D) -> StyleBoxTexture:
 	var stylebox = StyleBoxTexture.new()
-	var texture = load(texture_path)
 	if texture:
 		stylebox.texture = texture
 	return stylebox
@@ -255,7 +254,7 @@ func _setup_totem_wheel_ui() -> void:
 		icon.custom_minimum_size = Vector2(48, 48)
 		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture = load(TOTEM_TEXTURES[type])
+		icon.texture = TOTEM_TEXTURES[type] as Texture2D
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		box.add_child(icon)
 		
@@ -310,7 +309,7 @@ func _setup_nerubian_status_ui() -> void:
 		nerubian_status_container.add_child(slot)
 		nerubian_spider_slots.append(slot)
 
-func _create_icon_status_slot(texture_path: String, size: Vector2, title: String = "") -> Control:
+func _create_icon_status_slot(texture: Texture2D, size: Vector2, title: String = "") -> Control:
 	var slot = Control.new()
 	slot.custom_minimum_size = size
 	
@@ -322,7 +321,7 @@ func _create_icon_status_slot(texture_path: String, size: Vector2, title: String
 	
 	var icon = TextureRect.new()
 	icon.name = "Icon"
-	icon.texture = load(texture_path)
+	icon.texture = texture
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.set_anchors_preset(Control.PRESET_FULL_RECT)

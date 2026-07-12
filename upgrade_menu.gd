@@ -12,9 +12,9 @@ const SINGLE_MENU_MARGIN := 18.0
 const SINGLE_MENU_MIN_SCALE := 0.34
 const SINGLE_MENU_MAX_SCALE := 0.56
 const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.46
-const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
-const ENEMY_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
-const GOLD_ICON_TEXTURE := "res://GoldCoin.png"
+const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
+const ENEMY_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
+const GOLD_ICON_TEXTURE: Texture2D = preload("res://GoldCoin.png")
 
 var healthbar_unlocked = false
 var base_health_unlocked = false
@@ -109,9 +109,8 @@ func _layout_single_player_upgrade_panel() -> void:
 	panel.scale = Vector2(fit_scale, fit_scale)
 	panel.position = desired_top_left - _get_menu_art_top_left() * fit_scale
 
-func _make_texture_style(texture_path: String) -> StyleBoxTexture:
+func _make_texture_style(texture: Texture2D) -> StyleBoxTexture:
 	var stylebox = StyleBoxTexture.new()
-	var texture = load(texture_path)
 	if texture:
 		stylebox.texture = texture
 	return stylebox
@@ -269,7 +268,7 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.add_child(tex_rect)
 	
 	var cost_icon = TextureRect.new()
-	cost_icon.texture = load(GOLD_ICON_TEXTURE)
+	cost_icon.texture = GOLD_ICON_TEXTURE
 	cost_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	cost_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	cost_icon.custom_minimum_size = Vector2(22, 22)
@@ -284,7 +283,7 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 	hbox.add_child(lbl_cost)
 	
 	var inc_icon = TextureRect.new()
-	inc_icon.texture = load(GOLD_ICON_TEXTURE)
+	inc_icon.texture = GOLD_ICON_TEXTURE
 	inc_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	inc_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	inc_icon.custom_minimum_size = Vector2(22, 22)

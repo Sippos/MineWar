@@ -1,7 +1,7 @@
 extends Node
 
 const PANEL_NAME := "InvestmentPanel"
-const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
+const MENU_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 const REFRESH_INTERVAL := 0.15
 
 var active_world: Node = null
@@ -203,9 +203,9 @@ func _add_action_button(parent: VBoxContainer, action: String, title_text: Strin
 	buttons[action] = button
 
 func _make_button_style() -> StyleBox:
-	if ResourceLoader.exists(MENU_BUTTON_TEXTURE):
+	if MENU_BUTTON_TEXTURE:
 		var style := StyleBoxTexture.new()
-		style.texture = load(MENU_BUTTON_TEXTURE)
+		style.texture = MENU_BUTTON_TEXTURE
 		return style
 	var fallback := StyleBoxFlat.new()
 	fallback.bg_color = Color(0.18, 0.1, 0.04, 0.94)

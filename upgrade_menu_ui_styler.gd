@@ -1,7 +1,7 @@
 extends Node
 
-const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
-const BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
+const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
+const BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 const FRAME_LAYER_NAME := "RuntimeSectionFrames"
 
 var _panel_texture: Texture2D
@@ -9,8 +9,8 @@ var _button_texture: Texture2D
 
 
 func _ready() -> void:
-	_panel_texture = load(MENU_PANEL_TEXTURE)
-	_button_texture = load(BUTTON_TEXTURE)
+	_panel_texture = MENU_PANEL_TEXTURE
+	_button_texture = BUTTON_TEXTURE
 	get_tree().node_added.connect(_on_node_added)
 	call_deferred("_style_existing_tree")
 

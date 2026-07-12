@@ -22,6 +22,8 @@ var minecart_trail_length: int = 16
 var astar: AStarGrid2D
 const ENEMY_SCENE = preload("res://enemy.tscn")
 const FRONT_GEM_Z_INDEX = 2
+const GEM_TOP_TEXTURE = preload("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
+const GEM_FRONT_TEXTURE = preload("res://Stat_Ressources_Overlay_Front.png")
 
 var gem_blocks = {}
 
@@ -229,13 +231,13 @@ func generate_initial_world() -> void:
 				
 			if y >= 0 and randf() < 0.10:
 				var sprite = Sprite2D.new()
-				sprite.texture = load("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
+				sprite.texture = GEM_TOP_TEXTURE
 				sprite.position = block_layer.map_to_local(cell)
 				sprite.visible = false
 				edge_layer.add_child(sprite)
 				
 				var front_sprite = Sprite2D.new()
-				front_sprite.texture = load("res://Stat_Ressources_Overlay_Front.png")
+				front_sprite.texture = GEM_FRONT_TEXTURE
 				front_sprite.offset.y = -17 # Visually shift it back up to its intended position
 				front_sprite.z_index = FRONT_GEM_Z_INDEX
 				front_sprite.visible = false

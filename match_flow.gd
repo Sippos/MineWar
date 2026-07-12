@@ -2,8 +2,8 @@ extends Node
 
 const FINAL_WAVE := 10
 const RESULT_OVERLAY_NAME := "MatchResultOverlay"
-const MENU_PANEL_TEXTURE := "res://assets/sprites/ui/common/MenuPanel.png"
-const MENU_BUTTON_TEXTURE := "res://assets/sprites/ui/common/Button.png"
+const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
+const MENU_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 
 var active_world: Node = null
 var result_shown := false
@@ -222,8 +222,8 @@ func _format_elapsed_time(hud: Node) -> String:
 	var elapsed: int = max(0, int((Time.get_ticks_msec() - started) / 1000))
 	return "%02d:%02d" % [int(elapsed / 60), elapsed % 60]
 
-func _make_texture_style(texture_path: String) -> StyleBox:
-	if not ResourceLoader.exists(texture_path):
+func _make_texture_style(texture: Texture2D) -> StyleBox:
+	if texture == null:
 		var fallback := StyleBoxFlat.new()
 		fallback.bg_color = Color(0.12, 0.07, 0.035, 0.97)
 		fallback.border_color = Color(0.65, 0.44, 0.18, 1.0)
@@ -231,7 +231,7 @@ func _make_texture_style(texture_path: String) -> StyleBox:
 		fallback.set_corner_radius_all(8)
 		return fallback
 	var style := StyleBoxTexture.new()
-	style.texture = load(texture_path)
+	style.texture = texture
 	return style
 
 func _make_result_button(text_value: String, callback: Callable) -> Button:
