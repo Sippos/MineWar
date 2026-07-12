@@ -4,11 +4,11 @@ tscn_content = """[gd_scene format=3 uid="uid://dmqhra3bkn6uh"]
 
 [ext_resource type="Script" path="res://upgrade_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://braqxpv12iidt" path="res://Gold_Pile.png" id="2_goldpile"]
-[ext_resource type="Texture2D" uid="uid://dyf3an1f8lntc" path="res://StatRessources.png" id="3_gems"]
-[ext_resource type="Texture2D" path="res://Healthbar.png" id="4_healthbar"]
-[ext_resource type="Texture2D" path="res://Strenght.png" id="5_str"]
-[ext_resource type="Texture2D" path="res://Agility.png" id="6_agi"]
-[ext_resource type="Texture2D" path="res://Int.png" id="7_int"]
+[ext_resource type="Texture2D" uid="uid://dyf3an1f8lntc" path="res://assets/sprites/ui/common/stats/StatRessources.png" id="3_gems"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/stats/Healthbar.png" id="4_healthbar"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/stats/Strenght.png" id="5_str"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/stats/Agility.png" id="6_agi"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/stats/Int.png" id="7_int"]
 
 [node name="UpgradeMenu" type="CanvasLayer"]
 script = ExtResource("1_script")

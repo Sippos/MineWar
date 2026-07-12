@@ -454,6 +454,8 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-014 — Move HUD stat/health assets
 
+- **Status:** Implemented 2026-07-12 on `refactor/mov-014-hud-assets`. Frozen manifest: `docs/refactor/MOV_014_ASSET_MANIFEST.md`.
+
 - **Objective:** Separate HUD-owned images from root while leaving HUD scenes/scripts in place.
 - **Files/category:** health bar variants, stat icons, `StatRessources.png`, coin HUD art and matching sidecars, using a frozen manifest; exclude upgrade-only assets if ownership differs.
 - **Source → target:** `assets/sprites/ui/hud/` and `assets/sprites/ui/common/stats/` for confirmed cross-HUD/upgrade reuse.

@@ -40,7 +40,7 @@ with open(gem_tscn_path, "r") as f:
     gem_tscn = f.read()
 
 rail_tscn = gem_tscn.replace('path="res://scripts/gameplay/collectibles/gems/gem.gd" id="1_script"', 'path="res://scripts/gameplay/collectibles/rail_items/rail_item.gd" id="1_script"')
-rail_tscn = rail_tscn.replace('path="res://StatRessources.png" id="2_tex"', 'path="res://rail_item_placeholder.png" id="2_tex"')
+rail_tscn = rail_tscn.replace('path="res://assets/sprites/ui/common/stats/StatRessources.png" id="2_tex"', 'path="res://rail_item_placeholder.png" id="2_tex"')
 rail_tscn = rail_tscn.replace('[node name="Gem" type="RigidBody2D"]', '[node name="RailItem" type="RigidBody2D"]')
 
 with open("scenes/entities/collectibles/rail_items/rail_item.tscn", "w") as f:

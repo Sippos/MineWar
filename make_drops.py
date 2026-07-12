@@ -60,7 +60,7 @@ shape = SubResource("CircleShape2D_1")
 xp_tscn = """[gd_scene load_steps=4 format=3 uid="uid://xpdrop"]
 
 [ext_resource type="Script" path="res://scripts/gameplay/collectibles/drops/xp_drop.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://intdrop" path="res://Int.png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://intdrop" path="res://assets/sprites/ui/common/stats/Int.png" id="2_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 16.0
