@@ -13,9 +13,9 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/Black_BG_TransparentBorder.png" id="tex_bg"]
-[ext_resource type="Texture2D" path="res://Easy_Brick.png" id="tex_easy"]
-[ext_resource type="Texture2D" path="res://Medium_Brick.png" id="tex_med"]
-[ext_resource type="Texture2D" path="res://Hard_Brick.png" id="tex_hard"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/bricks/Easy_Brick.png" id="tex_easy"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/bricks/Medium_Brick.png" id="tex_med"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/bricks/Hard_Brick.png" id="tex_hard"]
 [ext_resource type="Texture2D" path="res://Easy_Edge_Atlas.png" id="tex_edge_easy"]
 [ext_resource type="Texture2D" path="res://Medium_Edge_Atlas.png" id="tex_edge_med"]
 [ext_resource type="Texture2D" path="res://Hard_Edge_Atlas.png" id="tex_edge_hard"]

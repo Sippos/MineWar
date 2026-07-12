@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cr5hlhxbu2fsg"
-path="res://.godot/imported/Hard_Brick.png-9450ddaa297a4b3beaac74b5c44ac960.ctex"
+path="res://.godot/imported/Hard_Brick.png-e6ccbf1952a88efe5e3417fa797fe0e8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Hard_Brick.png"
-dest_files=["res://.godot/imported/Hard_Brick.png-9450ddaa297a4b3beaac74b5c44ac960.ctex"]
+source_file="res://assets/sprites/world/terrain/bricks/Hard_Brick.png"
+dest_files=["res://.godot/imported/Hard_Brick.png-e6ccbf1952a88efe5e3417fa797fe0e8.ctex"]
 
 [params]
 

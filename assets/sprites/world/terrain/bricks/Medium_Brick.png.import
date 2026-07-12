@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://8lw4xn2idsg5"
-path="res://.godot/imported/Easy_Brick.png-a446a5b3c67e5e2bfef3e354fecdfb8b.ctex"
+uid="uid://05q4s6yyeyv1"
+path="res://.godot/imported/Medium_Brick.png-cc6424ff26d5ab0c88a38edfc7b3a0e3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Easy_Brick.png"
-dest_files=["res://.godot/imported/Easy_Brick.png-a446a5b3c67e5e2bfef3e354fecdfb8b.ctex"]
+source_file="res://assets/sprites/world/terrain/bricks/Medium_Brick.png"
+dest_files=["res://.godot/imported/Medium_Brick.png-cc6424ff26d5ab0c88a38edfc7b3a0e3.ctex"]
 
 [params]
 
