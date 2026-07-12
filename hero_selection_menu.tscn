@@ -1,6 +1,36 @@
-[gd_scene load_steps=2 format=3 uid="uid://hero_sel_menu_001"]
+[gd_scene load_steps=4 format=3 uid="uid://hero_sel_menu_001"]
 
 [ext_resource type="Script" path="res://hero_selection_menu.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_portrait"]
+bg_color = Color(0.055, 0.043, 0.035, 0.78)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.56, 0.39, 0.22, 0.95)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_ability"]
+bg_color = Color(0.035, 0.028, 0.024, 0.42)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.32, 0.24, 0.16, 0.75)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+content_margin_left = 48.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
 
 [node name="HeroSelectionMenu" type="Control"]
 layout_mode = 3
@@ -18,10 +48,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -200.0
-offset_right = 300.0
-offset_bottom = 200.0
+offset_left = -410.0
+offset_top = -250.0
+offset_right = 410.0
+offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -30,9 +60,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 12.0
+offset_right = -18.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="Label" type="Label" parent="Panel/VBox"]
@@ -43,35 +77,71 @@ horizontal_alignment = 1
 
 [node name="HBox" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
+size_flags_vertical = 3
 alignment = 1
-theme_override_constants/separation = 40
+theme_override_constants/separation = 34
 
 [node name="P1Container" type="VBoxContainer" parent="Panel/VBox/HBox"]
 layout_mode = 2
+size_flags_horizontal = 3
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/VBox/HBox/P1Container"]
 layout_mode = 2
 text = "Player 1"
 horizontal_alignment = 1
 
-[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P1Container"]
-custom_minimum_size = Vector2(128, 128)
+[node name="HeroPreviewRow" type="HBoxContainer" parent="Panel/VBox/HBox/P1Container"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="PortraitColumn" type="VBoxContainer" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="PortraitPanel" type="PanelContainer" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn"]
+custom_minimum_size = Vector2(166, 166)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_portrait")
+
+[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/PortraitPanel"]
+custom_minimum_size = Vector2(156, 156)
 layout_mode = 2
 
-[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P1Container/SpriteContainer"]
-position = Vector2(64, 64)
+[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer"]
+position = Vector2(78, 78)
 hframes = 8
 vframes = 8
 
-[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P1Container"]
+[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 text = "Dwarf"
 horizontal_alignment = 1
+
+[node name="AbilitySpacer" type="Control" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow"]
+custom_minimum_size = Vector2(64, 1)
+layout_mode = 2
+
+[node name="AbilityPanel" type="PanelContainer" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow"]
+custom_minimum_size = Vector2(330, 188)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBox_ability")
+
+[node name="AbilityList" type="VBoxContainer" parent="Panel/VBox/HBox/P1Container/HeroPreviewRow/AbilityPanel"]
+custom_minimum_size = Vector2(258, 168)
+layout_mode = 2
+theme_override_constants/separation = 6
 
 [node name="HBox" type="HBoxContainer" parent="Panel/VBox/HBox/P1Container"]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 10
 
 [node name="PrevBtn" type="Button" parent="Panel/VBox/HBox/P1Container/HBox"]
 layout_mode = 2
@@ -83,30 +153,65 @@ text = ">"
 
 [node name="P2Container" type="VBoxContainer" parent="Panel/VBox/HBox"]
 layout_mode = 2
+size_flags_horizontal = 3
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/VBox/HBox/P2Container"]
 layout_mode = 2
 text = "Player 2"
 horizontal_alignment = 1
 
-[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P2Container"]
-custom_minimum_size = Vector2(128, 128)
+[node name="HeroPreviewRow" type="HBoxContainer" parent="Panel/VBox/HBox/P2Container"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="PortraitColumn" type="VBoxContainer" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="PortraitPanel" type="PanelContainer" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn"]
+custom_minimum_size = Vector2(166, 166)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_portrait")
+
+[node name="SpriteContainer" type="Control" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/PortraitPanel"]
+custom_minimum_size = Vector2(156, 156)
 layout_mode = 2
 
-[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P2Container/SpriteContainer"]
-position = Vector2(64, 64)
+[node name="Sprite" type="Sprite2D" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer"]
+position = Vector2(78, 78)
 hframes = 8
 vframes = 8
 
-[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P2Container"]
+[node name="HeroName" type="Label" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 text = "Dwarf"
 horizontal_alignment = 1
+
+[node name="AbilitySpacer" type="Control" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow"]
+custom_minimum_size = Vector2(64, 1)
+layout_mode = 2
+
+[node name="AbilityPanel" type="PanelContainer" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow"]
+custom_minimum_size = Vector2(330, 188)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBox_ability")
+
+[node name="AbilityList" type="VBoxContainer" parent="Panel/VBox/HBox/P2Container/HeroPreviewRow/AbilityPanel"]
+custom_minimum_size = Vector2(258, 168)
+layout_mode = 2
+theme_override_constants/separation = 6
 
 [node name="HBox" type="HBoxContainer" parent="Panel/VBox/HBox/P2Container"]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 10
 
 [node name="PrevBtn" type="Button" parent="Panel/VBox/HBox/P2Container/HBox"]
 layout_mode = 2

@@ -5,7 +5,7 @@ var rtc_conn: WebRTCPeerConnection
 
 const DEFAULT_UNLOCKED_HEROES = ["Dwarf"]
 const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
-const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Mech"]
+const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Druid", "Undead King"]
 const GAME_UI_THEME_PATH = "res://global_theme.tres"
 const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
 
@@ -106,11 +106,20 @@ var hero_data = {
 	},
 	"Shaman": {
 		"walk": "res://character_sprites/shaman_walk_spritesheet_25d.png",
-		"attack": "res://character_sprites/shaman_walk_spritesheet_25d.png"
+		"attack": "res://character_sprites/shaman_attack_spritesheet_25d.png"
 	},
 	"Nerubian": {
-		"walk": "res://character_sprites/spider_walk_spritesheet.png",
-		"attack": "res://character_sprites/spider_walk_spritesheet.png"
+		"walk": "res://character_sprites/nerubian_walk_spritesheet_25d.png",
+		"attack": "res://character_sprites/nerubian_attack_spritesheet_25d.png"
+	},
+	"Druid": {
+		"walk": "res://character_sprites/druid_walk_spritesheet_25d.png",
+		"attack": "res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d.png",
+		"mole": "res://character_sprites/druid_mole_crawl_spritesheet_25d.png"
+	},
+	"Undead King": {
+		"walk": "res://character_sprites/undead_king_float_idle_spritesheet_25d.png",
+		"attack": "res://character_sprites/undead_king_staff_cast_spritesheet_25d.png"
 	}
 }
 
