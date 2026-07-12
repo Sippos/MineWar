@@ -96,7 +96,7 @@ func take_damage(amount: int) -> void:
 
 
 func spawn_rail():
-	var item = preload("res://rail_item.tscn").instantiate()
+	var item = preload("res://scenes/entities/collectibles/rail_items/rail_item.tscn").instantiate()
 	item.global_position = global_position
 	get_parent().call_deferred("add_child", item)
 

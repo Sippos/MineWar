@@ -14,7 +14,7 @@ var base_dig_time = 0.4
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 
-const GEM_SCENE = preload("res://gem.tscn")
+const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SHAMAN_TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const SHAMAN_TOTEM_COOLDOWN = 6.0

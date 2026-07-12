@@ -198,7 +198,7 @@ MineWars/
 - Project-wide services belong under `scripts/systems/`; autoload status is a lifecycle decision, not a folder convention. A move must not silently add or remove an autoload.
 - Menu controllers belong in `scripts/ui/menus/<menu>/`; HUD and upgrade controllers belong in their respective UI directories even though they currently own gameplay state. Moving them must not be combined with extracting that state.
 - Entity scenes own entity-specific collision shapes, animations, and embedded resources. Entity-specific external art belongs to `assets/sprites/<entity-family>/<entity>/`; shared art belongs one level above at the family or shared domain.
-- `rail_item.gd` inherits by path from `res://gem.gd`. The parent and child must either move together in a dedicated inheritance batch or the child reference must be updated and validated immediately.
+- `rail_item.gd` inherits by path from `res://scripts/gameplay/collectibles/gems/gem.gd`. The parent and child must either move together in a dedicated inheritance batch or the child reference must be updated and validated immediately.
 
 ## 6. Asset ownership
 
@@ -230,7 +230,7 @@ An asset that appears duplicated is not deletion-ready. The similarly named bric
 - No first-party `.gdshader` was found. Future shader moves must check material resources, inline ShaderMaterials, and code loads; shader include paths are also path-sensitive.
 - `level.tscn` embeds TileSet data, source IDs, atlas coordinates, collision data, layers, and texture dependencies. Terrain atlas moves can load successfully yet still render or collide incorrectly.
 - Animation libraries may store external texture/resource references and track node paths. Current animations embedded in scenes must be checked for both after moving an entity scene or art.
-- `rail_item.gd` uses path-based script inheritance (`extends "res://gem.gd"`). Search all `extends` declarations and update parent paths before parsing child scripts.
+- `rail_item.gd` uses path-based script inheritance (`extends "res://scripts/gameplay/collectibles/gems/gem.gd"`). Search all `extends` declarations and update parent paths before parsing child scripts.
 - Some scene resources include both `uid://` and `path="res://..."`, while many have paths only. UIDs reduce some editor relinking risk but are not a substitute for correct paths, and hand-written/custom IDs such as scene UIDs must not be assumed valid. Keep `.gd.uid` sidecars with scripts and verify Godot's UID cache after each move.
 - Case-only renames can be lost on Windows/macOS filesystems and fail on Linux/web deployment. Use an explicit intermediate rename when eventually authorized and validate exact casing with `git ls-files` and path searches.
 - Export preset `all_resources` behavior can ship root tests/archive content. Moving a file may change inclusion only if export filters later change; filter changes are a separate task.
@@ -440,10 +440,12 @@ The batches below are independently executable units, not one continuous mega-mi
 
 ### MOV-013 — Move gem and rail-item inheritance group
 
+- **Status:** Implemented 2026-07-12.
+
 - **Objective:** Relocate the inheritance-coupled collectible pair while preserving behavior.
 - **Files/category:** `gem.*`, `rail_item.*`, their UIDs; rail item placeholder art only if classified as active and owned by the item.
 - **Source → target:** scenes → `scenes/entities/collectibles/{gems,rail_items}/`; scripts → `scripts/gameplay/collectibles/{gems,rail_items}/`; active art → matching asset owner.
-- **Known references:** `player.gd`, `base.gd`, `rail_item.gd extends res://gem.gd`, level/world/cart/worker groups and signals.
+- **Known references:** `player.gd`, `base.gd`, `rail_item.gd extends res://scripts/gameplay/collectibles/gems/gem.gd`, level/world/cart/worker groups and signals.
 - **Prerequisites:** `AUD-012`; exact inheritance/reference manifest; collectible gameplay baseline.
 - **Risk/scope:** High but bounded; two inseparable scene/script pairs.
 - **Validation commands:** exact gem/rail filenames/UIDs, `extends`, group names, and all load/preload searches; load both scenes and level; common checks.

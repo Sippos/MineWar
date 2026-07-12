@@ -58,7 +58,7 @@ If a different executable is used, record its path and `--version` output. Do no
 - [ ] Load an affected scene directly with `--scene res://PATH.tscn --headless --quit-after 3 --log-file /tmp/minewars-scene-check.log`.
 - [ ] Search changed text resources for `res://`, `preload(`, `load(`, `ExtResource`, and script-inheritance paths; verify every target exists and preserves case.
 - [ ] Verify both autoload targets in `project.godot` exist and parse.
-- [ ] Search inheritance declarations (`extends`), including path-based inheritance such as `rail_item.gd` → `res://gem.gd`; confirm the parent exists and remains compatible.
+- [ ] Search inheritance declarations (`extends`), including path-based inheritance such as `rail_item.gd` → `res://scripts/gameplay/collectibles/gems/gem.gd`; confirm the parent exists and remains compatible.
 - [ ] Review `$Node`, `%UniqueNode`, `get_node()`, `get_parent()`, and sibling-name dependencies against the affected `.tscn` hierarchy.
 - [ ] Inspect runtime `InputMap.add_action`/`action_add_event` calls in `global.gd` and `world.gd` for duplicate/conflicting bindings. Input actions are currently created at runtime rather than declared in `project.godot`.
 - [ ] Run `git diff --check`.

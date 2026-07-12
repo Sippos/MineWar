@@ -16,7 +16,7 @@ This baseline characterizes the current `gem.gd` and `rail_item.gd` contracts be
 - `untether()` clears ownership and restores frozen, zero-velocity world state.
 - Player deposit consumes normal gems, counts each valid gem once, and removes them from `carried_gems`.
 - Items whose `should_deposit_as_gem()` returns `false` remain carried during base deposit.
-- `rail_item.gd` inherits directly from `res://gem.gd`.
+- `rail_item.gd` inherits directly from `res://scripts/gameplay/collectibles/gems/gem.gd`.
 - Rail items return `false` from `should_deposit_as_gem()`.
 - Dropping a rail item in an open, empty world cell writes RailLayer source ID `15`, refreshes autotiling for the cell and four neighbors, refreshes minecart paths, and queues the carried item for deletion.
 - Minecarts likewise reject rail items in `load_gem()` and consume only depositable gems.
@@ -32,7 +32,7 @@ This baseline characterizes the current `gem.gd` and `rail_item.gd` contracts be
 
 ## Known coupling and risks
 
-- Rail-item inheritance is path-based (`extends "res://gem.gd"`), so gem and rail-item scripts must move together.
+- Rail-item inheritance is path-based (`extends "res://scripts/gameplay/collectibles/gems/gem.gd"`), so gem and rail-item scripts must move together.
 - Production paths are referenced by player, base, spider-minion, minecart, and both scenes.
 - Rail placement depends on parent name `World`, child node names `RailLayer` and `BlockLayer`, RailLayer source ID `15`, and world methods `update_rail_autotile()` and `refresh_minecart_paths()`.
 - `deposit_gems()` queues normal gems for deletion before the end of the frame; callers must rely on the returned count and updated carried list rather than immediate object destruction.

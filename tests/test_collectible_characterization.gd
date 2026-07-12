@@ -1,8 +1,8 @@
 @tool
 extends McpTestSuite
 
-const GEM_SCRIPT := preload("res://gem.gd")
-const RAIL_ITEM_SCRIPT := preload("res://rail_item.gd")
+const GEM_SCRIPT := preload("res://scripts/gameplay/collectibles/gems/gem.gd")
+const RAIL_ITEM_SCRIPT := preload("res://scripts/gameplay/collectibles/rail_items/rail_item.gd")
 const PLAYER_SCRIPT := preload("res://player.gd")
 
 class FakeCarrier:
