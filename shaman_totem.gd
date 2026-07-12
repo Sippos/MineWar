@@ -1,10 +1,10 @@
 extends Node2D
 
 const TOTEM_TEXTURES = {
-	"dig": "res://Shaman_Totem_DigBuff.png",
-	"heal": "res://Shaman_Totem_Healing.png",
-	"radar": "res://Shaman_Totem_Radar.png",
-	"gem": "res://Shaman_Totem_GemBuff.png"
+	"dig": preload("res://Shaman_Totem_DigBuff.png"),
+	"heal": preload("res://Shaman_Totem_Healing.png"),
+	"radar": preload("res://Shaman_Totem_Radar.png"),
+	"gem": preload("res://Shaman_Totem_GemBuff.png")
 }
 
 const TOTEM_LABELS = {
@@ -32,7 +32,7 @@ func _ready() -> void:
 	add_to_group("shaman_totems")
 	max_lifetime = lifetime
 	if TOTEM_TEXTURES.has(totem_type):
-		sprite.texture = load(TOTEM_TEXTURES[totem_type])
+		sprite.texture = TOTEM_TEXTURES[totem_type] as Texture2D
 	_fit_sprite()
 	_spawn_aura()
 

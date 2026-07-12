@@ -21,8 +21,8 @@ func populate_heroes():
 func populate_monsters():
 	for monster_name in Global.monster_data.keys():
 		var is_seen = Global.seen_monsters.has(monster_name)
-		var texture_path = Global.monster_data[monster_name]
-		var icon = create_icon(texture_path, is_seen)
+		var texture = Global.monster_data[monster_name] as Texture2D
+		var icon = create_icon_from_texture(texture, is_seen)
 		$VBoxContainer/ScrollContainer/VBoxContainer/MonstersGrid.add_child(icon)
 
 func create_icon(texture_path: String, is_revealed: bool) -> Control:

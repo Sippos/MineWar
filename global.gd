@@ -126,12 +126,12 @@ var hero_data = {
 var seen_monsters = []
 
 var monster_data = {
-	"Rat": "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png",
-	"Orc": "res://character_sprites/orc_walk_pixelart_spritesheet.png",
-	"Mech": "res://character_sprites/mech_walk_pixelart_spritesheet.png",
-	"Spider": "res://character_sprites/spider_walk_spritesheet.png",
-	"Bat": "res://character_sprites/bat_fly_spritesheet.png",
-	"Trogg": "res://character_sprites/trogg_walk_spritesheet.png"
+	"Rat": preload("res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"),
+	"Orc": preload("res://character_sprites/orc_walk_pixelart_spritesheet.png"),
+	"Mech": preload("res://character_sprites/mech_walk_pixelart_spritesheet.png"),
+	"Spider": preload("res://character_sprites/spider_walk_spritesheet.png"),
+	"Bat": preload("res://character_sprites/bat_fly_spritesheet.png"),
+	"Trogg": preload("res://character_sprites/trogg_walk_spritesheet.png")
 }
 
 func is_hero_unlocked(hero_name: String) -> bool:

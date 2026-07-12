@@ -2,6 +2,15 @@ extends CharacterBody2D
 
 enum EnemyType { RAT, SPIDER, BAT, TROGG, ORC }
 
+const ENEMY_TEXTURES = {
+	EnemyType.RAT: preload("res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"),
+	EnemyType.SPIDER: preload("res://character_sprites/spider_walk_spritesheet.png"),
+	EnemyType.BAT: preload("res://character_sprites/bat_fly_spritesheet.png"),
+	EnemyType.TROGG: preload("res://character_sprites/trogg_walk_spritesheet.png"),
+	EnemyType.ORC: preload("res://character_sprites/orc_walk_pixelart_spritesheet.png")
+}
+const BOSS_TEXTURE = preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
+
 var enemy_type: EnemyType = EnemyType.RAT
 var speed = 80.0
 var damage = 10
@@ -35,7 +44,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 	var base_speed = 70.0
 	var base_xp = 5
 	var base_gold = 3
-	var tex_path = "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"
+	var enemy_texture: Texture2D = ENEMY_TEXTURES[EnemyType.RAT]
 	
 	if is_boss:
 		base_hp = 500
@@ -43,24 +52,24 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 		base_speed = 60.0
 		base_xp = 250
 		base_gold = 150
-		tex_path = "res://character_sprites/mech_walk_pixelart_spritesheet.png"
+		enemy_texture = BOSS_TEXTURE
 	else:
 		match enemy_type:
 			EnemyType.RAT:
 				base_hp = 20; base_dmg = 2; base_speed = 70.0; base_xp = 5; base_gold = 3
-				tex_path = "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png"
+				enemy_texture = ENEMY_TEXTURES[EnemyType.RAT]
 			EnemyType.SPIDER:
 				base_hp = 35; base_dmg = 4; base_speed = 75.0; base_xp = 10; base_gold = 6
-				tex_path = "res://character_sprites/spider_walk_spritesheet.png"
+				enemy_texture = ENEMY_TEXTURES[EnemyType.SPIDER]
 			EnemyType.BAT:
 				base_hp = 25; base_dmg = 5; base_speed = 95.0; base_xp = 12; base_gold = 8
-				tex_path = "res://character_sprites/bat_fly_spritesheet.png"
+				enemy_texture = ENEMY_TEXTURES[EnemyType.BAT]
 			EnemyType.TROGG:
 				base_hp = 60; base_dmg = 7; base_speed = 50.0; base_xp = 15; base_gold = 12
-				tex_path = "res://character_sprites/trogg_walk_spritesheet.png"
+				enemy_texture = ENEMY_TEXTURES[EnemyType.TROGG]
 			EnemyType.ORC:
 				base_hp = 80; base_dmg = 10; base_speed = 60.0; base_xp = 25; base_gold = 20
-				tex_path = "res://character_sprites/orc_walk_pixelart_spritesheet.png"
+				enemy_texture = ENEMY_TEXTURES[EnemyType.ORC]
 				
 	# Scale by wave
 	health = int(base_hp * (1.0 + wave_number * 0.2))
@@ -71,7 +80,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 	
 	var sprite = $Sprite2D
 	if sprite:
-		sprite.texture = load(tex_path)
+		sprite.texture = enemy_texture
 		if is_boss:
 			sprite.scale = Vector2(2.0, 2.0)
 			sprite.modulate = Color(1, 1, 1)
