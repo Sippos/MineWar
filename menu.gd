@@ -1,6 +1,6 @@
 extends Control
 
-const MENU_THEME = preload("res://global_theme.tres")
+const MENU_THEME = preload("res://assets/themes/global/global_theme.tres")
 
 func _ready() -> void:
 	theme = MENU_THEME

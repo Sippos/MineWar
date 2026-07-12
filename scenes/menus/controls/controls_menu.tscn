@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menus/controls/controls_menu.gd" id="1_script"]
-[ext_resource type="Theme" path="res://global_theme.tres" id="2_theme"]
+[ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
 
 [node name="ControlsMenu" type="CanvasLayer"]
 layer = 100

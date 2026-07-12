@@ -112,3 +112,8 @@ The gem and rail-item scene/script pairs have been relocated together on `refact
 ## MOV-014 status
 
 MOV-014 is implemented on `refactor/mov-014-hud-assets`. Review the frozen manifest at `docs/refactor/MOV_014_ASSET_MANIFEST.md`. The next planned structural task is MOV-015; do not merge without explicit approval.
+
+
+## MOV-015 status
+
+MOV-015 is implemented on `refactor/mov-015-global-theme`. Review `docs/refactor/MOV_015_THEME_MANIFEST.md`. The next planned structural task is MOV-016; do not merge without explicit approval.

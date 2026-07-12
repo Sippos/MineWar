@@ -107,3 +107,8 @@ All runtime, scene, test, tool, documentation, and path-based inheritance refere
 ## MOV-014 — HUD stat and health asset relocation
 
 Implemented on branch `refactor/mov-014-hud-assets`. Seven image/sidecar pairs were relocated using the frozen manifest in `docs/refactor/MOV_014_ASSET_MANIFEST.md`. Gold coin assets and world assets with misleading stat/resource names were excluded after ownership audit. This is a path-only change.
+
+
+## MOV-015 — Global theme relocation
+
+Implemented on branch `refactor/mov-015-global-theme`. `global_theme.tres` moved to `assets/themes/global/global_theme.tres`; all active exact runtime paths and relevant structural documentation were updated. This is a path-only change.

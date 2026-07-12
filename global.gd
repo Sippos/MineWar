@@ -6,7 +6,7 @@ var rtc_conn: WebRTCPeerConnection
 const DEFAULT_UNLOCKED_HEROES = ["Dwarf"]
 const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
 const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Druid", "Undead King"]
-const GAME_UI_THEME_PATH = "res://global_theme.tres"
+const GAME_UI_THEME_PATH = "res://assets/themes/global/global_theme.tres"
 const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
 
 var _game_ui_theme: Theme
