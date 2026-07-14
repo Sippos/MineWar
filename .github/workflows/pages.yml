@@ -42,15 +42,31 @@ jobs:
           unzip -q .ci/templates.tpz -d .ci/templates
           cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
 
-      - name: Rebuild hero preview imports
+      - name: Rebuild Godot import cache
         shell: bash
-        run: rm -f character_sprites/hero_idle/*.import
+        run: |
+          set -euo pipefail
+          # The repository contains old generated import metadata.  A clean CI
+          # cache forces Godot to regenerate every referenced .ctex artifact.
+          rm -rf .godot
+          rm -f character_sprites/hero_idle/*.import
 
       - name: Import Godot project resources
         shell: bash
         env:
           GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
         run: ${GODOT_BIN} --headless --editor --path . --quit
+
+      - name: Verify required hero imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          for hero in druid dwarf mech nerubian shaman undead_king; do
+            if ! find .godot/imported -maxdepth 1 -type f -name "${hero}_idle_front.png-*.ctex" -print -quit | grep -q .; then
+              echo "Missing generated import for ${hero}_idle_front.png" >&2
+              exit 1
+            fi
+          done
 
       - name: Export and validate Godot Web build
         shell: bash
@@ -60,7 +76,7 @@ jobs:
 
       - name: Record deployed commit
         shell: bash
-        run: printf '%s\n' "$GITHUB_SHA" > build/web/deploy-commit.txt
+        run: printf '%s\\n' "$GITHUB_SHA" > build/web/deploy-commit.txt
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
