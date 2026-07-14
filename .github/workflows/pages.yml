@@ -42,6 +42,10 @@ jobs:
           unzip -q .ci/templates.tpz -d .ci/templates
           cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
 
+      - name: Rebuild hero preview imports
+        shell: bash
+        run: rm -f character_sprites/hero_idle/*.import
+
       - name: Import Godot project resources
         shell: bash
         env:
