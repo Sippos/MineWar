@@ -1234,9 +1234,13 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 
 func _is_mobile_runtime() -> bool:
 	var is_mobile := OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
-	if OS.has_feature("web"):
-		is_mobile = is_mobile or bool(JavaScriptBridge.eval("/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)"))
-	return is_mobile
+	if not OS.has_feature("web") or not Engine.has_singleton("JavaScriptBridge"):
+		return is_mobile
+	var js_bridge = Engine.get_singleton("JavaScriptBridge")
+	var ua := str(js_bridge.eval("navigator.userAgent || ''", true))
+	var platform := str(js_bridge.eval("navigator.platform || ''", true))
+	var max_touch := int(js_bridge.eval("navigator.maxTouchPoints || 0", true))
+	return is_mobile or max_touch > 0 or ua.contains("Mobile") or ua.contains("iPhone") or ua.contains("iPad") or ua.contains("iPod") or ua.contains("Android") or (platform == "MacIntel" and max_touch > 1)
 
 func _ensure_hud() -> void:
 	if world == null:
