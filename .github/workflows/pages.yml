@@ -47,6 +47,10 @@ jobs:
           GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
         run: bash ./export_web.sh
 
+      - name: Record deployed commit
+        shell: bash
+        run: printf '%s\n' "$GITHUB_SHA" > build/web/deploy-commit.txt
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
