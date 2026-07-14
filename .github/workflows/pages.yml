@@ -46,28 +46,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The repository contains old generated import metadata.  A clean CI
-          # cache lets the export process rebuild missing .ctex artifacts.
+          # The repository contains old generated import metadata. Rebuild it
+          # without committing the generated .godot directory.
           rm -rf .godot
           mkdir -p build/web
 
-      - name: Warm Godot export imports
+      - name: Import Godot project resources
         shell: bash
         env:
           GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
-        run: |
-          set -euo pipefail
-          # Godot 4 can defer a first-time import until export. Three passes
-          # are intentional: the first creates import metadata, later passes
-          # consume the generated artifacts.
-          for attempt in 1 2 3; do
-            echo "Warm export pass ${attempt}/3"
-            set +e
-            "${GODOT_BIN}" --headless --path . --export-release Web build/web/index.html > "build/warm-export-${attempt}.log" 2>&1
-            status=$?
-            set -e
-            echo "Warm export pass ${attempt} exited ${status}"
-          done
+        run: ${GODOT_BIN} --headless --editor --path . --script .ci/reimport_assets.gd
 
       - name: Verify required hero imports
         shell: bash
