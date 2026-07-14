@@ -118,6 +118,7 @@ The contained feedback implementation is accepted after headless and real-run va
 - `scripts/gameplay/collectibles/gems/gem.gd` emits pickup feedback after a successful tether.
 - `base.gd` emits deposit feedback for carried and directly deposited gems.
 - A Godot 4.7 headless editor/project check completed successfully; duplicate UID warnings from local backup folders and the untracked `upgrade_tree_lab.tscn` parse error remain pre-existing and unrelated.
+- GitHub Pages and Itch export workflows now clear and deterministically rebuild `.godot` imports before exporting, preventing stale `.ctex` preload failures.
 - Real single-player smoke exercised rapid mining, final break/gem reveal, pickup, and carried/direct deposit feedback; 8 temporary feedback effects were created and 0 remained after cleanup.
 - The validated run produced no project-specific runtime errors, and feedback remained bounded during the rapid-mining/deposit check.
 
