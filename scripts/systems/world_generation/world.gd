@@ -379,6 +379,9 @@ func spawn_wave() -> void:
 	var target_cell = get_farthest_open_cell()
 	var spawn_pos = block_layer.to_global(block_layer.map_to_local(target_cell))
 	var is_boss = (current_wave_number % 10 == 0)
+	var hud = get_node_or_null("HUD")
+	if hud and hud.has_method("notify_wave_started"):
+		hud.notify_wave_started(is_boss)
 	
 	var spawn_count = 1 if is_boss else enemies_per_wave
 	
@@ -425,6 +428,98 @@ func _position_front_gem_sprite(sprite: Sprite2D, cell: Vector2i) -> void:
 	var below_cell = Vector2i(cell.x, cell.y + 1)
 	sprite.global_position = front_layer.to_global(front_layer.map_to_local(below_cell))
 	sprite.global_position.y += 1.0
+
+func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal := false) -> void:
+	var burst := CPUParticles2D.new()
+	burst.name = "MiningBreakFeedback" if strong else "MiningImpactFeedback"
+	burst.add_to_group("polish_feedback")
+	burst.one_shot = true
+	burst.emitting = false
+	burst.amount = 26 if strong else 9
+	burst.lifetime = 0.55 if strong else 0.24
+	burst.explosiveness = 0.95
+	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	burst.emission_sphere_radius = 7.0 if strong else 3.0
+	burst.gravity = Vector2(0, 160)
+	burst.initial_velocity_min = 80.0 if strong else 36.0
+	burst.initial_velocity_max = 190.0 if strong else 90.0
+	burst.damping_min = 90.0
+	burst.damping_max = 170.0
+	burst.scale_amount_min = 2.0 if strong else 1.2
+	burst.scale_amount_max = 5.5 if strong else 2.8
+	burst.color = Color(0.95, 0.82, 0.56, 0.95) if strong else Color(0.72, 0.58, 0.42, 0.82)
+	burst.global_position = world_position
+	burst.z_index = 8
+	add_child(burst)
+	burst.emitting = true
+	get_tree().create_timer(burst.lifetime + 0.15).timeout.connect(burst.queue_free)
+	if gem_reveal:
+		_spawn_feedback_label(world_position + Vector2(0, -24), "GEM REVEALED", Color(0.3, 1.0, 0.95), 1.05)
+		var gem_flash := PointLight2D.new()
+		gem_flash.name = "GemRevealFlash"
+		gem_flash.add_to_group("polish_feedback")
+		gem_flash.energy = 2.2
+		gem_flash.texture_scale = 0.45
+		gem_flash.color = Color(0.25, 1.0, 0.9)
+		gem_flash.global_position = world_position
+		add_child(gem_flash)
+		var flash_tween := create_tween()
+		flash_tween.tween_property(gem_flash, "energy", 0.0, 0.32)
+		flash_tween.tween_callback(gem_flash.queue_free)
+
+func spawn_gem_pickup_feedback(world_position: Vector2) -> void:
+	_spawn_resource_burst(world_position, Color(0.25, 0.95, 1.0, 0.95), "GemPickupFeedback")
+	_spawn_feedback_label(world_position + Vector2(0, -20), "PICKED UP", Color(0.55, 1.0, 1.0), 0.7)
+
+func spawn_gem_deposit_feedback(world_position: Vector2, amount: int) -> void:
+	if amount <= 0:
+		return
+	_spawn_resource_burst(world_position, Color(1.0, 0.82, 0.25, 0.98), "GemDepositFeedback", 34)
+	_spawn_feedback_label(world_position + Vector2(0, -34), "DEPOSITED", Color(1.0, 0.9, 0.45), 0.95)
+
+func _spawn_resource_burst(world_position: Vector2, burst_color: Color, effect_name: String, particle_count := 18) -> void:
+	var burst := CPUParticles2D.new()
+	burst.name = effect_name
+	burst.add_to_group("polish_feedback")
+	burst.one_shot = true
+	burst.emitting = false
+	burst.amount = particle_count
+	burst.lifetime = 0.45
+	burst.explosiveness = 0.92
+	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	burst.emission_sphere_radius = 8.0
+	burst.gravity = Vector2(0, 70)
+	burst.initial_velocity_min = 70.0
+	burst.initial_velocity_max = 160.0
+	burst.damping_min = 100.0
+	burst.damping_max = 180.0
+	burst.scale_amount_min = 1.8
+	burst.scale_amount_max = 4.5
+	burst.color = burst_color
+	burst.global_position = world_position
+	burst.z_index = 9
+	add_child(burst)
+	burst.emitting = true
+	get_tree().create_timer(0.65).timeout.connect(burst.queue_free)
+
+func _spawn_feedback_label(world_position: Vector2, text: String, text_color: Color, duration: float) -> void:
+	var label := Label.new()
+	label.name = "FeedbackLabel"
+	label.add_to_group("polish_feedback")
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_color_override("font_color", text_color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	label.add_theme_constant_override("outline_size", 3)
+	label.position = world_position - Vector2(70, 14)
+	label.size = Vector2(140, 28)
+	label.z_index = 12
+	add_child(label)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(label, "position", label.position + Vector2(0, -30), duration)
+	tween.tween_property(label, "modulate", Color(1, 1, 1, 0), duration)
+	tween.chain().tween_callback(label.queue_free)
 
 func update_astar_weight(cell: Vector2i) -> void:
 	if not astar.is_in_bounds(cell.x, cell.y):

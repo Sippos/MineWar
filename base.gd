@@ -68,6 +68,7 @@ func _process(delta: float) -> void:
 			if player.has_method("deposit_gems"):
 				var deposited = player.deposit_gems()
 				if deposited > 0:
+					_emit_deposit_feedback(deposited)
 					gems_deposited.emit(deposited)
 
 func _on_body_entered(body: Node2D) -> void:
@@ -77,12 +78,18 @@ func _on_body_entered(body: Node2D) -> void:
 	elif body.is_in_group("gems"):
 		# If a gem is thrown or pushed into the base directly!
 		body.queue_free()
+		_emit_deposit_feedback(1)
 		gems_deposited.emit(1)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.name == "Player":
 		player_in_zone = false
 		prompt.visible = false
+
+func _emit_deposit_feedback(amount: int) -> void:
+	var world = get_parent()
+	if world and world.has_method("spawn_gem_deposit_feedback"):
+		world.spawn_gem_deposit_feedback(global_position, amount)
 
 func _input(event: InputEvent) -> void:
 	var p_id = get_parent().get("player_id")
@@ -92,7 +99,10 @@ func _input(event: InputEvent) -> void:
 		upgrade_requested.emit()
 
 func take_damage(amount: int) -> void:
-	health -= amount
+	health = max(health - amount, 0)
+	var hud = get_parent().get_node_or_null("HUD")
+	if hud and hud.has_method("notify_base_damaged"):
+		hud.notify_base_damaged(health, 100)
 	base_damaged.emit(health)
 	if health <= 0:
 		game_over.emit()

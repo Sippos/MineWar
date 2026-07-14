@@ -32,6 +32,22 @@ var totem_status_slots := {}
 var nerubian_status_container: HBoxContainer
 var nerubian_spawn_slot: Control
 var nerubian_spider_slots := []
+var hero_portrait_container: PanelContainer
+var hero_portrait_icon: TextureRect
+var hero_portrait_dim: ColorRect
+var hero_portrait_timer: Label
+var hero_portrait_hero_name := ""
+var base_status_panel: PanelContainer
+var base_status_label: Label
+var base_status_style: StyleBoxFlat
+var base_direction_cue: Control
+var base_direction_arrow: Label
+var base_direction_label: Label
+var base_status_tween: Tween
+var base_warning_state := "stable"
+var base_warning_health := 100
+var base_warning_max_health := 100
+var base_hit_notice_cooldown := 0.0
 
 const TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const TOTEM_LABELS = {
@@ -58,7 +74,7 @@ const NERUBIAN_SPIDER_TEXTURE: Texture2D = preload("res://character_sprites/spid
 const NERUBIAN_MAX_SPIDER_SLOTS = 5
 const NERUBIAN_SPAWN_MAX_COOLDOWN = 3.5
 const HUD_STACK_LEFT := 20.0
-const HUD_STACK_TOP := 62.0
+const HUD_STACK_TOP := 88.0
 const HUD_STACK_GAP := 8.0
 const HUD_STACK_LABEL_LEFT := 30.0
 const HUD_STATS_HEIGHT := 36.0
@@ -66,9 +82,28 @@ const HUD_HEALTH_BAR_OFFSET_Y := 18.0
 const HUD_HEALTH_MODULE_HEIGHT := 66.0
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const MENU_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
+const HERO_PORTRAIT_TEXTURES = {
+	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
+	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
+	"Shaman": preload("res://character_sprites/hero_idle/shaman_idle_front.png"),
+	"Nerubian": preload("res://character_sprites/hero_idle/nerubian_idle_front.png"),
+	"Druid": preload("res://character_sprites/hero_idle/druid_idle_front.png"),
+	"Undead King": preload("res://character_sprites/hero_idle/undead_king_idle_front.png")
+}
+const HERO_PORTRAIT_RECT := Rect2(16.0, 12.0, 68.0, 68.0)
+const BASE_DAMAGED_THRESHOLD := 0.70
+const BASE_CRITICAL_THRESHOLD := 0.30
+const BASE_DIRECTION_DISTANCE := 520.0
+const BASE_HIT_NOTICE_COOLDOWN := 6.0
+const BASE_WARNING_COLORS = {
+	"stable": Color(0.35, 0.9, 0.55, 1.0),
+	"damaged": Color(1.0, 0.72, 0.22, 1.0),
+	"critical": Color(1.0, 0.2, 0.16, 1.0)
+}
 
 func _ready():
 	run_started_msec = Time.get_ticks_msec()
+	_setup_hero_portrait_ui()
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
 		
@@ -84,10 +119,154 @@ func _ready():
 			
 	_setup_stomp_ui()
 	_setup_notice_ui()
+	_setup_base_warning_ui()
 	_setup_totem_wheel_ui()
 	_setup_totem_status_ui()
 	_setup_nerubian_status_ui()
 	_relayout_unlocked_hud()
+
+func _setup_hero_portrait_ui() -> void:
+	hero_portrait_container = PanelContainer.new()
+	hero_portrait_container.name = "HeroPortrait"
+	hero_portrait_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_portrait_container.clip_contents = true
+	hero_portrait_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	hero_portrait_container.offset_left = HERO_PORTRAIT_RECT.position.x
+	hero_portrait_container.offset_top = HERO_PORTRAIT_RECT.position.y
+	hero_portrait_container.offset_right = HERO_PORTRAIT_RECT.end.x
+	hero_portrait_container.offset_bottom = HERO_PORTRAIT_RECT.end.y
+
+	var frame_style = StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.035, 0.045, 0.06, 0.92)
+	frame_style.border_color = Color(0.82, 0.68, 0.32, 0.95)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(8)
+	frame_style.shadow_color = Color(0, 0, 0, 0.55)
+	frame_style.shadow_size = 4
+	hero_portrait_container.add_theme_stylebox_override("panel", frame_style)
+
+	var portrait_content = Control.new()
+	portrait_content.name = "Content"
+	portrait_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_portrait_container.add_child(portrait_content)
+
+	hero_portrait_icon = TextureRect.new()
+	hero_portrait_icon.name = "Icon"
+	hero_portrait_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_portrait_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero_portrait_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero_portrait_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hero_portrait_icon.offset_left = 4
+	hero_portrait_icon.offset_top = 4
+	hero_portrait_icon.offset_right = -4
+	hero_portrait_icon.offset_bottom = -4
+	portrait_content.add_child(hero_portrait_icon)
+
+	hero_portrait_dim = ColorRect.new()
+	hero_portrait_dim.name = "DeathDim"
+	hero_portrait_dim.visible = false
+	hero_portrait_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_portrait_dim.color = Color(0.08, 0.08, 0.1, 0.58)
+	hero_portrait_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	portrait_content.add_child(hero_portrait_dim)
+
+	hero_portrait_timer = Label.new()
+	hero_portrait_timer.name = "RespawnTimer"
+	hero_portrait_timer.visible = false
+	hero_portrait_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_portrait_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_portrait_timer.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hero_portrait_timer.add_theme_font_size_override("font_size", 25)
+	hero_portrait_timer.add_theme_color_override("font_color", Color.WHITE)
+	hero_portrait_timer.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	hero_portrait_timer.add_theme_constant_override("outline_size", 5)
+	hero_portrait_timer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	portrait_content.add_child(hero_portrait_timer)
+
+	add_child(hero_portrait_container)
+	_shift_resource_row_for_portrait()
+	_refresh_hero_portrait(true)
+
+func _shift_resource_row_for_portrait() -> void:
+	var gem_icon = get_node_or_null("GemIcon") as TextureRect
+	var gem_label = get_node_or_null("Label") as Label
+	var gold_icon = get_node_or_null("GoldIcon") as TextureRect
+	var gold_value = get_node_or_null("GoldLabel") as Label
+
+	var resource_panel = PanelContainer.new()
+	resource_panel.name = "ResourcePanel"
+	resource_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	resource_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	resource_panel.offset_left = 92
+	resource_panel.offset_top = 20
+	resource_panel.offset_right = 272
+	resource_panel.offset_bottom = 58
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.025, 0.03, 0.04, 0.78)
+	panel_style.border_color = Color(0.34, 0.38, 0.46, 0.55)
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(7)
+	resource_panel.add_theme_stylebox_override("panel", panel_style)
+	add_child(resource_panel)
+	move_child(resource_panel, hero_portrait_container.get_index())
+
+	if gem_icon:
+		gem_icon.position = Vector2(102, 25)
+		gem_icon.size = Vector2(28, 28)
+		gem_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gem_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gem_icon.move_to_front()
+	if gem_label:
+		gem_label.position = Vector2(132, 23)
+		gem_label.size = Vector2(34, 32)
+		gem_label.add_theme_font_size_override("font_size", 18)
+		gem_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		gem_label.move_to_front()
+	if gold_icon:
+		gold_icon.position = Vector2(171, 25)
+		gold_icon.size = Vector2(28, 28)
+		gold_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gold_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gold_icon.move_to_front()
+	if gold_value:
+		gold_value.position = Vector2(201, 23)
+		gold_value.size = Vector2(52, 32)
+		gold_value.add_theme_font_size_override("font_size", 18)
+		gold_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		gold_value.move_to_front()
+
+func _get_active_hero_name_for_portrait() -> String:
+	var player = _get_player_node()
+	if player and player.is_node_ready():
+		var player_hero = player.get("current_hero_name")
+		if typeof(player_hero) == TYPE_STRING and player_hero != "":
+			return player_hero
+	if Global.hero_data.has(Global.hero_p1):
+		return Global.hero_p1
+	return "Dwarf"
+
+func _refresh_hero_portrait(force := false) -> void:
+	if not hero_portrait_icon:
+		return
+	var hero_name = _get_active_hero_name_for_portrait()
+	if not force and hero_name == hero_portrait_hero_name:
+		return
+	hero_portrait_hero_name = hero_name
+	var portrait_texture = HERO_PORTRAIT_TEXTURES.get(hero_name, null) as Texture2D
+	if portrait_texture == null:
+		portrait_texture = _get_player_portrait_texture()
+	hero_portrait_icon.texture = portrait_texture
+	hero_portrait_icon.tooltip_text = hero_name
+
+func _set_hero_portrait_respawn(time_left: float) -> void:
+	var respawning = time_left > 0.0
+	if hero_portrait_icon:
+		hero_portrait_icon.modulate = Color(0.32, 0.32, 0.32, 1.0) if respawning else Color.WHITE
+	if hero_portrait_dim:
+		hero_portrait_dim.visible = respawning
+	if hero_portrait_timer:
+		hero_portrait_timer.visible = respawning
+		hero_portrait_timer.text = str(int(ceil(time_left))) if respawning else ""
 
 func _load_stomp_texture() -> Texture2D:
 	for texture_path in STOMP_SPRITE_TEXTURES:
@@ -175,9 +354,140 @@ func _setup_notice_ui() -> void:
 	notice_label.offset_bottom = 112
 	add_child(notice_label)
 
+func _setup_base_warning_ui() -> void:
+	base_status_panel = PanelContainer.new()
+	base_status_panel.name = "BaseStatus"
+	base_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	base_status_panel.offset_left = -214
+	base_status_panel.offset_top = 86
+	base_status_panel.offset_right = -18
+	base_status_panel.offset_bottom = 126
+	base_status_panel.pivot_offset = Vector2(98, 20)
+	base_status_style = StyleBoxFlat.new()
+	base_status_style.set_border_width_all(2)
+	base_status_style.set_corner_radius_all(7)
+	base_status_panel.add_theme_stylebox_override("panel", base_status_style)
+	base_status_label = Label.new()
+	base_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	base_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	base_status_label.add_theme_font_size_override("font_size", 16)
+	base_status_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	base_status_label.add_theme_constant_override("outline_size", 3)
+	base_status_panel.add_child(base_status_label)
+	add_child(base_status_panel)
+
+	base_direction_cue = Control.new()
+	base_direction_cue.name = "BaseDirectionCue"
+	base_direction_cue.visible = false
+	base_direction_cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base_direction_cue.size = Vector2(116, 44)
+	var cue_background = ColorRect.new()
+	cue_background.color = Color(0.04, 0.04, 0.05, 0.86)
+	cue_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cue_background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base_direction_cue.add_child(cue_background)
+	base_direction_arrow = Label.new()
+	base_direction_arrow.text = "▶"
+	base_direction_arrow.position = Vector2(7, 7)
+	base_direction_arrow.size = Vector2(30, 30)
+	base_direction_arrow.pivot_offset = Vector2(15, 15)
+	base_direction_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	base_direction_arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	base_direction_arrow.add_theme_font_size_override("font_size", 24)
+	base_direction_cue.add_child(base_direction_arrow)
+	base_direction_label = Label.new()
+	base_direction_label.text = "BASE"
+	base_direction_label.position = Vector2(40, 7)
+	base_direction_label.size = Vector2(68, 30)
+	base_direction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	base_direction_label.add_theme_font_size_override("font_size", 16)
+	base_direction_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	base_direction_label.add_theme_constant_override("outline_size", 3)
+	base_direction_cue.add_child(base_direction_label)
+	add_child(base_direction_cue)
+	_apply_base_warning_state(false)
+
+func _set_base_warning_health(current_health: int, maximum_health: int, pulse: bool) -> void:
+	base_warning_health = max(current_health, 0)
+	base_warning_max_health = max(maximum_health, 1)
+	var health_ratio := float(base_warning_health) / float(base_warning_max_health)
+	if health_ratio <= BASE_CRITICAL_THRESHOLD:
+		base_warning_state = "critical"
+	elif health_ratio < BASE_DAMAGED_THRESHOLD:
+		base_warning_state = "damaged"
+	else:
+		base_warning_state = "stable"
+	_apply_base_warning_state(pulse)
+
+func _apply_base_warning_state(pulse: bool) -> void:
+	if not base_status_panel or not base_status_label or not base_status_style:
+		return
+	var warning_color: Color = BASE_WARNING_COLORS.get(base_warning_state, BASE_WARNING_COLORS["stable"])
+	base_status_label.text = "BASE: %s" % base_warning_state.to_upper()
+	base_status_label.add_theme_color_override("font_color", warning_color)
+	base_status_style.bg_color = Color(warning_color.r * 0.16, warning_color.g * 0.16, warning_color.b * 0.16, 0.92)
+	base_status_style.border_color = warning_color
+	base_status_panel.queue_redraw()
+	if base_direction_arrow:
+		base_direction_arrow.add_theme_color_override("font_color", warning_color)
+	if base_direction_label:
+		base_direction_label.add_theme_color_override("font_color", warning_color)
+	if pulse:
+		if base_status_tween and base_status_tween.is_running():
+			base_status_tween.kill()
+		base_status_panel.scale = Vector2(1.12, 1.12)
+		base_status_panel.modulate = Color(1.35, 1.35, 1.35, 1.0)
+		base_status_tween = create_tween().set_parallel(true)
+		base_status_tween.tween_property(base_status_panel, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		base_status_tween.tween_property(base_status_panel, "modulate", Color.WHITE, 0.24)
+
+func notify_wave_started(is_boss: bool = false) -> void:
+	show_notice("A boss has entered the mine." if is_boss else "Enemies have entered the mine.", 2.6)
+
+func notify_base_damaged(current_health: int, maximum_health: int = 100) -> void:
+	var previous_state := base_warning_state
+	_set_base_warning_health(current_health, maximum_health, true)
+	var entered_critical := base_warning_state == "critical" and previous_state != "critical"
+	if base_hit_notice_cooldown <= 0.0 or entered_critical:
+		show_notice("The base is in critical danger!" if base_warning_state == "critical" else "The base is under attack.", 2.2)
+		base_hit_notice_cooldown = BASE_HIT_NOTICE_COOLDOWN
+
+func _update_base_direction_cue() -> void:
+	if not base_direction_cue or not base_direction_arrow:
+		return
+	var world := get_parent()
+	var player := world.get_node_or_null("Player") if world else null
+	var base := world.get_node_or_null("Base") if world else null
+	if not player or not base or base_warning_state == "stable":
+		base_direction_cue.visible = false
+		return
+	var to_base: Vector2 = base.global_position - player.global_position
+	if to_base.length() < BASE_DIRECTION_DISTANCE:
+		base_direction_cue.visible = false
+		return
+	var direction := to_base.normalized()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var center := viewport_size * 0.5
+	var half_extent := Vector2(max(viewport_size.x * 0.5 - 70.0, 20.0), max(viewport_size.y * 0.5 - 48.0, 20.0))
+	var edge_scale := 1000000.0
+	if abs(direction.x) > 0.001:
+		edge_scale = min(edge_scale, half_extent.x / abs(direction.x))
+	if abs(direction.y) > 0.001:
+		edge_scale = min(edge_scale, half_extent.y / abs(direction.y))
+	var cue_position := center + direction * edge_scale - base_direction_cue.size * 0.5
+	cue_position.x = clamp(cue_position.x, 8.0, max(viewport_size.x - base_direction_cue.size.x - 8.0, 8.0))
+	cue_position.y = clamp(cue_position.y, 8.0, max(viewport_size.y - base_direction_cue.size.y - 8.0, 8.0))
+	base_direction_cue.position = cue_position
+	base_direction_arrow.rotation = direction.angle()
+	base_direction_cue.visible = true
+
 func _process(delta):
+	base_hit_notice_cooldown = max(base_hit_notice_cooldown - delta, 0.0)
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
+	_refresh_hero_portrait()
+	_update_base_direction_cue()
 	_update_nerubian_status_from_world()
 
 func _relayout_unlocked_hud() -> void:
@@ -380,6 +690,7 @@ func add_gold(amount: int) -> void:
 func update_health(new_health: int) -> void:
 	if base_health_bar:
 		base_health_bar.value = new_health
+	_set_base_warning_health(new_health, base_warning_max_health, false)
 
 func update_stats(str_val: int, agi_val: int, int_val: int) -> void:
 	if str_label: str_label.text = str(str_val)
@@ -550,6 +861,7 @@ func upgrade_minimap_enemies() -> void:
 	minimap_shows_enemies = true
 
 func update_respawn_timer(time_left: float) -> void:
+	_set_hero_portrait_respawn(time_left)
 	if time_left > 0:
 		respawn_label.visible = true
 		respawn_label.text = "Respawning in %.1f..." % time_left

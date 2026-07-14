@@ -115,7 +115,8 @@ var hero_data = {
 	"Druid": {
 		"walk": preload("res://character_sprites/druid_walk_spritesheet_25d.png"),
 		"attack": preload("res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d.png"),
-		"mole": preload("res://character_sprites/druid_mole_crawl_spritesheet_25d.png")
+		"mole": preload("res://character_sprites/druid_mole_crawl_spritesheet_25d.png"),
+		"mole_attack": preload("res://character_sprites/druid_mole_attack_spritesheet_25d.png")
 	},
 	"Undead King": {
 		"walk": preload("res://character_sprites/undead_king_float_idle_spritesheet_25d.png"),
