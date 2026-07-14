@@ -55,7 +55,7 @@ jobs:
         shell: bash
         env:
           GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
-        run: ${GODOT_BIN} --headless --editor --path . --quit
+        run: ${GODOT_BIN} --headless --path . --import
 
       - name: Verify required hero imports
         shell: bash
