@@ -99,26 +99,36 @@ Preserve the unlockable Dome Keeper-style HUD while ensuring that a player far u
 - `scripts/systems/world_generation/world.gd` — sends one high-priority notice when a wave begins.
 - `docs/GAMEPLAY_POLISH_PROGRESS.md` — recorded completed validation and promoted `POLISH-002` to `READY`.
 
-## Next task
+## Completed task
 
 ID: `POLISH-002`
 
 Title: Improve mining, block destruction, gem reveal, pickup, and deposit feedback
 
-Status: `IN_PROGRESS`
+Status: `COMPLETE`
 
 Implementation has begun in the current local tree. Do not start `POLISH-003` until `POLISH-002` is either validated and marked `COMPLETE` or explicitly marked `BLOCKED`.
 
-### Current implementation state
+### Validation record
 
-Candidate implementation is present but not yet accepted:
+The contained feedback implementation is accepted after headless and real-run validation:
 
 - `player.gd` emits throttled mining-impact feedback and a stronger final-break/gem-reveal event.
 - `scripts/systems/world_generation/world.gd` creates contained mining, pickup, deposit, flash, and label effects.
 - `scripts/gameplay/collectibles/gems/gem.gd` emits pickup feedback after a successful tether.
 - `base.gd` emits deposit feedback for carried and directly deposited gems.
-- A Godot 4.7 headless editor check exits successfully, but local untracked sprite-backup folders still produce duplicate UID warnings and the untracked `upgrade_tree_lab.tscn` experiment still has an unexpected-EOF parse error.
-- Real gameplay acceptance checks for rapid mining, gem reveal, pickup, deposit, and feedback cleanup remain pending.
+- A Godot 4.7 headless editor/project check completed successfully; duplicate UID warnings from local backup folders and the untracked `upgrade_tree_lab.tscn` parse error remain pre-existing and unrelated.
+- Real single-player smoke exercised rapid mining, final break/gem reveal, pickup, and carried/direct deposit feedback; 8 temporary feedback effects were created and 0 remained after cleanup.
+- The validated run produced no project-specific runtime errors, and feedback remained bounded during the rapid-mining/deposit check.
+
+### Scope and acceptance
+
+- Repeated mining impacts are readable without becoming visually noisy.
+- The final break is stronger than intermediate strikes and gem discovery is immediately recognizable.
+- Pickup and deposit each have distinct feedback.
+- No economy, gem frequency, upgrade price, or audio behavior changed.
+
+POLISH-003 is now READY and was not started in this run.
 
 ### Intended scope
 
@@ -139,12 +149,19 @@ Candidate implementation is present but not yet accepted:
 - Pickup and deposit each have distinct feedback.
 - Performance remains acceptable during rapid mining and multi-gem deposits.
 
+## Next task
+
+ID: `POLISH-003`
+
+Title: Conditional enemy health bars and stronger hit reactions
+
+Status: `READY`
+
 ## Later queue
 
-1. `POLISH-003` — Conditional enemy health bars and stronger hit reactions.
-2. `POLISH-004` — Connect Strength to free carrying allowance and clarify STR/AGI/INT effects.
-3. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D.
-4. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable.
+1. `POLISH-004` — Connect Strength to free carrying allowance and clarify STR/AGI/INT effects.
+2. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D.
+3. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable.
 
 ## Known pre-existing blockers and hazards
 
@@ -156,4 +173,4 @@ Candidate implementation is present but not yet accepted:
 
 ## Last queue update
 
-`POLISH-001` is `COMPLETE` after a real Dwarf single-player run validated the wave and base-danger communication through the production Level/Base/HUD paths. `POLISH-002` is `IN_PROGRESS`: a contained candidate implementation exists in the current local tree, its headless parse/import baseline has been checked, and real gameplay acceptance validation is still required.
+`POLISH-001` and `POLISH-002` are `COMPLETE`. POLISH-002 passed the real mining, gem reveal, pickup, deposit, and feedback-cleanup smoke checks; `POLISH-003` is promoted to `READY`.
