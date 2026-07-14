@@ -2,6 +2,12 @@ name: Deploy Web to GitHub Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - fix/hero-sprite-recovery-publish
+    paths:
+      - '.deploy-trigger'
 
 permissions:
   contents: read
