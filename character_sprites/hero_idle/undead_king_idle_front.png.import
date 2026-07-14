@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dp6make6ovuxy"
-path="res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"
+uid="uid://cxyp0yn2cgh3a"
+path="res://.godot/imported/undead_king_idle_front.png-69d27f5c582174cd6d6c6c174a13eaf8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png"
-dest_files=["res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"]
+source_file="res://character_sprites/hero_idle/undead_king_idle_front.png"
+dest_files=["res://.godot/imported/undead_king_idle_front.png-69d27f5c582174cd6d6c6c174a13eaf8.ctex"]
 
 [params]
 

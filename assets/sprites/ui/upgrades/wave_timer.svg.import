@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dp6make6ovuxy"
-path="res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"
+uid="uid://dvneqe40t7t22"
+path="res://.godot/imported/wave_timer.svg-10ce2cc80cac26f4be1bb673fbe678d4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png"
-dest_files=["res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"]
+source_file="res://assets/sprites/ui/upgrades/wave_timer.svg"
+dest_files=["res://.godot/imported/wave_timer.svg-10ce2cc80cac26f4be1bb673fbe678d4.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

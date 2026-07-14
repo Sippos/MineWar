@@ -106,6 +106,11 @@ const HERO_VISUALS = {
 		"attack_scale": Vector2(0.85, 0.85),
 		"sprite_position": Vector2(0, -24)
 	},
+	"Mech": {
+		"walk_scale": Vector2(0.85, 0.85),
+		"attack_scale": Vector2(0.85, 0.85),
+		"sprite_position": Vector2(0, -24)
+	},
 	"Shaman": {
 		"walk_scale": Vector2(0.58, 0.58),
 		"attack_scale": Vector2(0.58, 0.58),

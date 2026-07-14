@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dp6make6ovuxy"
-path="res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"
+uid="uid://d2la7b0avi8f4"
+path="res://.godot/imported/base_health.svg-3f0eed9491d3b9f10c2e884fb6cb33fd.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png"
-dest_files=["res://.godot/imported/dwarf_walk_highres_spritesheet.png-2272e265d3e4dbc8d3d33ecf405f9c94.ctex"]
+source_file="res://assets/sprites/ui/upgrades/base_health.svg"
+dest_files=["res://.godot/imported/base_health.svg-3f0eed9491d3b9f10c2e884fb6cb33fd.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

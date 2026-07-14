@@ -10,6 +10,14 @@ var p2_index = 0
 # in the selection carousel while the project is in playtest mode.
 var available_heroes = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King"]
 const PLAYTEST_ALL_HEROES := true
+const HERO_IDLE_PREVIEWS = {
+	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
+	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
+	"Shaman": preload("res://character_sprites/hero_idle/shaman_idle_front.png"),
+	"Nerubian": preload("res://character_sprites/hero_idle/nerubian_idle_front.png"),
+	"Druid": preload("res://character_sprites/hero_idle/druid_idle_front.png"),
+	"Undead King": preload("res://character_sprites/hero_idle/undead_king_idle_front.png")
+}
 const HERO_PREVIEW_VISUALS = {
 	"Dwarf": {"scale": 2.20, "center": Vector2(65.5, 76.5)},
 	"Shaman": {"scale": 1.75, "center": Vector2(62.5, 56.0)},
@@ -76,7 +84,6 @@ const HERO_ABILITY_PREVIEWS = {
 var compact_layout = false
 var minimal_layout = false
 var ability_icon_cache = {}
-var hero_preview_texture_cache = {}
 
 func setup(mode: int) -> void:
 	current_mode = mode
@@ -224,27 +231,10 @@ func _is_hero_playable(hero_name: String) -> bool:
 		return Global.is_hero_playable_in_single_player(hero_name)
 	return true
 
-func _get_hero_preview_texture(hero_name: String) -> Texture2D:
-	if hero_preview_texture_cache.has(hero_name):
-		return hero_preview_texture_cache[hero_name] as Texture2D
-	var hero_entry = Global.hero_data.get(hero_name, {}) as Dictionary
-	var sheet = hero_entry.get("walk", null) as Texture2D
-	if sheet == null:
-		return null
-	var frame_width := float(sheet.get_width()) / 8.0
-	var frame_height := float(sheet.get_height()) / 8.0
-	if frame_width <= 0.0 or frame_height <= 0.0:
-		return sheet
-	var portrait := AtlasTexture.new()
-	portrait.atlas = sheet
-	portrait.region = Rect2(0.0, 0.0, frame_width, frame_height)
-	hero_preview_texture_cache[hero_name] = portrait
-	return portrait
-
 func update_ui(player_id: int) -> void:
 	var h_name = available_heroes[p1_index] if player_id == 1 else available_heroes[p2_index]
 	var is_unlocked = _is_hero_playable(h_name)
-	var tex = _get_hero_preview_texture(h_name)
+	var tex = HERO_IDLE_PREVIEWS.get(h_name, Global.hero_data[h_name]["walk"]) as Texture2D
 	
 	if player_id == 1:
 		p1_label.text = h_name if is_unlocked else (h_name + " (Locked)")

@@ -37,7 +37,6 @@ var hero_portrait_icon: TextureRect
 var hero_portrait_dim: ColorRect
 var hero_portrait_timer: Label
 var hero_portrait_hero_name := ""
-var hero_portrait_texture_cache := {}
 var base_status_panel: PanelContainer
 var base_status_label: Label
 var base_status_style: StyleBoxFlat
@@ -83,6 +82,14 @@ const HUD_HEALTH_BAR_OFFSET_Y := 18.0
 const HUD_HEALTH_MODULE_HEIGHT := 66.0
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const MENU_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
+const HERO_PORTRAIT_TEXTURES = {
+	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
+	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
+	"Shaman": preload("res://character_sprites/hero_idle/shaman_idle_front.png"),
+	"Nerubian": preload("res://character_sprites/hero_idle/nerubian_idle_front.png"),
+	"Druid": preload("res://character_sprites/hero_idle/druid_idle_front.png"),
+	"Undead King": preload("res://character_sprites/hero_idle/undead_king_idle_front.png")
+}
 const HERO_PORTRAIT_RECT := Rect2(16.0, 12.0, 68.0, 68.0)
 const BASE_DAMAGED_THRESHOLD := 0.70
 const BASE_CRITICAL_THRESHOLD := 0.30
@@ -238,23 +245,6 @@ func _get_active_hero_name_for_portrait() -> String:
 		return Global.hero_p1
 	return "Dwarf"
 
-func _get_hero_sheet_portrait(hero_name: String) -> Texture2D:
-	if hero_portrait_texture_cache.has(hero_name):
-		return hero_portrait_texture_cache[hero_name] as Texture2D
-	var hero_entry = Global.hero_data.get(hero_name, {}) as Dictionary
-	var sheet = hero_entry.get("walk", null) as Texture2D
-	if sheet == null:
-		return _get_player_portrait_texture()
-	var frame_width := float(sheet.get_width()) / 8.0
-	var frame_height := float(sheet.get_height()) / 8.0
-	if frame_width <= 0.0 or frame_height <= 0.0:
-		return sheet
-	var portrait := AtlasTexture.new()
-	portrait.atlas = sheet
-	portrait.region = Rect2(0.0, 0.0, frame_width, frame_height)
-	hero_portrait_texture_cache[hero_name] = portrait
-	return portrait
-
 func _refresh_hero_portrait(force := false) -> void:
 	if not hero_portrait_icon:
 		return
@@ -262,7 +252,10 @@ func _refresh_hero_portrait(force := false) -> void:
 	if not force and hero_name == hero_portrait_hero_name:
 		return
 	hero_portrait_hero_name = hero_name
-	hero_portrait_icon.texture = _get_hero_sheet_portrait(hero_name)
+	var portrait_texture = HERO_PORTRAIT_TEXTURES.get(hero_name, null) as Texture2D
+	if portrait_texture == null:
+		portrait_texture = _get_player_portrait_texture()
+	hero_portrait_icon.texture = portrait_texture
 	hero_portrait_icon.tooltip_text = hero_name
 
 func _set_hero_portrait_respawn(time_left: float) -> void:

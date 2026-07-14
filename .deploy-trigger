@@ -1,1 +1,1 @@
-Deploy reconciled gameplay, UI, and non-hero sprites from main at 40fe686.
+Deploy current reconciled local game state with deterministic Godot resource reimport.
