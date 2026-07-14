@@ -1,1 +1,1 @@
-Deploy current reconciled local game state after hero import rebuild.
+Deploy current reconciled local game state after clean Godot import-cache rebuild.
