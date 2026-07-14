@@ -15,6 +15,16 @@ const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.46
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const ENEMY_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 const GOLD_ICON_TEXTURE: Texture2D = preload("res://GoldCoin.png")
+const UPGRADE_ICON_PATHS := {
+	"UnlockHealthbar": "res://assets/sprites/ui/upgrades/hud_health.png",
+	"UnlockBaseHealth": "res://assets/sprites/ui/upgrades/base_health.png",
+	"UnlockWaveTimer": "res://assets/sprites/ui/upgrades/wave_timer.png",
+	"UnlockMinimap": "res://assets/sprites/ui/upgrades/minimap.png",
+	"UpgradeMinimap": "res://assets/sprites/ui/upgrades/enemy_sight.png",
+	"UpgradeMaxHealth": "res://assets/sprites/ui/upgrades/max_health.png",
+	"HealPlayer": "res://assets/sprites/ui/upgrades/heal.png",
+	"UpgradeSpikes": "res://assets/sprites/ui/upgrades/base_fortification.png"
+}
 
 var healthbar_unlocked = false
 var base_health_unlocked = false
@@ -27,7 +37,21 @@ var minimap_upgraded = false
 func _ready():
 	if not $Panel/Close.pressed.is_connected(_on_close_pressed):
 		$Panel/Close.pressed.connect(_on_close_pressed)
+	_apply_upgrade_icons()
 	hide_menu()
+
+
+func _apply_upgrade_icons() -> void:
+	for node_name: String in UPGRADE_ICON_PATHS:
+		var button := $Panel.get_node_or_null(node_name) as Button
+		var icon_path: String = UPGRADE_ICON_PATHS[node_name]
+		if button == null or not ResourceLoader.exists(icon_path):
+			continue
+		button.icon = load(icon_path) as Texture2D
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", 52)
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_constant_override("icon_spacing", 8)
 
 
 func get_upgrade_cost(stat_level: int) -> int:
