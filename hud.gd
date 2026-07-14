@@ -39,6 +39,7 @@ var hero_portrait_timer: Label
 var hero_portrait_hero_name := ""
 var base_status_panel: PanelContainer
 var base_status_label: Label
+var base_status_icon: TextureRect
 var base_status_style: StyleBoxFlat
 var base_direction_cue: Control
 var base_direction_arrow: Label
@@ -95,6 +96,7 @@ const BASE_DAMAGED_THRESHOLD := 0.70
 const BASE_CRITICAL_THRESHOLD := 0.30
 const BASE_DIRECTION_DISTANCE := 520.0
 const BASE_HIT_NOTICE_COOLDOWN := 6.0
+const BASE_STATUS_ICON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrades/base_health.svg")
 const BASE_WARNING_COLORS = {
 	"stable": Color(0.35, 0.9, 0.55, 1.0),
 	"damaged": Color(1.0, 0.72, 0.22, 1.0),
@@ -107,16 +109,15 @@ func _ready():
 	if minimap:
 		minimap.draw.connect(_on_minimap_draw)
 		
-	var is_mobile = OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
-	if OS.has_feature("web"):
-		is_mobile = is_mobile or JavaScriptBridge.eval("/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)")
-		
-	if is_mobile:
+	# Web touch devices are handled by web_ios_lighting_fallback.gd. Keep native mobile
+	# controls here so web/iPad cannot create a second overlay.
+	var is_native_mobile := OS.has_feature("mobile") and not OS.has_feature("web")
+	if is_native_mobile:
 		var mobile_controls_scene = load("res://mobile_controls.tscn")
 		if mobile_controls_scene:
 			var mobile_controls = mobile_controls_scene.instantiate()
 			add_child(mobile_controls)
-			
+	
 	_setup_stomp_ui()
 	_setup_notice_ui()
 	_setup_base_warning_ui()
@@ -359,22 +360,46 @@ func _setup_base_warning_ui() -> void:
 	base_status_panel.name = "BaseStatus"
 	base_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	base_status_panel.offset_left = -214
+	base_status_panel.offset_left = -92
 	base_status_panel.offset_top = 86
 	base_status_panel.offset_right = -18
-	base_status_panel.offset_bottom = 126
-	base_status_panel.pivot_offset = Vector2(98, 20)
+	base_status_panel.offset_bottom = 162
+	base_status_panel.pivot_offset = Vector2(37, 38)
 	base_status_style = StyleBoxFlat.new()
 	base_status_style.set_border_width_all(2)
-	base_status_style.set_corner_radius_all(7)
+	base_status_style.set_corner_radius_all(9)
+	base_status_style.shadow_color = Color(0, 0, 0, 0.55)
+	base_status_style.shadow_size = 4
 	base_status_panel.add_theme_stylebox_override("panel", base_status_style)
+
+	var content := Control.new()
+	content.name = "Content"
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base_status_panel.add_child(content)
+	base_status_icon = TextureRect.new()
+	base_status_icon.name = "Icon"
+	base_status_icon.texture = BASE_STATUS_ICON_TEXTURE
+	base_status_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	base_status_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	base_status_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base_status_icon.offset_left = 8
+	base_status_icon.offset_top = 5
+	base_status_icon.offset_right = -8
+	base_status_icon.offset_bottom = -20
+	base_status_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(base_status_icon)
+
 	base_status_label = Label.new()
 	base_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	base_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	base_status_label.add_theme_font_size_override("font_size", 16)
-	base_status_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	base_status_label.add_theme_constant_override("outline_size", 3)
-	base_status_panel.add_child(base_status_label)
+	base_status_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	base_status_label.offset_top = -20
+	base_status_label.offset_bottom = -3
+	base_status_label.add_theme_font_size_override("font_size", 9)
+	base_status_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	base_status_label.add_theme_constant_override("outline_size", 2)
+	base_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(base_status_label)
 	add_child(base_status_panel)
 
 	base_direction_cue = Control.new()
@@ -428,6 +453,8 @@ func _apply_base_warning_state(pulse: bool) -> void:
 	base_status_label.add_theme_color_override("font_color", warning_color)
 	base_status_style.bg_color = Color(warning_color.r * 0.16, warning_color.g * 0.16, warning_color.b * 0.16, 0.92)
 	base_status_style.border_color = warning_color
+	if base_status_icon:
+		base_status_icon.modulate = warning_color.lightened(0.18)
 	base_status_panel.queue_redraw()
 	if base_direction_arrow:
 		base_direction_arrow.add_theme_color_override("font_color", warning_color)
