@@ -51,15 +51,32 @@ jobs:
           unzip -q .ci/templates.tpz -d .ci/templates
           cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
 
-      - name: Validate versioned import cache
+      - name: Rebuild Godot import cache
         if: steps.freshness.outputs.is_latest == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          test -d .godot/imported
-          count="$(find .godot/imported -type f | wc -l)"
-          test "$count" -gt 0
-          echo "Using $count versioned Godot import artifacts"
+          rm -rf .godot
+          mkdir -p build/web
+
+      - name: Import Godot project resources
+        if: steps.freshness.outputs.is_latest == 'true'
+        shell: bash
+        env:
+          GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
+        run: ${GODOT_BIN} --headless --editor --path . --script .ci/reimport_assets.gd
+
+      - name: Verify required hero imports
+        if: steps.freshness.outputs.is_latest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for hero in druid dwarf mech nerubian shaman undead_king; do
+            if ! find .godot/imported -maxdepth 1 -type f -name "${hero}_idle_front.png-*.ctex" -print -quit | grep -q .; then
+              echo "Missing generated import for ${hero}_idle_front.png" >&2
+              exit 1
+            fi
+          done
 
       - name: Export and validate Godot Web build
         if: steps.freshness.outputs.is_latest == 'true'
