@@ -1,1 +1,1 @@
-Deploy current reconciled local game state with repeated Godot import-warmup exports.
+Deploy current reconciled local game state with deterministic Godot resource reimport.
