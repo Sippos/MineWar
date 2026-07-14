@@ -42,6 +42,12 @@ jobs:
           unzip -q .ci/templates.tpz -d .ci/templates
           cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.stable/"
 
+      - name: Import Godot project resources
+        shell: bash
+        env:
+          GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
+        run: ${GODOT_BIN} --headless --editor --path . --quit
+
       - name: Export and validate Godot Web build
         shell: bash
         env:
