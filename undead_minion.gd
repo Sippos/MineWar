@@ -6,6 +6,7 @@ extends CharacterBody2D
 @export var attack_range := 46.0
 @export var attack_interval := 0.75
 @export var aggro_range := 520.0
+@export var life_steal := 0.0
 
 var owner_player: Node2D
 var lifetime := 36.0
@@ -60,6 +61,9 @@ func _process_enemy_target(delta: float) -> void:
 		if attack_timer <= 0.0:
 			if target_enemy.has_method("take_damage"):
 				target_enemy.take_damage(attack_damage)
+				if life_steal > 0.0 and is_instance_valid(owner_player):
+					var healing: int = max(1, int(round(float(attack_damage) * life_steal)))
+					owner_player.set("health", min(int(owner_player.get("max_health")), int(owner_player.get("health")) + healing))
 			attack_timer = attack_interval
 			_spawn_hit_flash()
 		return
