@@ -76,6 +76,7 @@ const HERO_ABILITY_PREVIEWS = {
 var compact_layout = false
 var minimal_layout = false
 var ability_icon_cache = {}
+var hero_preview_texture_cache = {}
 
 func setup(mode: int) -> void:
 	current_mode = mode
@@ -140,12 +141,9 @@ func _configure_sprite_container(container: Control, sprite: Sprite2D, sprite_si
 	_apply_preview_visuals(sprite, hero_name, sprite_size)
 
 func _apply_preview_visuals(sprite: Sprite2D, hero_name: String, sprite_size: float) -> void:
-	var visuals = HERO_PREVIEW_VISUALS.get(hero_name, HERO_PREVIEW_VISUALS["Dwarf"])
-	var scale_factor = (sprite_size / 128.0) * float(visuals["scale"])
-	var frame_center = Vector2(64.0, 64.0)
-	var visible_center: Vector2 = visuals["center"]
+	var scale_factor = sprite_size / 128.0
 	sprite.scale = Vector2(scale_factor, scale_factor)
-	sprite.position = Vector2(sprite_size * 0.5, sprite_size * 0.5) - (visible_center - frame_center) * scale_factor
+	sprite.position = Vector2(sprite_size * 0.5, sprite_size * 0.5)
 
 func _rebuild_ability_preview(container: VBoxContainer, hero_name: String) -> void:
 	for child in container.get_children():
@@ -226,15 +224,34 @@ func _is_hero_playable(hero_name: String) -> bool:
 		return Global.is_hero_playable_in_single_player(hero_name)
 	return true
 
+func _get_hero_preview_texture(hero_name: String) -> Texture2D:
+	if hero_preview_texture_cache.has(hero_name):
+		return hero_preview_texture_cache[hero_name] as Texture2D
+	var hero_entry = Global.hero_data.get(hero_name, {}) as Dictionary
+	var sheet = hero_entry.get("walk", null) as Texture2D
+	if sheet == null:
+		return null
+	var frame_width := float(sheet.get_width()) / 8.0
+	var frame_height := float(sheet.get_height()) / 8.0
+	if frame_width <= 0.0 or frame_height <= 0.0:
+		return sheet
+	var portrait := AtlasTexture.new()
+	portrait.atlas = sheet
+	portrait.region = Rect2(0.0, 0.0, frame_width, frame_height)
+	hero_preview_texture_cache[hero_name] = portrait
+	return portrait
+
 func update_ui(player_id: int) -> void:
 	var h_name = available_heroes[p1_index] if player_id == 1 else available_heroes[p2_index]
 	var is_unlocked = _is_hero_playable(h_name)
-	var tex = Global.hero_data[h_name]["walk"] as Texture2D
+	var tex = _get_hero_preview_texture(h_name)
 	
 	if player_id == 1:
 		p1_label.text = h_name if is_unlocked else (h_name + " (Locked)")
 		p1_sprite.texture = tex
-		p1_sprite.frame = 0 # First frame of row 0 is the south/down-facing idle pose.
+		p1_sprite.hframes = 1
+		p1_sprite.vframes = 1
+		p1_sprite.frame = 0
 		p1_sprite.flip_h = false
 		_apply_preview_visuals(p1_sprite, h_name, p1_sprite_container.custom_minimum_size.x)
 		_rebuild_ability_preview(p1_ability_list, h_name)
@@ -242,7 +259,9 @@ func update_ui(player_id: int) -> void:
 	else:
 		p2_label.text = h_name if is_unlocked else (h_name + " (Locked)")
 		p2_sprite.texture = tex
-		p2_sprite.frame = 0 # First frame of row 0 is the south/down-facing idle pose.
+		p2_sprite.hframes = 1
+		p2_sprite.vframes = 1
+		p2_sprite.frame = 0
 		p2_sprite.flip_h = false
 		_apply_preview_visuals(p2_sprite, h_name, p2_sprite_container.custom_minimum_size.x)
 		_rebuild_ability_preview(p2_ability_list, h_name)

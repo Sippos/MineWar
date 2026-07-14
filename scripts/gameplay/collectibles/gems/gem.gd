@@ -51,6 +51,9 @@ func tether_to(player) -> bool:
 	angular_velocity = 0.0
 	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
+	var world = get_parent()
+	if world and world.has_method("spawn_gem_pickup_feedback"):
+		world.spawn_gem_pickup_feedback(global_position)
 	return true
 
 func untether() -> void:
