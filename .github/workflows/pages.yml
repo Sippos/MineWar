@@ -10,7 +10,7 @@ on:
       - '.deploy-trigger'
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -66,13 +66,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Checkout deployed revision
-        uses: actions/checkout@v6
-
-      - name: Record successful deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-          git tag --force pages-deployed-latest "$GITHUB_SHA"
-          git push --force origin refs/tags/pages-deployed-latest
