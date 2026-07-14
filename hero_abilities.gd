@@ -30,7 +30,13 @@ const ICON_PATHS := {
 	"carapace": "res://ability_icons/placeholder_carapace.svg",
 	"broodmother": "res://ability_icons/placeholder_broodmother.svg",
 	"mole": "res://ability_icons/placeholder_avatar.svg",
-	"raise_dead": "res://ability_icons/placeholder_brood.svg"
+	"tunnel": "res://ability_icons/placeholder_hammer.svg",
+	"deep_roots": "res://ability_icons/placeholder_wisdom.svg",
+	"worldroot": "res://ability_icons/placeholder_ascendance.svg",
+	"raise_dead": "res://ability_icons/placeholder_brood.svg",
+	"grave_might": "res://ability_icons/placeholder_bash.svg",
+	"soul_harvest": "res://ability_icons/placeholder_wisdom.svg",
+	"death_march": "res://ability_icons/placeholder_broodmother.svg"
 }
 
 const STOMP_KNOWN_PATHS := [
@@ -96,9 +102,24 @@ var mole_level := 1
 var mole_cooldown := 0.0
 var mole_duration := 0.0
 var mole_active := false
+var tunnel_level := 0
+var deep_roots_level := 0
+var worldroot_level := 0
+var tunnel_cooldown := 0.0
+var tunnel_has_entrance := false
+var tunnel_has_exit := false
+var tunnel_entrance_position := Vector2.ZERO
+var tunnel_exit_position := Vector2.ZERO
+var tunnel_entrance_visual: Node2D
+var tunnel_exit_visual: Node2D
+var worldroot_cooldown := 0.0
 
 var undead_summon_level := 1
 var undead_summon_cooldown := 0.0
+var grave_might_level := 0
+var soul_harvest_level := 0
+var death_march_level := 0
+var death_march_cooldown := 0.0
 
 var facing_direction := Vector2.DOWN
 var ability_bar: HBoxContainer
@@ -210,7 +231,10 @@ func _tick_cooldowns(delta: float) -> void:
 	web_cooldown = max(0.0, web_cooldown - delta)
 	broodmother_cooldown = max(0.0, broodmother_cooldown - delta)
 	mole_cooldown = max(0.0, mole_cooldown - delta)
+	tunnel_cooldown = max(0.0, tunnel_cooldown - delta)
+	worldroot_cooldown = max(0.0, worldroot_cooldown - delta)
 	undead_summon_cooldown = max(0.0, undead_summon_cooldown - delta)
+	death_march_cooldown = max(0.0, death_march_cooldown - delta)
 	if mole_active:
 		mole_duration = max(0.0, mole_duration - delta)
 		if mole_duration <= 0.0:
@@ -690,6 +714,10 @@ func _end_ascendance() -> void:
 func _process_druid() -> void:
 	if Input.is_action_just_pressed(_action("stomp")):
 		_try_cast_mole_form()
+	if Input.is_action_just_pressed(_action("secondary")):
+		_try_place_or_use_tunnel()
+	if Input.is_action_just_pressed(_action("ultimate")):
+		_try_worldroot_passage()
 
 func _try_cast_mole_form() -> void:
 	if mole_cooldown > 0.0:
@@ -707,9 +735,77 @@ func _end_mole_form() -> void:
 	mole_active = false
 	player.set("druid_mole_active", false)
 
+func _try_place_or_use_tunnel() -> void:
+	if tunnel_level <= 0:
+		_show_notice("Learn Burrow Tunnel first")
+		return
+	if tunnel_cooldown > 0.0:
+		_show_notice("Tunnel ready in %.1fs" % tunnel_cooldown, 0.8)
+		return
+	var placement := player.global_position + _cardinal_direction() * 54.0
+	if not tunnel_has_entrance:
+		tunnel_entrance_position = placement
+		tunnel_has_entrance = true
+		tunnel_entrance_visual = _spawn_tunnel_marker(tunnel_entrance_position, false)
+		_show_notice("Tunnel entrance placed — move and press F again")
+		return
+	if not tunnel_has_exit:
+		if placement.distance_to(tunnel_entrance_position) < 128.0:
+			_show_notice("Tunnel exit must be farther away", 0.8)
+			return
+		tunnel_exit_position = placement
+		tunnel_has_exit = true
+		tunnel_exit_visual = _spawn_tunnel_marker(tunnel_exit_position, true)
+		tunnel_cooldown = max(5.0, 10.0 - tunnel_level)
+		_show_notice("Burrow Tunnel completed")
+		return
+	var entrance_distance := player.global_position.distance_to(tunnel_entrance_position)
+	var exit_distance := player.global_position.distance_to(tunnel_exit_position)
+	var use_radius := 82.0 + tunnel_level * 10.0
+	if min(entrance_distance, exit_distance) > use_radius:
+		_show_notice("Stand near a tunnel opening", 0.8)
+		return
+	player.global_position = tunnel_exit_position if entrance_distance <= exit_distance else tunnel_entrance_position
+	player.velocity = Vector2.ZERO
+	tunnel_cooldown = max(3.5, 7.0 - tunnel_level * 0.75)
+	_spawn_burst(player.global_position, Color(0.35, 0.72, 0.35, 0.9), 24)
+
+func _spawn_tunnel_marker(position: Vector2, is_exit: bool) -> Node2D:
+	if world == null:
+		return null
+	var marker := Polygon2D.new()
+	marker.polygon = PackedVector2Array([Vector2(-28, 0), Vector2(-20, -12), Vector2(0, -18), Vector2(20, -12), Vector2(28, 0), Vector2(20, 10), Vector2(0, 14), Vector2(-20, 10)])
+	marker.color = Color(0.25, 0.48, 0.18, 0.78) if is_exit else Color(0.34, 0.24, 0.12, 0.85)
+	marker.global_position = position
+	marker.z_index = -1
+	marker.set_meta("hero_owner_id", player.get_instance_id())
+	marker.set_meta("druid_tunnel_marker", true)
+	world.add_child(marker)
+	return marker
+
+func _try_worldroot_passage() -> void:
+	if worldroot_level <= 0 or int(player.get("level")) < ULTIMATE_REQUIRED_LEVEL:
+		_show_notice("Worldroot Passage unlocks at hero level 6")
+		return
+	if worldroot_cooldown > 0.0:
+		_show_notice("Worldroot ready in %.1fs" % worldroot_cooldown, 0.8)
+		return
+	var base := world.get_node_or_null("Base") if world else null
+	if base == null:
+		return
+	var origin := player.global_position
+	player.global_position = base.global_position + Vector2(0, 86)
+	player.velocity = Vector2.ZERO
+	worldroot_cooldown = 45.0
+	_spawn_burst(origin, Color(0.28, 0.82, 0.4, 0.9), 36)
+	_spawn_burst(player.global_position, Color(0.28, 0.82, 0.4, 0.9), 36)
+	_show_notice("Worldroot Passage!")
+
 func _process_undead_king() -> void:
 	if Input.is_action_just_pressed(_action("stomp")):
 		_try_summon_undead_minion()
+	if Input.is_action_just_pressed(_action("ultimate")):
+		_try_death_march()
 
 func _try_summon_undead_minion() -> void:
 	if undead_summon_cooldown > 0.0:
@@ -722,8 +818,7 @@ func _try_summon_undead_minion() -> void:
 		return
 	var minion = UNDEAD_MINION_SCENE.instantiate()
 	minion.set("owner_player", player)
-	minion.set("max_lifetime", 36.0 + float(int(player.get("intelligence")) - 1) * 2.0)
-	minion.set("attack_damage", 10 + int(player.get("intelligence")) * 4)
+	_configure_undead_minion(minion)
 	minion.global_position = player.global_position + _cardinal_direction() * 42.0
 	world.add_child(minion)
 	player.set("undead_cast_timer", 8.0 / 12.0)
@@ -731,6 +826,36 @@ func _try_summon_undead_minion() -> void:
 	undead_summon_cooldown = max(5.0, 11.0 - float(int(player.get("intelligence")) - 1) * 0.25)
 	_spawn_burst(minion.global_position, Color(0.55, 0.25, 0.8, 0.9), 28)
 	_show_notice("Raised Undead Minion!")
+
+func _configure_undead_minion(minion: Node) -> void:
+	if minion == null:
+		return
+	var intelligence := int(player.get("intelligence"))
+	minion.set("max_lifetime", 36.0 + float(intelligence - 1) * 2.0 + grave_might_level * 8.0)
+	minion.set("attack_damage", 10 + intelligence * 4 + grave_might_level * 7)
+	minion.set("speed", 112.0 + grave_might_level * 12.0)
+	minion.set("attack_interval", max(0.42, 0.75 - grave_might_level * 0.08))
+	minion.set("life_steal", 0.06 * soul_harvest_level)
+	minion.set_meta("hero_owner_id", player.get_instance_id())
+
+func _try_death_march() -> void:
+	if death_march_level <= 0 or int(player.get("level")) < ULTIMATE_REQUIRED_LEVEL:
+		_show_notice("Death March unlocks at hero level 6")
+		return
+	if death_march_cooldown > 0.0:
+		_show_notice("Death March ready in %.1fs" % death_march_cooldown, 0.8)
+		return
+	death_march_cooldown = 60.0
+	for minion in _owned_undead_minions():
+		minion.set("lifetime", float(minion.get("lifetime")) + 18.0)
+		minion.set("speed", float(minion.get("speed")) * 1.35)
+		minion.set("attack_damage", int(float(minion.get("attack_damage")) * 1.4))
+	for _i in range(2):
+		if _owned_undead_minions().size() < UNDEAD_MINION_LIMIT:
+			_try_summon_undead_minion()
+			undead_summon_cooldown = 0.0
+	_spawn_burst(player.global_position, Color(0.52, 0.18, 0.72, 0.95), 48)
+	_show_notice("DEATH MARCH!")
 
 func _owned_undead_minions() -> Array:
 	var result := []
@@ -784,6 +909,7 @@ func _configure_spider(spider: Node) -> void:
 	spider.set("max_lifetime", 48.0 + brood_level * 14.0 + carapace_level * 6.0)
 	spider.set("lifetime", float(spider.get("max_lifetime")))
 	spider.set("speed", 112.0 + brood_level * 17.0)
+	spider.set("dig_speed_multiplier", 1.0 + carapace_level * 0.18)
 	spider.set_meta("hero_owner_id", player.get_instance_id())
 	if broodmother_active:
 		_buff_spider(spider)
@@ -896,6 +1022,8 @@ func _configure_world_child(node: Node) -> void:
 		_configure_shaman_totem(node)
 	elif script_path == "res://spider_minion.gd" and node.get("owner_player") == player:
 		_configure_spider(node)
+	elif script_path == "res://undead_minion.gd" and node.get("owner_player") == player:
+		_configure_undead_minion(node)
 
 func _try_connect_level_menu(node: Node) -> void:
 	if node == null or not node.has_signal("upgrade_selected"):
@@ -1004,10 +1132,24 @@ func get_level_up_options() -> Array:
 			]
 		HERO_NERUBIAN:
 			options = [
-				_option("brood", "Spawn Brood", "Create autonomous mining spiders", brood_level, MAX_BASIC_LEVEL, 0),
+				_option("brood", "Spawn Brood", "More, faster, longer-lived mining spiders", brood_level, MAX_BASIC_LEVEL, 0),
 				_option("web", "Web Burst", "Damage, root, and slow nearby enemies", web_level, MAX_BASIC_LEVEL, 0),
-				_option("carapace", "Chitinous Carapace", "More health and steady regeneration", carapace_level, MAX_BASIC_LEVEL, 0),
+				_option("carapace", "Worker Carapace", "Toughens the hero and improves spider digging", carapace_level, MAX_BASIC_LEVEL, 0),
 				_option("broodmother", "Broodmother's Call", "Summon and empower a full spider brood", broodmother_level, 1, ULTIMATE_REQUIRED_LEVEL)
+			]
+		HERO_DRUID:
+			options = [
+				_option("mole", "Mole Form", "Longer, faster-recharging digging form", mole_level, MAX_BASIC_LEVEL, 0),
+				_option("tunnel", "Burrow Tunnel", "Place two linked tunnel openings and travel between them", tunnel_level, MAX_BASIC_LEVEL, 0),
+				_option("deep_roots", "Deep Roots", "Gain health and improve natural recovery", deep_roots_level, MAX_BASIC_LEVEL, 0),
+				_option("worldroot", "Worldroot Passage", "Instantly return to your base through the roots", worldroot_level, 1, ULTIMATE_REQUIRED_LEVEL)
+			]
+		HERO_UNDEAD_KING:
+			options = [
+				_option("raise_dead", "Raise Dead", "Summon stronger and longer-lived undead minions", undead_summon_level, MAX_BASIC_LEVEL, 0),
+				_option("grave_might", "Grave Might", "Minions attack faster, hit harder, and move faster", grave_might_level, MAX_BASIC_LEVEL, 0),
+				_option("soul_harvest", "Soul Harvest", "Minion damage heals their king", soul_harvest_level, MAX_BASIC_LEVEL, 0),
+				_option("death_march", "Death March", "Raise reinforcements and empower the entire army", death_march_level, 1, ULTIMATE_REQUIRED_LEVEL)
 			]
 	return options
 
@@ -1062,6 +1204,31 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 		"broodmother":
 			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
 				broodmother_level = 1
+		"mole":
+			mole_level = min(MAX_BASIC_LEVEL, mole_level + 1)
+		"tunnel":
+			tunnel_level = min(MAX_BASIC_LEVEL, tunnel_level + 1)
+		"deep_roots":
+			if deep_roots_level < MAX_BASIC_LEVEL:
+				deep_roots_level += 1
+				player.set("max_health", int(player.get("max_health")) + 12)
+				player.set("health", int(player.get("health")) + 12)
+		"worldroot":
+			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
+				worldroot_level = 1
+		"raise_dead":
+			undead_summon_level = min(MAX_BASIC_LEVEL, undead_summon_level + 1)
+		"grave_might":
+			grave_might_level = min(MAX_BASIC_LEVEL, grave_might_level + 1)
+			for minion in _owned_undead_minions():
+				_configure_undead_minion(minion)
+		"soul_harvest":
+			soul_harvest_level = min(MAX_BASIC_LEVEL, soul_harvest_level + 1)
+			for minion in _owned_undead_minions():
+				_configure_undead_minion(minion)
+		"death_march":
+			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
+				death_march_level = 1
 	_refresh_stats_hud()
 	_update_ability_hud()
 
@@ -1082,11 +1249,13 @@ func _ensure_hud() -> void:
 	ability_bar = HBoxContainer.new()
 	ability_bar.name = "HeroAbilityBarP%d" % _player_id()
 	ability_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	var mobile_runtime := _is_mobile_runtime()
 	ability_bar.offset_left = -326.0
-	ability_bar.offset_top = -96.0 - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.offset_top = (-182.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
 	ability_bar.offset_right = -20.0
-	ability_bar.offset_bottom = -20.0 - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.offset_bottom = (-106.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
 	ability_bar.add_theme_constant_override("separation", 8)
+	ability_bar.alignment = BoxContainer.ALIGNMENT_END
 	hud.add_child(ability_bar)
 	_rebuild_hud()
 	_hide_legacy_stomp_slot()
@@ -1124,16 +1293,35 @@ func _rebuild_hud() -> void:
 			]
 		HERO_DRUID:
 			definitions = [
-				["mole", "Mole Form", "R / X"]
+				["mole", "Mole Form", "R / X"],
+				["tunnel", "Burrow Tunnel", "F / RB"],
+				["deep_roots", "Deep Roots", "PASSIVE"],
+				["worldroot", "Worldroot", "T / LB"]
 			]
 		HERO_UNDEAD_KING:
 			definitions = [
-				["raise_dead", "Raise Dead", "R / X"]
+				["raise_dead", "Raise Dead", "R / X"],
+				["grave_might", "Grave Might", "PASSIVE"],
+				["soul_harvest", "Soul Harvest", "PASSIVE"],
+				["death_march", "Death March", "T / LB"]
 			]
-	ability_bar.visible = definitions.size() > 0 and not _is_mobile_runtime()
+	var mobile_runtime := _is_mobile_runtime()
+	ability_bar.visible = definitions.size() > 0
 	for definition in definitions:
-		ability_slots[definition[0]] = _create_ability_slot(definition[0], definition[1], definition[2])
+		var ability_id := str(definition[0])
+		if mobile_runtime and _mobile_action_for_ability(ability_id) == "":
+			continue
+		ability_slots[ability_id] = _create_ability_slot(ability_id, str(definition[1]), str(definition[2]))
 	_update_ability_hud()
+
+func _mobile_action_for_ability(ability: String) -> String:
+	if ability in ["stomp", "totem", "brood", "mole", "raise_dead"]:
+		return _action("stomp")
+	if ability in ["hammer", "chain", "web", "tunnel"]:
+		return _action("secondary")
+	if ability in ["avatar", "ascendance", "broodmother", "worldroot", "death_march"]:
+		return _action("ultimate")
+	return ""
 
 func _create_ability_slot(ability: String, display_name: String, key_text: String) -> PanelContainer:
 	var slot := PanelContainer.new()
@@ -1194,6 +1382,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	key_label.offset_top = -17.0
 	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key_label.text = key_text
+	key_label.visible = not _is_mobile_runtime()
 	key_label.add_theme_font_size_override("font_size", 9)
 	key_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.55))
 	key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1208,6 +1397,18 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	level_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.55))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(level_label)
+	if _is_mobile_runtime():
+		var action_name := _mobile_action_for_ability(ability)
+		if action_name != "":
+			var touch_button := Button.new()
+			touch_button.name = "TouchButton"
+			touch_button.set_anchors_preset(Control.PRESET_FULL_RECT)
+			touch_button.focus_mode = Control.FOCUS_NONE
+			touch_button.flat = true
+			touch_button.tooltip_text = display_name
+			touch_button.button_down.connect(func(): Input.action_press(action_name))
+			touch_button.button_up.connect(func(): Input.action_release(action_name))
+			root.add_child(touch_button)
 	ability_bar.add_child(slot)
 	return slot
 
@@ -1233,8 +1434,14 @@ func _update_ability_hud() -> void:
 			_update_slot("broodmother", broodmother_level, broodmother_cooldown, 70.0, "LVL 6" if broodmother_level <= 0 else ("%.1f" % broodmother_duration if broodmother_active else ""), broodmother_active)
 		HERO_DRUID:
 			_update_slot("mole", mole_level, mole_cooldown, max(8.0, 16.0 - float(mole_level)), "%.1f" % mole_duration if mole_active else "", mole_active)
+			_update_slot("tunnel", tunnel_level, tunnel_cooldown, max(3.5, 10.0 - tunnel_level), "PLACE EXIT" if tunnel_has_entrance and not tunnel_has_exit else ("READY" if tunnel_has_exit and tunnel_cooldown <= 0.0 else ""))
+			_update_slot("deep_roots", deep_roots_level, 0.0, 1.0, "PASSIVE" if deep_roots_level > 0 else "LOCKED")
+			_update_slot("worldroot", worldroot_level, worldroot_cooldown, 45.0, "LVL 6" if worldroot_level <= 0 else "")
 		HERO_UNDEAD_KING:
 			_update_slot("raise_dead", undead_summon_level, undead_summon_cooldown, max(5.0, 11.0 - float(int(player.get("intelligence")) - 1) * 0.25), "%d/%d" % [_owned_undead_minions().size(), UNDEAD_MINION_LIMIT])
+			_update_slot("grave_might", grave_might_level, 0.0, 1.0, "PASSIVE" if grave_might_level > 0 else "LOCKED")
+			_update_slot("soul_harvest", soul_harvest_level, 0.0, 1.0, "PASSIVE" if soul_harvest_level > 0 else "LOCKED")
+			_update_slot("death_march", death_march_level, death_march_cooldown, 60.0, "LVL 6" if death_march_level <= 0 else "")
 
 func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldown: float, override_text: String = "", active: bool = false) -> void:
 	var slot = ability_slots.get(ability)

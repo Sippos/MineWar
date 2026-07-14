@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://huduid" path="res://hud.tscn" id="6_hud"]
 [ext_resource type="PackedScene" uid="uid://b4q4firriech2" path="res://upgrade_menu.tscn" id="7_menu"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
+[ext_resource type="Texture2D" path="res://assets/environment/ground/blue_mine_ground.svg" id="tex_ground_backdrop"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/Black_BG_TransparentBorder.png" id="tex_bg"]
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/bricks/Easy_Brick.png" id="tex_easy"]
@@ -268,6 +269,19 @@ script = ExtResource("9_bounds")
 
 [node name="Base" parent="." instance=ExtResource("5_base")]
 position = Vector2(0, -64)
+
+[node name="GroundBackdrop" type="TextureRect" parent="."]
+z_index = -10
+texture_filter = 1
+texture_repeat = 2
+offset_left = -2048.0
+offset_top = -1024.0
+offset_right = 2048.0
+offset_bottom = 3072.0
+mouse_filter = 2
+texture = ExtResource("tex_ground_backdrop")
+expand_mode = 1
+stretch_mode = 1
 
 [node name="BackgroundLayer" type="TileMapLayer" parent="."]
 z_index = -5

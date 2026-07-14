@@ -42,6 +42,7 @@ var stomp_level = 0
 var stomp_cooldown_timer = 0.0
 
 var dig_timer = 0.0
+var mining_feedback_timer = 0.0
 var currently_digging_cell = null
 var walk_timer = 0.0
 var action_anim_timer = 0.0
@@ -101,6 +102,11 @@ const HERO_ANIMATIONS = {
 
 const HERO_VISUALS = {
 	"Dwarf": {
+		"walk_scale": Vector2(0.85, 0.85),
+		"attack_scale": Vector2(0.85, 0.85),
+		"sprite_position": Vector2(0, -24)
+	},
+	"Mech": {
 		"walk_scale": Vector2(0.85, 0.85),
 		"attack_scale": Vector2(0.85, 0.85),
 		"sprite_position": Vector2(0, -24)
@@ -285,6 +291,7 @@ func respawn() -> void:
 var can_move = true
 
 func _physics_process(delta: float) -> void:
+	mining_feedback_timer = max(mining_feedback_timer - delta, 0.0)
 	if shaman_spell_cooldown_timer > 0.0:
 		shaman_spell_cooldown_timer -= delta
 	if nerubian_spawn_cooldown_timer > 0.0:
@@ -550,6 +557,10 @@ func handle_digging(delta: float) -> void:
 					return
 				if currently_digging_cell == cell:
 					dig_timer += delta
+					if mining_feedback_timer <= 0.0 and get_parent().has_method("spawn_mining_feedback"):
+						var impact_position = tile_map.to_global(tile_map.map_to_local(cell))
+						get_parent().spawn_mining_feedback(impact_position)
+						mining_feedback_timer = 0.12
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					if current_hero_name == "Druid" and druid_mole_active:
@@ -570,6 +581,9 @@ func handle_digging(delta: float) -> void:
 						damage_layer.erase_cell(cell)
 						front_damage_layer.erase_cell(below_cell)
 						var cell_had_gem = get_parent().has_gem(cell)
+						if get_parent().has_method("spawn_mining_feedback"):
+							var break_position = tile_map.to_global(tile_map.map_to_local(cell))
+							get_parent().spawn_mining_feedback(break_position, true, cell_had_gem)
 						get_parent().on_cell_dug(cell)
 						var gems_to_spawn = 1 if cell_had_gem else 0
 						if _roll_shaman_gem_bonus():

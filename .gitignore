@@ -1,7 +1,5 @@
 # Godot 4+ specific ignores
-.godot/*
-!.godot/imported/
-!.godot/imported/**
+.godot/
 *.translation
 # export_presets.cfg
 
@@ -24,3 +22,20 @@ __pycache__/
 # Generated/local development output
 pixel_sprite_output/
 build/
+
+# Local inspection, invalid experiments, and sprite render comparisons
+/.mcp_*
+/upgrade_tree_lab.*
+/character_sprites/_*_backup*/
+/character_sprites/*_test.png*
+/character_sprites/*_compare.png*
+/character_sprites/*camera_*.png*
+/character_sprites/*_aligned_bright.png*
+/character_sprites/*_same_walk_rotation_bright.png*
+/character_sprites/Druid_Humanoid_*.png*
+/character_sprites/Dwarf_*.png*
+/character_sprites/Mech_*.png*
+/character_sprites/Nerubian_*.png*
+/character_sprites/Shaman_*.png*
+/character_sprites/UndeadKing_*.png*
+/character_sprites/UndeadMinion_*.png*

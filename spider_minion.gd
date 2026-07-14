@@ -15,6 +15,7 @@ var target_stand_cell = INVALID_CELL
 var astar_path = []
 var path_index = 0
 var speed = 135.0
+var dig_speed_multiplier := 1.0
 var dig_timer = 0.0
 var target_recheck_timer = 0.0
 var anim_timer = 0.0
@@ -162,6 +163,7 @@ func _dig_target(delta: float) -> void:
 		target_dig_time = 3.2
 	if is_instance_valid(owner_player):
 		target_dig_time *= max(0.55, 1.0 - (float(owner_player.get("intelligence")) - 1.0) * 0.04)
+	target_dig_time /= max(0.1, dig_speed_multiplier)
 	
 	var damage_progress = dig_timer / target_dig_time
 	var source_id = 7 if damage_progress < 0.66 else 8
