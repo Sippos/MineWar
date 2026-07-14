@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - fix/hero-sprite-recovery-publish
+      - reconcile/local-game-20260714-merged
     paths:
       - '.deploy-trigger'
 
