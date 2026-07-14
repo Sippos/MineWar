@@ -49,13 +49,12 @@ jobs:
           # The repository contains old generated import metadata.  A clean CI
           # cache forces Godot to regenerate every referenced .ctex artifact.
           rm -rf .godot
-          rm -f character_sprites/hero_idle/*.import
 
       - name: Import Godot project resources
         shell: bash
         env:
           GODOT_BIN: ${{ github.workspace }}/.ci/godot/Godot_v4.7-stable_linux.x86_64
-        run: ${GODOT_BIN} --headless --path . --import
+        run: xvfb-run -a ${GODOT_BIN} --editor --path . --import
 
       - name: Verify required hero imports
         shell: bash
