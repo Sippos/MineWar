@@ -25,6 +25,7 @@ const NERUBIAN_MAX_SPIDERS = 5
 var tex_walk: Texture2D
 var tex_attack: Texture2D
 var tex_druid_mole: Texture2D
+var tex_druid_mole_attack: Texture2D
 var druid_mole_active := false
 
 var health = 30
@@ -56,7 +57,8 @@ const HERO_ANIMATIONS = {
 		"walk_frames": 8,
 		"walk_fps": 12.0,
 		"attack_frames": 8,
-		"attack_fps": 20.0
+		"attack_fps": 8.0,
+		"attack_hold_frames": 2.0
 	},
 	"Mech": {
 		"walk_frames": 8,
@@ -66,9 +68,10 @@ const HERO_ANIMATIONS = {
 	},
 	"Shaman": {
 		"walk_frames": 8,
-		"walk_fps": 12.0,
+		"walk_fps": 11.0,
 		"attack_frames": 8,
-		"attack_fps": 8.0
+		"attack_fps": 8.0,
+		"attack_hold_frames": 1.0
 	},
 	"Nerubian": {
 		"walk_frames": 8,
@@ -78,9 +81,15 @@ const HERO_ANIMATIONS = {
 	},
 	"Druid": {
 		"walk_frames": 8,
-		"walk_fps": 12.0,
+		"walk_fps": 10.0,
 		"attack_frames": 8,
-		"attack_fps": 12.0
+		"attack_fps": 8.0,
+		"attack_hold_frames": 1.0,
+		"mole_walk_frames": 8,
+		"mole_walk_fps": 10.0,
+		"mole_attack_frames": 8,
+		"mole_attack_fps": 8.0,
+		"mole_attack_hold_frames": 1.0
 	},
 	"Undead King": {
 		"walk_frames": 8,
@@ -93,7 +102,7 @@ const HERO_ANIMATIONS = {
 const HERO_VISUALS = {
 	"Dwarf": {
 		"walk_scale": Vector2(0.85, 0.85),
-		"attack_scale": Vector2(1.25, 1.25),
+		"attack_scale": Vector2(0.85, 0.85),
 		"sprite_position": Vector2(0, -24)
 	},
 	"Shaman": {
@@ -103,7 +112,7 @@ const HERO_VISUALS = {
 	},
 	"Nerubian": {
 		"walk_scale": Vector2(0.46, 0.46),
-		"attack_scale": Vector2(0.52, 0.52),
+		"attack_scale": Vector2(0.46, 0.46),
 		"sprite_position": Vector2(0, -14)
 	},
 	"Druid": {
@@ -112,6 +121,11 @@ const HERO_VISUALS = {
 		"sprite_position": Vector2(0, -4),
 		"mole_scale": Vector2(0.56, 0.56),
 		"mole_position": Vector2(0, -9)
+	},
+	"Undead King": {
+		"walk_scale": Vector2(0.85, 0.85),
+		"attack_scale": Vector2(0.85, 0.85),
+		"sprite_position": Vector2(0, -24)
 	}
 }
 
@@ -164,6 +178,7 @@ func update_hero_sprites() -> void:
 		tex_walk = data["walk"] as Texture2D
 		tex_attack = data["attack"] as Texture2D
 		tex_druid_mole = data["mole"] as Texture2D if data.has("mole") else null
+		tex_druid_mole_attack = data["mole_attack"] as Texture2D if data.has("mole_attack") else null
 		druid_mole_active = false
 		if has_node("Sprite2D"):
 			$Sprite2D.texture = tex_walk
@@ -177,17 +192,17 @@ func _get_hero_visuals() -> Dictionary:
 	return HERO_VISUALS.get(current_hero_name, HERO_VISUALS["Dwarf"])
 
 func _apply_sprite_visuals(is_attack: bool) -> void:
-	var visuals = _get_hero_visuals()
-	current_sprite_scale = visuals["attack_scale"] if is_attack else visuals["walk_scale"]
-	current_sprite_position = visuals["sprite_position"]
+	var visuals := _get_hero_visuals()
+	current_sprite_scale = visuals.get("attack_scale", Vector2(0.85, 0.85)) if is_attack else visuals.get("walk_scale", Vector2(0.85, 0.85))
+	current_sprite_position = visuals.get("sprite_position", Vector2(0, -24))
 	if has_node("Sprite2D"):
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
 
 func _apply_druid_mole_visuals() -> void:
-	var visuals = _get_hero_visuals()
-	current_sprite_scale = visuals.get("mole_scale", visuals["attack_scale"])
-	current_sprite_position = visuals.get("mole_position", visuals["sprite_position"])
+	var visuals := _get_hero_visuals()
+	current_sprite_scale = visuals.get("mole_scale", visuals.get("walk_scale", Vector2(0.85, 0.85)))
+	current_sprite_position = visuals.get("mole_position", visuals.get("sprite_position", Vector2(0, -24)))
 	if has_node("Sprite2D"):
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
@@ -392,6 +407,9 @@ func _physics_process(delta: float) -> void:
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
 			attack_timer = 0.0
+			action_anim_timer = 0.0
+			action_anim_active = true
+			magic_orb_last_animation_cycle = -1
 		if current_hero_name == "Druid" and not druid_mole_active:
 			_maybe_shoot_magic_orb(enemy_hit.global_position + Vector2(0, 8), true)
 	else:
@@ -405,10 +423,21 @@ func _physics_process(delta: float) -> void:
 
 	var is_performing_action = nerubian_cast_timer > 0.0 if current_hero_name == "Nerubian" else currently_attacking_enemy != null or currently_digging_cell != null
 	if druid_mole_active and tex_druid_mole != null:
-		if $Sprite2D.texture != tex_druid_mole:
-			$Sprite2D.texture = tex_druid_mole
+		var mole_is_attacking := currently_attacking_enemy != null or currently_digging_cell != null
+		var desired_mole_texture := tex_druid_mole_attack if mole_is_attacking and tex_druid_mole_attack != null else tex_druid_mole
+		if $Sprite2D.texture != desired_mole_texture:
+			$Sprite2D.texture = desired_mole_texture
 			_apply_druid_mole_visuals()
-		_update_action_animation(delta)
+			if mole_is_attacking:
+				_reset_action_animation()
+		if mole_is_attacking:
+			_update_mole_attack_animation(delta)
+		elif velocity.length() > 0.0:
+			_update_mole_walk_animation(delta)
+		else:
+			action_anim_timer = 0.0
+			action_anim_active = false
+			$Sprite2D.frame = current_anim_row * 8
 	elif is_performing_action:
 		if $Sprite2D.texture != tex_attack:
 			$Sprite2D.texture = tex_attack
@@ -451,9 +480,32 @@ func _update_action_animation(delta: float) -> void:
 	var settings = _get_hero_animation_settings()
 	var attack_frames = max(1, int(settings.get("attack_frames", 8)))
 	var attack_fps = float(settings.get("attack_fps", 12.0))
+	var hold_frames = max(0.0, float(settings.get("attack_hold_frames", 0.0)))
 	action_anim_active = true
 	action_anim_timer += delta * attack_fps
-	$Sprite2D.frame = current_anim_row * attack_frames + (int(action_anim_timer) % attack_frames)
+	var frame_index = mini(int(action_anim_timer), attack_frames - 1)
+	$Sprite2D.frame = current_anim_row * attack_frames + frame_index
+	if action_anim_timer >= float(attack_frames + hold_frames):
+		action_anim_timer = float(attack_frames + hold_frames)
+
+func _update_mole_walk_animation(delta: float) -> void:
+	var settings = _get_hero_animation_settings()
+	var walk_frames = max(1, int(settings.get("mole_walk_frames", 8)))
+	var walk_fps = float(settings.get("mole_walk_fps", 10.0))
+	walk_timer += delta * walk_fps
+	$Sprite2D.frame = current_anim_row * walk_frames + (int(walk_timer) % walk_frames)
+
+func _update_mole_attack_animation(delta: float) -> void:
+	var settings = _get_hero_animation_settings()
+	var attack_frames = max(1, int(settings.get("mole_attack_frames", 8)))
+	var attack_fps = float(settings.get("mole_attack_fps", 8.0))
+	var hold_frames = max(0.0, float(settings.get("mole_attack_hold_frames", 0.0)))
+	action_anim_active = true
+	action_anim_timer += delta * attack_fps
+	var frame_index = mini(int(action_anim_timer), attack_frames - 1)
+	$Sprite2D.frame = current_anim_row * attack_frames + frame_index
+	if action_anim_timer >= float(attack_frames + hold_frames):
+		action_anim_timer = float(attack_frames + hold_frames)
 
 func _reset_action_animation() -> void:
 	action_anim_timer = 0.0
@@ -529,6 +581,9 @@ func handle_digging(delta: float) -> void:
 					_stop_digging()
 					currently_digging_cell = cell
 					dig_timer = 0.0
+					action_anim_timer = 0.0
+					action_anim_active = true
+					magic_orb_last_animation_cycle = -1
 			else:
 				_stop_digging()
 	else:
