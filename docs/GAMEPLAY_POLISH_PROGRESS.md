@@ -150,19 +150,52 @@ POLISH-003 is now READY and was not started in this run.
 - Pickup and deposit each have distinct feedback.
 - Performance remains acceptable during rapid mining and multi-gem deposits.
 
-## Next task
+## Completed task
 
 ID: `POLISH-003`
 
 Title: Conditional enemy health bars and stronger hit reactions
 
+Status: `COMPLETE`
+
+Implementation is limited to enemy combat readability. Do not change enemy health, damage, speed, rewards, wave timing, hero damage, or economy balance.
+
+### Scope
+
+- Keep untouched distant enemies free of health-bar clutter.
+- Show an enemy health bar when damaged, targeted, or near the player.
+- Fade ordinary enemy bars after combat inactivity.
+- Keep the boss bar visible throughout its fight.
+- Animate immediate and delayed health loss instead of snapping.
+- Strengthen hit response with a contained flash, sprite punch, and short impact burst.
+
+### Validation record
+
+- enemy.tscn now contains an editable two-layer health bar that starts hidden.
+- enemy.gd shows ordinary bars when damaged, targeted, or within 170 pixels of a player, then fades them after combat inactivity.
+- Boss bars remain visible and use a 1.35x larger display.
+- Current health animates quickly while the delayed damage layer catches up more slowly.
+- Hits now combine a short overbright flash, sprite punch/jitter, and contained orange impact particles.
+- Godot 4.7 headless project check exited with code 0.
+- Real single-player Dwarf run booted through hero selection with no new project-specific runtime errors.
+- Godot Live runtime evaluation confirmed damaged-bar visibility, current/delayed values, ordinary-bar fade to invisible after 3.6 seconds away, boss-bar visibility at range, and transient impact-particle cleanup.
+- No enemy health, damage, speed, rewards, wave timing, hero damage, or economy values changed.
+- Pre-existing editor warnings remain in mobile_controls.gd, match_flow.gd, hero_selection_menu.gd, player.gd, world.gd, map_bounds.gd, minecart.gd, and hud.gd; they did not originate in this task.
+
+POLISH-004 is now READY and was not started in this run.
+
+## Next task
+
+ID: `POLISH-004`
+
+Title: Connect Strength to free carrying allowance and clarify STR/AGI/INT effects
+
 Status: `READY`
 
 ## Later queue
 
-1. `POLISH-004` — Connect Strength to free carrying allowance and clarify STR/AGI/INT effects.
-2. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D.
-3. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable.
+1. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D.
+2. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable.
 
 ## Known pre-existing blockers and hazards
 
@@ -174,4 +207,4 @@ Status: `READY`
 
 ## Last queue update
 
-`POLISH-001` and `POLISH-002` are `COMPLETE`. POLISH-002 passed the real mining, gem reveal, pickup, deposit, and feedback-cleanup smoke checks; `POLISH-003` is promoted to `READY`.
+`POLISH-001`, `POLISH-002`, and `POLISH-003` are `COMPLETE`. POLISH-003 passed the real enemy-health-bar and hit-reaction smoke checks; `POLISH-004` is `READY` and was not started in this run.
