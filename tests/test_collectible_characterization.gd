@@ -116,6 +116,37 @@ func test_player_deposit_deletes_gems_but_retains_rail_items() -> void:
 	assert_eq(player.carried_gems.size(), 1)
 	assert_eq(player.carried_gems[0], rail_item)
 
+func test_strength_grants_free_carry_allowance_before_overload_penalty() -> void:
+	var scene_root := EditorInterface.get_edited_scene_root()
+	assert_false(scene_root == null, "An edited scene is required")
+	if scene_root == null:
+		return
+	var player := PLAYER_SCRIPT.new()
+	track(player)
+	var carried: Array[Node] = []
+	for index in range(3):
+		var gem := Node.new()
+		gem.name = "CarryTestGem%d" % index
+		track(gem)
+		carried.append(gem)
+	player.carried_gems = carried
+
+	player.strength = 1
+	assert_eq(player.get_free_carry_allowance(), 1)
+	assert_eq(player.get_carry_load(), 3)
+	assert_eq(player.get_carry_overload(), 2)
+	assert_eq(player.get_weight_penalty(), 0.3)
+
+	player.strength = 4
+	assert_eq(player.get_free_carry_allowance(), 2)
+	assert_eq(player.get_carry_overload(), 1)
+	assert_eq(player.get_weight_penalty(), 0.15)
+
+	player.strength = 7
+	assert_eq(player.get_free_carry_allowance(), 3)
+	assert_eq(player.get_carry_overload(), 0)
+	assert_eq(player.get_weight_penalty(), 0.0)
+
 func test_rail_item_untether_places_tile_and_frees_item() -> void:
 	var scene_root := EditorInterface.get_edited_scene_root()
 	assert_false(scene_root == null, "An edited scene is required")

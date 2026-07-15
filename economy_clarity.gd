@@ -156,9 +156,9 @@ func _attach_investment_panel() -> void:
 	investment_panel.add_child(columns)
 	
 	var hero_column := _create_column(columns, "HERO POWER")
-	_add_action_button(hero_column, "strength", "Strength +1", "More attack and stomp damage")
+	_add_action_button(hero_column, "strength", "Strength +1", "More attack and stomp damage; +1 free gem carry every 3 STR")
 	_add_action_button(hero_column, "agility", "Agility +1", "Faster movement, attacks, and digging")
-	_add_action_button(hero_column, "intelligence", "Intelligence +1", "Faster Nerubian brood recovery")
+	_add_action_button(hero_column, "intelligence", "Intelligence +1", "Stronger and faster hero abilities; faster brood recovery")
 	
 	var survival_column := _create_column(columns, "SURVIVAL")
 	_add_action_button(survival_column, "max_health", "Fortify Hero", "+20 maximum health")
@@ -237,6 +237,16 @@ func _refresh_panel() -> void:
 func _stat_cost(level: int) -> int:
 	return (level * 2) - 1
 
+func _stat_description(action: String) -> String:
+	match action:
+		"strength":
+			return "Damage/stomp +1 free carry every 3 STR"
+		"agility":
+			return "Faster movement, attacks, and digging"
+		"intelligence":
+			return "Stronger/faster abilities and brood recovery"
+	return ""
+
 func _update_stat_button(action: String, level: int, gems: int, display_name: String) -> void:
 	var button: Button = buttons.get(action)
 	if button == null:
@@ -244,7 +254,8 @@ func _update_stat_button(action: String, level: int, gems: int, display_name: St
 	var cost := _stat_cost(level)
 	button.visible = true
 	button.disabled = gems < cost
-	button.text = "%s +1   •   %d Gems\nCurrent level: %d" % [display_name, cost, level]
+	button.text = "%s +1   •   %d Gems\n%s — level %d" % [display_name, cost, _stat_description(action), level]
+	button.tooltip_text = _stat_description(action)
 
 func _update_intelligence_button(player: Node, gems: int) -> void:
 	var button: Button = buttons.get("intelligence")
@@ -257,7 +268,8 @@ func _update_intelligence_button(player: Node, gems: int) -> void:
 	var level := int(player.get("intelligence"))
 	var cost := _stat_cost(level)
 	button.disabled = gems < cost
-	button.text = "Intelligence +1   •   %d Gems\nBrood cooldown improves — level %d" % [cost, level]
+	button.text = "Intelligence +1   •   %d Gems\n%s — level %d" % [cost, _stat_description("intelligence"), level]
+	button.tooltip_text = _stat_description("intelligence")
 
 func _update_gold_button(action: String, cost: int, gold: int, title_text: String, description: String) -> void:
 	var button: Button = buttons.get(action)

@@ -190,12 +190,33 @@ ID: `POLISH-004`
 
 Title: Connect Strength to free carrying allowance and clarify STR/AGI/INT effects
 
-Status: `READY`
+Status: `COMPLETE`
+
+### Validation record
+
+- `player.gd` now exposes free-carry allowance, load, overload, and penalty helpers.
+- Strength starts with one free gem and adds one more free gem at Strength 4, 7, 10, and so on; overload still slows movement by 15% per gem and remains capped at 75%.
+- The investment panel now explains Strength's carrying thresholds, Agility's movement/attack/digging role, and Intelligence's ability/brood role in both button text and tooltips.
+- Godot 4.7 headless project check completed with exit code 0 and no stderr.
+- Godot Live characterization tests passed: 11/11 tests across collectible and peon suites, including a regression test for Strength carry thresholds and overload penalties.
+- A real single-player smoke reached the hero-selection flow and entered the generated mine; runtime evaluation confirmed the carrying allowance changes from 1 at Strength 1 to 2 at Strength 4 with no carried load penalty.
+- No economy prices, gem values, pickup/deposit rules, attack damage, or other unrelated systems were changed.
 
 ## Later queue
 
-1. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D.
-2. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable.
+1. `POLISH-005` — Add a smaller physical collision footprint to the base while preserving its interaction Area2D. **COMPLETE**
+
+### Validation record
+
+- `base.tscn` preserves the original 128×64 Area2D interaction shape for healing, deposits, and upgrades.
+- Added a separate `SolidBody2D` StaticBody2D with an 88×24 footprint positioned over the lower foundation, allowing the hero to pass behind the upper base image.
+- Godot 4.7 headless project check completed with exit code 0 and no stderr.
+- Real single-player smoke reached hero selection and entered the generated mine; the interaction prompt remained active, the default hero spawn stayed at `(0, -32)`, and moving into the foundation produced one slide collision without displacement.
+- Godot Live characterization tests passed: 11/11 tests across collectible and peon suites, including a regression test for Strength carry thresholds and overload penalties.
+- Fresh game logs contained only the helper registration; remaining editor entries are pre-existing warnings in unrelated scripts.
+- Files modified for this task: `base.tscn` and this progress document.
+
+2. `POLISH-006` — Add one small cave reward prototype, such as a bag or boots, only after the earlier polish tasks are stable. **READY**
 
 ## Known pre-existing blockers and hazards
 
@@ -207,4 +228,4 @@ Status: `READY`
 
 ## Last queue update
 
-`POLISH-001`, `POLISH-002`, and `POLISH-003` are `COMPLETE`. POLISH-003 passed the real enemy-health-bar and hit-reaction smoke checks; `POLISH-004` is `READY` and was not started in this run.
+`POLISH-001` through `POLISH-005` are `COMPLETE`. POLISH-005 passed the base interaction and physical-footprint smoke checks; `POLISH-006` is `READY` and was not started in this run.

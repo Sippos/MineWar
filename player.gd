@@ -148,6 +148,12 @@ var undead_cast_timer = 0.0
 var carried_gems = []
 var nearby_gems = []
 
+# Carrying stays permissive: Strength grants a small free allowance before the
+# existing overload slowdown starts. Every three points above the starting
+# value adds one more gem slot without changing pickup or deposit rules.
+const BASE_FREE_CARRY_ALLOWANCE := 1
+const STRENGTH_CARRY_STEP := 3
+
 @onready var tile_map: TileMapLayer = $"../BlockLayer"
 @onready var damage_layer: TileMapLayer = $"../DamageLayer"
 @onready var front_damage_layer: TileMapLayer = $"../FrontDamageLayer"
@@ -213,11 +219,25 @@ func _apply_druid_mole_visuals() -> void:
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
 
+func get_free_carry_allowance() -> int:
+	var strength_bonus: int = maxi(0, floori(float(strength - 1) / float(STRENGTH_CARRY_STEP)))
+	return BASE_FREE_CARRY_ALLOWANCE + strength_bonus
+
+func get_carry_load() -> int:
+	var carry_load := 0
+	for gem in carried_gems:
+		if is_instance_valid(gem):
+			carry_load += 1
+	return carry_load
+
+func get_carry_overload() -> int:
+	return max(0, get_carry_load() - get_free_carry_allowance())
+
 func get_weight_penalty() -> float:
-	var p = float(carried_gems.size()) * 0.15
-	if p > 0.75:
-		return 0.75
-	return p
+	# Preserve the existing 15% per-item overload penalty and 75% cap while
+	# making the first allowance of gems (plus Strength thresholds) penalty-free.
+	var p := float(get_carry_overload()) * 0.15
+	return min(p, 0.75)
 
 func add_nearby_gem(gem) -> void:
 	if not nearby_gems.has(gem):
