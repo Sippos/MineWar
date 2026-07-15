@@ -375,11 +375,12 @@ func _setup_base_warning_ui() -> void:
 	base_status_panel = PanelContainer.new()
 	base_status_panel.name = "BaseStatus"
 	base_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	base_status_panel.offset_left = -92
-	base_status_panel.offset_top = 86
-	base_status_panel.offset_right = -18
-	base_status_panel.offset_bottom = 162
+	# Keep the faction base health check beside the hero portrait on the top HUD row.
+	base_status_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	base_status_panel.offset_left = 282
+	base_status_panel.offset_top = 12
+	base_status_panel.offset_right = 356
+	base_status_panel.offset_bottom = 88
 	base_status_panel.pivot_offset = Vector2(37, 38)
 	base_status_style = StyleBoxFlat.new()
 	base_status_style.set_border_width_all(2)
