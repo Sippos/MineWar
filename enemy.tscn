@@ -1,10 +1,11 @@
-[gd_scene format=3 uid="uid://enemyuid"]
+[gd_scene load_steps=7 format=3 uid="uid://enemyuid"]
 
 [ext_resource type="Script" path="res://enemy.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_enemy"]
 size = Vector2(40, 40)
+
 [sub_resource type="Gradient" id="Gradient_shadow"]
 colors = PackedColorArray(0, 0, 0, 0.6, 0, 0, 0, 0)
 
@@ -16,6 +17,31 @@ fill_to = Vector2(0.8, 0.8)
 width = 48
 height = 24
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_background"]
+bg_color = Color(0.035, 0.04, 0.05, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.06, 0.06, 0.07, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_lag"]
+bg_color = Color(0.88, 0.48, 0.12, 1)
+corner_radius_top_left = 1
+corner_radius_top_right = 1
+corner_radius_bottom_right = 1
+corner_radius_bottom_left = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
+bg_color = Color(0.18, 0.82, 0.3, 1)
+corner_radius_top_left = 1
+corner_radius_top_right = 1
+corner_radius_bottom_right = 1
+corner_radius_bottom_left = 1
 
 [node name="Enemy" type="CharacterBody2D" groups=["enemies"]]
 collision_layer = 4
@@ -28,10 +54,44 @@ texture = SubResource("GradientTexture2D_shadow")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, 8)
-scale = Vector2(1.0, 1.0)
 texture = ExtResource("2_tex")
 hframes = 8
 vframes = 8
+
+[node name="HealthBarContainer" type="Control" parent="."]
+visible = false
+z_index = 30
+offset_left = -32.0
+offset_top = -45.0
+offset_right = 32.0
+offset_bottom = -37.0
+mouse_filter = 2
+
+[node name="DamageLag" type="ProgressBar" parent="HealthBarContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_health_background")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_lag")
+value = 100.0
+show_percentage = false
+
+[node name="Health" type="ProgressBar" parent="HealthBarContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_health_background")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
+value = 100.0
+show_percentage = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 8)
