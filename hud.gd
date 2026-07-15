@@ -96,7 +96,13 @@ const BASE_DAMAGED_THRESHOLD := 0.70
 const BASE_CRITICAL_THRESHOLD := 0.30
 const BASE_DIRECTION_DISTANCE := 520.0
 const BASE_HIT_NOTICE_COOLDOWN := 6.0
-const BASE_STATUS_ICON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrades/base_health.svg")
+const HERO_BASE_TEXTURES = {
+	"Dwarf": preload("res://DwarfBase.png"),
+	"Shaman": preload("res://ShamanBase.png"),
+	"Nerubian": preload("res://NerubianBase.png"),
+	"Druid": preload("res://DruidBase.png"),
+	"Undead King": preload("res://UndeadKingBase.png")
+}
 const BASE_WARNING_COLORS = {
 	"stable": Color(0.35, 0.9, 0.55, 1.0),
 	"damaged": Color(1.0, 0.72, 0.22, 1.0),
@@ -258,6 +264,14 @@ func _refresh_hero_portrait(force := false) -> void:
 		portrait_texture = _get_player_portrait_texture()
 	hero_portrait_icon.texture = portrait_texture
 	hero_portrait_icon.tooltip_text = hero_name
+	_refresh_base_status_icon(hero_name)
+
+func _refresh_base_status_icon(hero_name: String = "") -> void:
+	if not base_status_icon:
+		return
+	var active_hero := hero_name if hero_name != "" else _get_active_hero_name_for_portrait()
+	base_status_icon.texture = HERO_BASE_TEXTURES.get(active_hero, HERO_BASE_TEXTURES["Dwarf"]) as Texture2D
+	base_status_icon.tooltip_text = "%s Base" % active_hero
 
 func _set_hero_portrait_respawn(time_left: float) -> void:
 	var respawning = time_left > 0.0
@@ -282,10 +296,12 @@ func _setup_stomp_ui() -> void:
 	stomp_container.name = "StompContainer"
 	stomp_container.visible = false
 	stomp_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	# Keep Stomp in its own row above the hero ability bar.
+	# The old bottom-right anchor overlapped the fourth ability card.
 	stomp_container.offset_left = -88
-	stomp_container.offset_top = -88
+	stomp_container.offset_top = -168
 	stomp_container.offset_right = -28
-	stomp_container.offset_bottom = -28
+	stomp_container.offset_bottom = -108
 	
 	var stomp_icon = Control.new()
 	stomp_icon.name = "StompIcon"
@@ -378,7 +394,6 @@ func _setup_base_warning_ui() -> void:
 	base_status_panel.add_child(content)
 	base_status_icon = TextureRect.new()
 	base_status_icon.name = "Icon"
-	base_status_icon.texture = BASE_STATUS_ICON_TEXTURE
 	base_status_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	base_status_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	base_status_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -388,6 +403,7 @@ func _setup_base_warning_ui() -> void:
 	base_status_icon.offset_bottom = -20
 	base_status_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_child(base_status_icon)
+	_refresh_base_status_icon()
 
 	base_status_label = Label.new()
 	base_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -454,7 +470,8 @@ func _apply_base_warning_state(pulse: bool) -> void:
 	base_status_style.bg_color = Color(warning_color.r * 0.16, warning_color.g * 0.16, warning_color.b * 0.16, 0.92)
 	base_status_style.border_color = warning_color
 	if base_status_icon:
-		base_status_icon.modulate = warning_color.lightened(0.18)
+		# Preserve faction colors; the frame and label carry the warning state.
+		base_status_icon.modulate = Color.WHITE if base_warning_state == "stable" else Color.WHITE.lerp(warning_color, 0.35)
 	base_status_panel.queue_redraw()
 	if base_direction_arrow:
 		base_direction_arrow.add_theme_color_override("font_color", warning_color)
