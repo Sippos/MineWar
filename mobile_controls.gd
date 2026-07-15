@@ -1,5 +1,8 @@
 extends Control
 
+const GRAB_ICON: Texture2D = preload("res://assets/sprites/ui/mobile/grab_hand.svg")
+const DROP_ICON: Texture2D = preload("res://assets/sprites/ui/mobile/drop_arrow.svg")
+
 @export var player_id: int = 1
 
 var joystick_center = Vector2(150, 450)
@@ -17,7 +20,7 @@ var menu_button_active = false
 var menu_button_touch_id = -1
 var buttons = [
 	{ "action": "p%d_grab", "role": "grab", "pos": Vector2(), "color": Color(0.2, 0.8, 0.2), "active": false, "touch_id": -1, "label": "Grab" },
-	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(0.8, 0.2, 0.2), "active": false, "touch_id": -1, "label": "Drop" },
+	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(0.8, 0.2, 0.2), "active": false, "touch_id": -1, "label": "Release" },
 ]
 
 func _ready() -> void:
@@ -183,11 +186,18 @@ func _draw_action_button(btn: Dictionary) -> void:
 	c.a = 0.82 if btn.active else 0.48
 	draw_circle(btn.pos, button_radius * (0.92 if btn.active else 1.0), c)
 	draw_arc(btn.pos, button_radius, 0.0, TAU, 32, Color(0.95, 0.78, 0.38, 0.9), 2.0)
+	var icon_texture: Texture2D = GRAB_ICON if btn.role == "grab" else DROP_ICON
+	var icon_size: float = button_radius * 1.22
+	var icon_rect := Rect2(
+		btn.pos + Vector2(-icon_size * 0.5, -icon_size * 0.66),
+		Vector2(icon_size, icon_size)
+	)
+	draw_texture_rect(icon_texture, icon_rect, false, Color(1.0, 1.0, 1.0, 0.95 if btn.active else 0.82))
 	var font = ThemeDB.fallback_font
 	if font:
 		var font_size := 12 if btn.label.length() > 8 else 14
 		var str_size = font.get_string_size(btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.62), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
+		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
 
 func _draw_menu_button() -> void:
 	var bg = Color(0.08, 0.08, 0.08, 0.55)
