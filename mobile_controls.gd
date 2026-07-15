@@ -37,8 +37,8 @@ func _process(_delta: float) -> void:
 	pass
 
 func _on_size_changed() -> void:
-	var size = get_viewport().get_visible_rect().size
-	var min_axis = min(size.x, size.y)
+	var viewport_size = get_viewport().get_visible_rect().size
+	var min_axis = min(viewport_size.x, viewport_size.y)
 	var compact = min_axis < 520.0
 	var margin = 18.0 if compact else 30.0
 	button_radius = clamp(min_axis * 0.062, 29.0, 42.0)
@@ -46,15 +46,18 @@ func _on_size_changed() -> void:
 	joystick_knob_radius = joystick_radius * 0.5
 	menu_button_radius = clamp(min_axis * 0.055, 26.0, 36.0)
 	base_tap_radius = clamp(min_axis * 0.18, 72.0, 112.0)
-	joystick_center = Vector2(margin + joystick_radius, size.y - margin - joystick_radius)
+	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
 	joystick_current_pos = joystick_center
 
 	var gap: float = button_radius * 2.18
-	var bottom_y: float = size.y - margin - button_radius
-	var right_x: float = size.x - margin - button_radius
+	# Keep Grab/Drop in a dedicated row above Stomp and the hero ability bar.
+	# Their touch circles must never intercept ability or Stomp taps.
+	var controls_row_offset: float = 186.0 + button_radius
+	var bottom_y: float = viewport_size.y - controls_row_offset
+	var right_x: float = viewport_size.x - margin - button_radius
 	buttons[1].pos = Vector2(right_x, bottom_y) # Drop
 	buttons[0].pos = Vector2(right_x - gap, bottom_y) # Grab
-	menu_button_pos = Vector2(size.x - margin - menu_button_radius, margin + menu_button_radius)
+	menu_button_pos = Vector2(viewport_size.x - margin - menu_button_radius, margin + menu_button_radius)
 	queue_redraw()
 
 func _input(event: InputEvent) -> void:
