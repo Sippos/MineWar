@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - main
-      - fix/hero-sprite-recovery-publish
-      - reconcile/local-game-20260714-merged
-    paths:
-      - '.deploy-trigger'
 
 permissions:
   contents: read
@@ -55,8 +51,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The repository contains old generated import metadata. Rebuild it
-          # without committing the generated .godot directory.
           rm -rf .godot
           mkdir -p build/web
 
@@ -93,6 +87,7 @@ jobs:
           path: build/web
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -102,3 +97,24 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify live browser build
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          expected="$GITHUB_SHA"
+          verify_url="${PAGE_URL%/}/deploy-commit.txt?sha=${expected}"
+          for attempt in $(seq 1 18); do
+            actual="$(curl -fsSL -H 'Cache-Control: no-cache' "$verify_url" 2>/dev/null | tr -d '\r\n' || true)"
+            if [[ "$actual" == "$expected" ]]; then
+              echo "Verified live Pages deployment: $actual"
+              printf '### Live deployment verified\n\n- URL: %s\n- Commit: `%s`\n' "$PAGE_URL" "$expected" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Waiting for Pages propagation ($attempt/18): got '${actual:-no response}'"
+            sleep 10
+          done
+          echo "Pages did not serve expected commit $expected from $verify_url" >&2
+          exit 1
