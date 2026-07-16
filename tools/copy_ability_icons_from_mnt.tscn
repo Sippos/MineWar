@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/copy_ability_icons_from_mnt.gd" type="Script" id="1"]
+
+[node name="CopyAbilityIconsFromMnt" type="Node"]
+script = ExtResource("1")
