@@ -38,6 +38,16 @@ jobs:
             echo "Skipping stale commit $GITHUB_SHA because latest main is $latest"
           fi
 
+      - name: Remove local Godot AI tooling hooks
+        if: steps.freshness.outputs.is_latest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Godot AI addon is local editor tooling and is intentionally
+          # excluded from Git. Remove its project hooks only in this CI checkout.
+          sed -i '/^_mcp_game_helper=.*addons\/godot_ai/d' project.godot
+          sed -i 's#^enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")#enabled=PackedStringArray()#' project.godot
+
       - name: Install Godot 4.7 and export templates
         if: steps.freshness.outputs.is_latest == 'true'
         shell: bash

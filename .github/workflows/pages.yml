@@ -30,6 +30,15 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Remove local Godot AI tooling hooks
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Godot AI addon is local editor tooling and is intentionally
+          # excluded from Git. Remove its project hooks only in this CI checkout.
+          sed -i '/^_mcp_game_helper=.*addons\/godot_ai/d' project.godot
+          sed -i 's#^enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")#enabled=PackedStringArray()#' project.godot
+
       - name: Install Godot 4.7 and export templates
         shell: bash
         run: |
@@ -76,7 +85,7 @@ jobs:
 
       - name: Record deployed commit
         shell: bash
-        run: printf '%s\\n' "$GITHUB_SHA" > build/web/deploy-commit.txt
+        run: printf '%s\n' "$GITHUB_SHA" > build/web/deploy-commit.txt
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
