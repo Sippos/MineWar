@@ -160,11 +160,11 @@ func _disable_runtime_upgrade_menu() -> void:
 		upgrade_menu.hide_menu()
 	upgrade_menu.set_process(false)
 	upgrade_menu.set_process_input(false)
-	upgrade_menu.visible = false
 
 func _enable_runtime_upgrade_menu() -> void:
 	if upgrade_menu == null:
 		return
+	upgrade_menu.visible = true
 	upgrade_menu.set_process(true)
 	upgrade_menu.set_process_input(true)
 	if upgrade_menu.has_method("hide_menu"):
