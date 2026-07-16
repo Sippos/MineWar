@@ -62,6 +62,7 @@ var cave_reward_spawned := false
 var onboarding_active := false
 var onboarding_stage: int = OnboardingStage.DIG_DOWN
 var onboarding_entry_marker: Label
+var onboarding_entry_marker_tween: Tween
 var first_deposit_received := false
 
 var wave_timer = FIRST_WAVE_DELAY
@@ -459,11 +460,17 @@ func _create_entry_marker() -> void:
 	onboarding_entry_marker.size = Vector2(180, 30)
 	onboarding_entry_marker.z_index = 30
 	add_child(onboarding_entry_marker)
-	var marker_tween := create_tween().set_loops()
-	marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y + 7.0, 0.55).set_trans(Tween.TRANS_SINE)
-	marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y, 0.55).set_trans(Tween.TRANS_SINE)
+	onboarding_entry_marker_tween = create_tween().bind_node(onboarding_entry_marker).set_loops()
+	onboarding_entry_marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y + 7.0, 0.55).set_trans(Tween.TRANS_SINE)
+	onboarding_entry_marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y, 0.55).set_trans(Tween.TRANS_SINE)
 
 func _remove_entry_marker() -> void:
+	# This tween is created by the world but targets the short-lived tutorial
+	# marker. Stop it before freeing the marker so the web build cannot enter a
+	# zero-duration loop after the first block advances the tutorial.
+	if onboarding_entry_marker_tween and onboarding_entry_marker_tween.is_valid():
+		onboarding_entry_marker_tween.kill()
+	onboarding_entry_marker_tween = null
 	if onboarding_entry_marker and is_instance_valid(onboarding_entry_marker):
 		onboarding_entry_marker.queue_free()
 	onboarding_entry_marker = null
