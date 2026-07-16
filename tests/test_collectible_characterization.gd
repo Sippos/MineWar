@@ -23,6 +23,13 @@ class FakeRailWorld:
 func suite_name() -> String:
 	return "collectible_characterization"
 
+func _new_player() -> CharacterBody2D:
+	var source := FileAccess.get_file_as_string("res://player.gd")
+	var script := GDScript.new()
+	script.source_code = source
+	assert_eq(script.reload(), OK, "Fresh player.gd source must compile")
+	return script.new() as CharacterBody2D
+
 func _make_gem(script: Script) -> RigidBody2D:
 	var gem := script.new() as RigidBody2D
 	var sprite := Sprite2D.new()
@@ -98,7 +105,7 @@ func test_player_deposit_deletes_gems_but_retains_rail_items() -> void:
 	assert_false(scene_root == null, "An edited scene is required")
 	if scene_root == null:
 		return
-	var player := PLAYER_SCRIPT.new()
+	var player := _new_player()
 	track(player)
 	var gem := _make_gem(GEM_SCRIPT)
 	var rail_item := _make_gem(RAIL_ITEM_SCRIPT)
@@ -121,7 +128,7 @@ func test_strength_grants_free_carry_allowance_before_overload_penalty() -> void
 	assert_false(scene_root == null, "An edited scene is required")
 	if scene_root == null:
 		return
-	var player := PLAYER_SCRIPT.new()
+	var player := _new_player()
 	track(player)
 	var carried: Array[Node] = []
 	for index in range(3):

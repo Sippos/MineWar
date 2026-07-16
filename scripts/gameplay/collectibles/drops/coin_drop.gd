@@ -24,7 +24,10 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if not can_pickup: return
 	if body.name == "Player":
-		var hud = get_parent().get_node_or_null("HUD")
+		var world := get_parent()
+		var hud = world.get_node_or_null("HUD") if world else null
 		if hud and hud.has_method("add_gold"):
 			hud.add_gold(gold_value)
+		if world and world.has_method("spawn_gold_pickup_feedback"):
+			world.spawn_gold_pickup_feedback(global_position, gold_value)
 		queue_free()

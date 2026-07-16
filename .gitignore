@@ -22,6 +22,9 @@ __pycache__/
 # Generated/local development output
 pixel_sprite_output/
 build/
+/.ai_transfer/
+/.noop.gd
+/.noop.gd.uid
 
 # Local inspection, invalid experiments, and sprite render comparisons
 /.mcp_*

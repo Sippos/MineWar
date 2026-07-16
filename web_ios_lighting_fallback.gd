@@ -1,6 +1,6 @@
 extends Node
 
-const MOBILE_CANVAS_MODULATE_COLOR = Color(0.16, 0.16, 0.22, 1.0)
+const MOBILE_CANVAS_MODULATE_COLOR = Color(0.44, 0.47, 0.55, 1.0)
 const MOBILE_CONTROLS_SCENE = preload("res://mobile_controls.tscn")
 
 var enabled = false

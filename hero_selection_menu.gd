@@ -1,7 +1,8 @@
 extends Control
 
 enum Mode { SINGLE_PLAYER, VS_LOCAL, VS_ONLINE }
-var current_mode = Mode.SINGLE_PLAYER
+var current_mode: Mode = Mode.SINGLE_PLAYER
+var current_context := "menu"
 
 var p1_index = 0
 var p2_index = 0
@@ -58,35 +59,46 @@ const HERO_ABILITY_PREVIEWS = {
 @onready var root_vbox = $Panel/VBox
 @onready var hero_hbox = $Panel/VBox/HBox
 @onready var title_label = $Panel/VBox/Label
+@onready var footer = $Panel/VBox/Footer
 @onready var p1_container = $Panel/VBox/HBox/P1Container
+@onready var p1_player_caption = $Panel/VBox/HBox/P1Container/Label
 @onready var p1_label = $Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/HeroName
+@onready var p1_portrait_panel = $Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/PortraitPanel
 @onready var p1_sprite_container = $Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer
 @onready var p1_sprite = $Panel/VBox/HBox/P1Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer/Sprite
 @onready var p1_ability_spacer = $Panel/VBox/HBox/P1Container/HeroPreviewRow/AbilitySpacer
 @onready var p1_ability_panel = $Panel/VBox/HBox/P1Container/HeroPreviewRow/AbilityPanel
 @onready var p1_ability_list = $Panel/VBox/HBox/P1Container/HeroPreviewRow/AbilityPanel/AbilityList
+@onready var p1_nav = $Panel/VBox/HBox/P1Container/HBox
 @onready var p1_prev = $Panel/VBox/HBox/P1Container/HBox/PrevBtn
 @onready var p1_next = $Panel/VBox/HBox/P1Container/HBox/NextBtn
 
 @onready var p2_container = $Panel/VBox/HBox/P2Container
+@onready var p2_player_caption = $Panel/VBox/HBox/P2Container/Label
 @onready var p2_label = $Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/HeroName
+@onready var p2_portrait_panel = $Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/PortraitPanel
 @onready var p2_sprite_container = $Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer
 @onready var p2_sprite = $Panel/VBox/HBox/P2Container/HeroPreviewRow/PortraitColumn/PortraitPanel/SpriteContainer/Sprite
 @onready var p2_ability_spacer = $Panel/VBox/HBox/P2Container/HeroPreviewRow/AbilitySpacer
 @onready var p2_ability_panel = $Panel/VBox/HBox/P2Container/HeroPreviewRow/AbilityPanel
 @onready var p2_ability_list = $Panel/VBox/HBox/P2Container/HeroPreviewRow/AbilityPanel/AbilityList
+@onready var p2_nav = $Panel/VBox/HBox/P2Container/HBox
 @onready var p2_prev = $Panel/VBox/HBox/P2Container/HBox/PrevBtn
 @onready var p2_next = $Panel/VBox/HBox/P2Container/HBox/NextBtn
 
-@onready var start_btn = $Panel/VBox/StartBtn
-@onready var back_btn = $Panel/VBox/BackBtn
+@onready var back_btn = $Panel/VBox/Footer/BackBtn
+@onready var start_btn = $Panel/VBox/Footer/StartBtn
 
 var compact_layout = false
 var minimal_layout = false
 var ability_icon_cache = {}
 
-func setup(mode: int) -> void:
-	current_mode = mode
+func setup(mode: int, context: String = "menu") -> void:
+	current_mode = mode as Mode
+	current_context = context
+	var selected_index := available_heroes.find(Global.hero_p1)
+	if selected_index >= 0:
+		p1_index = selected_index
 
 func _ready() -> void:
 	p1_prev.pressed.connect(func(): change_hero(1, -1))
@@ -95,20 +107,67 @@ func _ready() -> void:
 	p2_next.pressed.connect(func(): change_hero(2, 1))
 	
 	start_btn.pressed.connect(_on_start_pressed)
-	back_btn.pressed.connect(func(): queue_free())
+	back_btn.pressed.connect(_on_back_pressed)
 	
 	p2_container.visible = (current_mode == Mode.VS_LOCAL)
+	_configure_ability_panels()
 	get_tree().root.size_changed.connect(_layout_for_screen)
 	_layout_for_screen()
 	
 	update_ui(1)
 	if current_mode == Mode.VS_LOCAL:
 		update_ui(2)
-		
+	_apply_context_labels()
+	_configure_focus_navigation()
 	start_btn.grab_focus()
 
-func _layout_for_screen() -> void:
-	var screen_size = get_viewport().get_visible_rect().size
+func _apply_context_labels() -> void:
+	if current_mode == Mode.SINGLE_PLAYER:
+		title_label.text = "Choose Hero & Matching Base" if current_context == "solo_retry" else "Select Hero & Matching Base"
+		p1_player_caption.text = "HERO"
+	else:
+		title_label.text = "Select Heroes"
+		p1_player_caption.text = "PLAYER 1"
+	p2_player_caption.text = "PLAYER 2"
+	start_btn.text = "Retry from Surface" if current_context == "solo_retry" else "Start"
+	back_btn.text = "Back"
+	p1_prev.text = "◀  Previous"
+	p1_next.text = "Next  ▶"
+	p2_prev.text = "◀  Previous"
+	p2_next.text = "Next  ▶"
+
+func _on_back_pressed() -> void:
+	queue_free()
+
+func _configure_ability_panels() -> void:
+	for ability_panel_value in [p1_ability_panel, p2_ability_panel]:
+		var ability_panel := ability_panel_value as PanelContainer
+		var source_style: StyleBox = ability_panel.get_theme_stylebox("panel")
+		if source_style == null:
+			continue
+		var panel_style: StyleBox = source_style.duplicate() as StyleBox
+		panel_style.content_margin_left = 18.0
+		panel_style.content_margin_right = 18.0
+		panel_style.content_margin_top = 10.0
+		panel_style.content_margin_bottom = 10.0
+		ability_panel.add_theme_stylebox_override("panel", panel_style)
+
+func _configure_focus_navigation() -> void:
+	p1_prev.focus_neighbor_right = p1_next.get_path()
+	p1_next.focus_neighbor_left = p1_prev.get_path()
+	p1_prev.focus_neighbor_bottom = back_btn.get_path()
+	p1_next.focus_neighbor_bottom = start_btn.get_path()
+	p2_prev.focus_neighbor_right = p2_next.get_path()
+	p2_next.focus_neighbor_left = p2_prev.get_path()
+	p2_prev.focus_neighbor_bottom = back_btn.get_path()
+	p2_next.focus_neighbor_bottom = start_btn.get_path()
+	back_btn.focus_neighbor_right = start_btn.get_path()
+	start_btn.focus_neighbor_left = back_btn.get_path()
+	back_btn.focus_neighbor_top = p1_prev.get_path()
+	start_btn.focus_neighbor_top = p1_next.get_path()
+
+func _layout_for_screen(forced_size: Vector2 = Vector2.ZERO) -> void:
+	var screen_size = forced_size if forced_size != Vector2.ZERO else get_viewport().get_visible_rect().size
 	if screen_size.x <= 0.0 or screen_size.y <= 0.0:
 		return
 	minimal_layout = screen_size.x < 540.0
@@ -120,34 +179,55 @@ func _layout_for_screen() -> void:
 	panel.offset_right = panel_w * 0.5
 	panel.offset_top = -panel_h * 0.5
 	panel.offset_bottom = panel_h * 0.5
-	root_vbox.add_theme_constant_override("separation", 6 if minimal_layout else (9 if compact_layout else 16))
-	hero_hbox.add_theme_constant_override("separation", 6 if minimal_layout else (12 if compact_layout else 28))
-	title_label.add_theme_font_size_override("font_size", 22 if compact_layout else 32)
-	
-	var sprite_size = 72.0 if minimal_layout else (104.0 if compact_layout else 156.0)
-	var ability_panel_width = 150.0 if minimal_layout else (235.0 if compact_layout else 330.0)
-	var ability_panel_height = 96.0 if minimal_layout else (138.0 if compact_layout else 180.0)
-	var ability_gap = 16.0 if minimal_layout else (34.0 if compact_layout else 64.0)
-	_configure_sprite_container(p1_sprite_container, p1_sprite, sprite_size)
-	_configure_sprite_container(p2_sprite_container, p2_sprite, sprite_size)
+
+	var horizontal_inset = 40.0 if compact_layout else 86.0
+	var top_inset = 14.0 if minimal_layout else (18.0 if compact_layout else 24.0)
+	var bottom_inset = 32.0 if minimal_layout else (22.0 if compact_layout else 32.0)
+	root_vbox.offset_left = horizontal_inset
+	root_vbox.offset_top = top_inset
+	root_vbox.offset_right = -horizontal_inset
+	root_vbox.offset_bottom = -bottom_inset
+	root_vbox.add_theme_constant_override("separation", 5 if minimal_layout else (8 if compact_layout else 12))
+	hero_hbox.add_theme_constant_override("separation", 6 if minimal_layout else (12 if compact_layout else 24))
+	title_label.add_theme_font_size_override("font_size", 20 if minimal_layout else (24 if compact_layout else 28))
+	title_label.custom_minimum_size.y = 28.0 if minimal_layout else (34.0 if compact_layout else 40.0)
+	p1_player_caption.add_theme_font_size_override("font_size", 10 if minimal_layout else (12 if compact_layout else 14))
+	p2_player_caption.add_theme_font_size_override("font_size", 10 if minimal_layout else (12 if compact_layout else 14))
+	p1_label.add_theme_font_size_override("font_size", 14 if minimal_layout else (16 if compact_layout else 18))
+	p2_label.add_theme_font_size_override("font_size", 14 if minimal_layout else (16 if compact_layout else 18))
+
+	var sprite_size = 92.0 if minimal_layout else (112.0 if compact_layout else 150.0)
+	var ability_panel_width = 150.0 if minimal_layout else (230.0 if compact_layout else 320.0)
+	var ability_panel_height = 108.0 if minimal_layout else (142.0 if compact_layout else 178.0)
+	var ability_gap = 12.0 if minimal_layout else (16.0 if compact_layout else 24.0)
+	_configure_sprite_container(p1_portrait_panel, p1_sprite_container, p1_sprite, sprite_size)
+	_configure_sprite_container(p2_portrait_panel, p2_sprite_container, p2_sprite, sprite_size)
 	p1_ability_spacer.custom_minimum_size = Vector2(ability_gap, 1.0)
 	p2_ability_spacer.custom_minimum_size = Vector2(ability_gap, 1.0)
 	p1_ability_panel.custom_minimum_size = Vector2(ability_panel_width, ability_panel_height)
 	p2_ability_panel.custom_minimum_size = Vector2(ability_panel_width, ability_panel_height)
-	p1_ability_list.custom_minimum_size = Vector2(max(90.0, ability_panel_width - 72.0), max(72.0, ability_panel_height - 20.0))
-	p2_ability_list.custom_minimum_size = Vector2(max(90.0, ability_panel_width - 72.0), max(72.0, ability_panel_height - 20.0))
+	p1_ability_list.custom_minimum_size = Vector2(max(90.0, ability_panel_width - 36.0), max(84.0, ability_panel_height - 20.0))
+	p2_ability_list.custom_minimum_size = Vector2(max(90.0, ability_panel_width - 36.0), max(84.0, ability_panel_height - 20.0))
 	_rebuild_ability_preview(p1_ability_list, available_heroes[p1_index])
 	_rebuild_ability_preview(p2_ability_list, available_heroes[p2_index])
-	var button_size = Vector2(160, 38) if compact_layout else Vector2(200, 50)
-	start_btn.custom_minimum_size = button_size
-	back_btn.custom_minimum_size = button_size
 
-func _configure_sprite_container(container: Control, sprite: Sprite2D, sprite_size: float) -> void:
+	var nav_button_size = Vector2(126, 44) if minimal_layout else (Vector2(150, 46) if compact_layout else Vector2(170, 48))
+	for button in [p1_prev, p1_next, p2_prev, p2_next]:
+		button.custom_minimum_size = nav_button_size
+	p1_nav.add_theme_constant_override("separation", 8 if minimal_layout else 12)
+	p2_nav.add_theme_constant_override("separation", 8 if minimal_layout else 12)
+	var action_button_size = Vector2(132, 44) if minimal_layout else (Vector2(160, 46) if compact_layout else Vector2(190, 50))
+	start_btn.custom_minimum_size = action_button_size
+	back_btn.custom_minimum_size = action_button_size
+	footer.add_theme_constant_override("separation", 12 if minimal_layout else (16 if compact_layout else 20))
+
+func _configure_sprite_container(portrait_panel: Control, container: Control, sprite: Sprite2D, sprite_size: float) -> void:
+	portrait_panel.custom_minimum_size = Vector2(sprite_size + 8.0, sprite_size + 8.0)
 	container.custom_minimum_size = Vector2(sprite_size, sprite_size)
 	var hero_name = available_heroes[p1_index] if sprite == p1_sprite else available_heroes[p2_index]
 	_apply_preview_visuals(sprite, hero_name, sprite_size)
 
-func _apply_preview_visuals(sprite: Sprite2D, hero_name: String, sprite_size: float) -> void:
+func _apply_preview_visuals(sprite: Sprite2D, _hero_name: String, sprite_size: float) -> void:
 	var scale_factor = sprite_size / 128.0
 	sprite.scale = Vector2(scale_factor, scale_factor)
 	sprite.position = Vector2(sprite_size * 0.5, sprite_size * 0.5)
@@ -264,6 +344,7 @@ func check_start_btn() -> void:
 	start_btn.disabled = not _is_hero_playable(h1)
 
 func _on_start_pressed() -> void:
+	get_tree().paused = false
 	Global.hero_p1 = available_heroes[p1_index]
 	Global.current_hero = Global.hero_p1
 	if current_mode == Mode.VS_LOCAL:
@@ -272,6 +353,7 @@ func _on_start_pressed() -> void:
 		Global.hero_p2 = Global.hero_p1
 		
 	if current_mode == Mode.SINGLE_PLAYER:
+		Global.set_run_loadout(available_heroes[p1_index], Global.selected_base_id)
 		get_tree().change_scene_to_file("res://scenes/boot/main.tscn")
 	elif current_mode == Mode.VS_LOCAL:
 		get_tree().change_scene_to_file("res://vs_mode.tscn")

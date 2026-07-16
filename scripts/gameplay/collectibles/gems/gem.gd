@@ -17,6 +17,7 @@ func _ready() -> void:
 	add_to_group("gems")
 	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
+	_setup_pickup_prompt()
 	
 	# Gems are collectible markers, not movable world physics objects. Keeping
 	# the body frozen and on no collision layers prevents players from pushing
@@ -32,6 +33,35 @@ func _ready() -> void:
 	if area:
 		if not area.body_exited.is_connected(_on_pickup_area_body_exited):
 			area.body_exited.connect(_on_pickup_area_body_exited)
+
+func _setup_pickup_prompt() -> void:
+	var pickup_prompt := Label.new()
+	pickup_prompt.name = "PickupPrompt"
+	pickup_prompt.text = "SPACE / A  •  PICK UP"
+	pickup_prompt.visible = bool(get_meta("tutorial_emphasis", false))
+	pickup_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pickup_prompt.position = Vector2(-82, -58)
+	pickup_prompt.size = Vector2(164, 28)
+	pickup_prompt.z_index = 28
+	pickup_prompt.add_theme_font_size_override("font_size", 13)
+	pickup_prompt.add_theme_color_override("font_color", Color(0.4, 1.0, 1.0, 1.0))
+	pickup_prompt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.98))
+	pickup_prompt.add_theme_constant_override("outline_size", 4)
+	add_child(pickup_prompt)
+	var prompt_tween := create_tween().set_loops()
+	prompt_tween.tween_property(pickup_prompt, "modulate", Color(1.3, 1.3, 1.3, 1.0), 0.5).set_trans(Tween.TRANS_SINE)
+	prompt_tween.tween_property(pickup_prompt, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE)
+
+func set_tutorial_emphasis(enabled: bool) -> void:
+	set_meta("tutorial_emphasis", enabled)
+	var pickup_prompt := get_node_or_null("PickupPrompt") as Label
+	if pickup_prompt:
+		pickup_prompt.visible = enabled and tethered_to == null
+
+func _set_pickup_prompt_visible(should_show: bool) -> void:
+	var pickup_prompt := get_node_or_null("PickupPrompt") as Label
+	if pickup_prompt:
+		pickup_prompt.visible = should_show and tethered_to == null
 
 func tether_to(player) -> bool:
 	if tethered_to != null and is_instance_valid(tethered_to) and tethered_to != player:
@@ -51,9 +81,12 @@ func tether_to(player) -> bool:
 	angular_velocity = 0.0
 	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
+	_set_pickup_prompt_visible(false)
 	var world = get_parent()
 	if world and world.has_method("spawn_gem_pickup_feedback"):
 		world.spawn_gem_pickup_feedback(global_position)
+	if world and world.has_method("notify_tutorial_gem_picked"):
+		world.notify_tutorial_gem_picked(self)
 	return true
 
 func untether() -> void:
@@ -64,6 +97,7 @@ func untether() -> void:
 	angular_velocity = 0.0
 	_apply_world_sorting()
 	_set_visual_offset(GEM_VISUAL_OFFSET)
+	_set_pickup_prompt_visible(bool(get_meta("tutorial_emphasis", false)))
 
 func _apply_world_sorting() -> void:
 	z_index = WORLD_Z_INDEX
@@ -124,7 +158,9 @@ func _get_carry_slot() -> int:
 func _on_pickup_area_body_entered(body) -> void:
 	if body.has_method("add_nearby_gem"):
 		body.add_nearby_gem(self)
+		_set_pickup_prompt_visible(true)
 
 func _on_pickup_area_body_exited(body) -> void:
 	if body.has_method("remove_nearby_gem"):
 		body.remove_nearby_gem(self)
+	_set_pickup_prompt_visible(bool(get_meta("tutorial_emphasis", false)))

@@ -4,7 +4,7 @@
 ;
 ; Format:
 ;   [section] ; section goes between []
-;   param=value
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -23,6 +23,8 @@ HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
 UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
 MatchFlow="*res://match_flow.gd"
 PeonCoordinator="*res://peon_coordinator.gd"
+SoundFX="*res://sound_fx.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 
@@ -32,6 +34,14 @@ window/stretch/aspect="expand"
 [dotnet]
 
 project/assembly_name="Mining"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+
+[filesystem]
+
+import/blender/enabled=false
 
 [input_devices]
 
@@ -44,8 +54,8 @@ pointing/emulate_touch_from_mouse=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-2d/snap/snap_2d_transforms_to_pixel=true
-2d/snap/snap_2d_vertices_to_pixel=true
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true

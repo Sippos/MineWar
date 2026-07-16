@@ -47,5 +47,7 @@ func _on_body_entered(body: Node2D) -> void:
 		
 		var t = get_tree().create_timer(1.0)
 		t.timeout.connect(burst.queue_free)
-		
+		var world := get_parent()
+		if world and world.has_method("spawn_xp_pickup_feedback"):
+			world.spawn_xp_pickup_feedback(global_position, xp_value)
 		queue_free()

@@ -28,7 +28,7 @@ texture = SubResource("GradientTexture2D_shadow")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, -8)
-scale = Vector2(0.46, 0.46)
+scale = Vector2(0.56, 0.56)
 texture = ExtResource("2_texture")
 hframes = 8
 vframes = 8

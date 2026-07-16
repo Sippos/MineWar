@@ -13,6 +13,7 @@ var base_speed = 200.0
 var base_dig_time = 0.4
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
+const AUTO_DEFEND_DISTANCE := 140.0
 
 const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
@@ -103,8 +104,12 @@ const HERO_ANIMATIONS = {
 const HERO_VISUALS = {
 	"Dwarf": {
 		"walk_scale": Vector2(0.85, 0.85),
-		"attack_scale": Vector2(0.85, 0.85),
-		"sprite_position": Vector2(0, -24)
+		# The attack sheet contains a much smaller figure inside each 128 px
+		# frame. Scale and anchor it independently so the Dwarf no longer
+		# shrinks whenever the hammer swing starts.
+		"attack_scale": Vector2(1.12, 1.12),
+		"sprite_position": Vector2(0, -24),
+		"attack_position": Vector2(0, -26)
 	},
 	"Mech": {
 		"walk_scale": Vector2(0.85, 0.85),
@@ -112,21 +117,32 @@ const HERO_VISUALS = {
 		"sprite_position": Vector2(0, -24)
 	},
 	"Shaman": {
-		"walk_scale": Vector2(0.58, 0.58),
-		"attack_scale": Vector2(0.58, 0.58),
-		"sprite_position": Vector2(0, -16)
+		# Shaman is rendered with the approved Druid humanoid walk and staff
+		# strike actions. Both atlases share one camera and foot line, so one
+		# grounded fit works without mirroring, shoulder jumps, or state popping.
+		"walk_scale": Vector2(0.64, 0.64),
+		"attack_scale": Vector2(0.64, 0.64),
+		"walk_position": Vector2(0, -5),
+		"attack_position": Vector2(0, -5),
+		"sprite_position": Vector2(0, -5)
 	},
 	"Nerubian": {
+		# The production pair is rendered together from the original rig: the
+		# 30-frame leg gait for movement and the matching v3 action for attacks.
 		"walk_scale": Vector2(0.46, 0.46),
 		"attack_scale": Vector2(0.46, 0.46),
-		"sprite_position": Vector2(0, -14)
+		"sprite_position": Vector2(0, -9)
 	},
 	"Druid": {
-		"walk_scale": Vector2(0.62, 0.62),
+		# The humanoid walk source has real movement and a larger silhouette than
+		# the restored attack take, so each state needs its own fitted scale.
+		"walk_scale": Vector2(0.50, 0.50),
 		"attack_scale": Vector2(0.62, 0.62),
+		"walk_position": Vector2(0, -7),
+		"attack_position": Vector2(0, -4),
 		"sprite_position": Vector2(0, -4),
-		"mole_scale": Vector2(0.56, 0.56),
-		"mole_position": Vector2(0, -9)
+		"mole_scale": Vector2(0.70, 0.70),
+		"mole_position": Vector2(0, -10)
 	},
 	"Undead King": {
 		"walk_scale": Vector2(0.85, 0.85),
@@ -147,10 +163,13 @@ var undead_cast_timer = 0.0
 
 var carried_gems = []
 var nearby_gems = []
+var cave_reward_ids: Array[String] = []
+var cave_reward_carry_bonus := 0
 
-# Carrying stays permissive: Strength grants a small free allowance before the
-# existing overload slowdown starts. Every three points above the starting
-# value adds one more gem slot without changing pickup or deposit rules.
+# Carrying stays permissive: Strength and cave rewards grant a small free
+# allowance before the existing overload slowdown starts. Every three Strength
+# points above the starting value adds another slot without changing pickup or
+# deposit rules.
 const BASE_FREE_CARRY_ALLOWANCE := 1
 const STRENGTH_CARRY_STEP := 3
 
@@ -205,11 +224,47 @@ func _get_hero_visuals() -> Dictionary:
 
 func _apply_sprite_visuals(is_attack: bool) -> void:
 	var visuals := _get_hero_visuals()
-	current_sprite_scale = visuals.get("attack_scale", Vector2(0.85, 0.85)) if is_attack else visuals.get("walk_scale", Vector2(0.85, 0.85))
-	current_sprite_position = visuals.get("sprite_position", Vector2(0, -24))
+	if is_attack:
+		current_sprite_scale = visuals.get("attack_scale", Vector2(0.85, 0.85))
+		current_sprite_position = visuals.get("attack_position", visuals.get("sprite_position", Vector2(0, -24)))
+	else:
+		current_sprite_scale = visuals.get("walk_scale", Vector2(0.85, 0.85))
+		current_sprite_position = visuals.get("walk_position", visuals.get("sprite_position", Vector2(0, -24)))
 	if has_node("Sprite2D"):
 		$Sprite2D.scale = current_sprite_scale
 		$Sprite2D.position = current_sprite_position
+
+func _get_action_animation_row() -> int:
+	# Reviewed action sheets use the same eight-direction row order as walking.
+	return current_anim_row
+
+func _uses_mirrored_action_animation() -> bool:
+	return false
+
+func _is_currently_performing_action() -> bool:
+	if current_hero_name == "Nerubian":
+		return currently_attacking_enemy != null or nerubian_cast_timer > 0.0
+	return currently_attacking_enemy != null or currently_digging_cell != null
+
+func _use_walk_animation_state() -> void:
+	if $Sprite2D.texture != tex_walk:
+		$Sprite2D.texture = tex_walk
+		_apply_sprite_visuals(false)
+	$Sprite2D.flip_h = false
+
+func _use_action_animation_state() -> void:
+	if $Sprite2D.texture != tex_attack:
+		$Sprite2D.texture = tex_attack
+		_apply_sprite_visuals(true)
+		_reset_action_animation()
+
+func _use_druid_mole_animation_state(is_attack: bool) -> void:
+	var desired_texture: Texture2D = tex_druid_mole_attack if is_attack and tex_druid_mole_attack != null else tex_druid_mole
+	if $Sprite2D.texture != desired_texture:
+		$Sprite2D.texture = desired_texture
+		_apply_druid_mole_visuals()
+		_reset_action_animation()
+	$Sprite2D.flip_h = false
 
 func _apply_druid_mole_visuals() -> void:
 	var visuals := _get_hero_visuals()
@@ -221,7 +276,30 @@ func _apply_druid_mole_visuals() -> void:
 
 func get_free_carry_allowance() -> int:
 	var strength_bonus: int = maxi(0, floori(float(strength - 1) / float(STRENGTH_CARRY_STEP)))
-	return BASE_FREE_CARRY_ALLOWANCE + strength_bonus
+	var permanent_carry_bonus := 0
+	if is_inside_tree():
+		var global_state := get_node_or_null("/root/Global")
+		if global_state and global_state.has_method("get_permanent_carry_bonus"):
+			permanent_carry_bonus = int(global_state.get_permanent_carry_bonus())
+	return BASE_FREE_CARRY_ALLOWANCE + strength_bonus + cave_reward_carry_bonus + permanent_carry_bonus
+
+func apply_cave_reward(reward_id: String) -> bool:
+	if cave_reward_ids.has(reward_id):
+		return false
+	match reward_id:
+		"miners_satchel":
+			cave_reward_carry_bonus += 1
+		_:
+			return false
+	cave_reward_ids.append(reward_id)
+	if is_inside_tree():
+		var parent_node := get_parent()
+		var hud = parent_node.get_node_or_null("HUD") if parent_node else null
+		if hud and hud.has_method("add_cave_reward"):
+			hud.add_cave_reward(reward_id)
+		if hud and hud.has_method("show_notice"):
+			hud.show_notice("Miner's Satchel equipped: +1 free gem carry", 2.4)
+	return true
 
 func get_carry_load() -> int:
 	var carry_load := 0
@@ -393,30 +471,32 @@ func _physics_process(delta: float) -> void:
 	if direction.length() > 0:
 		direction = direction.normalized()
 		velocity = direction * current_speed
-		_update_directional_animation(direction, delta)
+		_update_direction_row(direction)
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, current_speed)
-		walk_timer = 0.0
-		$Sprite2D.frame = current_anim_row * 8
 
-	var enemy_hit = null
-	if direction.length() > 0:
-		var enemies = get_tree().get_nodes_in_group("enemies")
-		var p_center = global_position + Vector2(0, -24)
-		for enemy in enemies:
-			if not is_instance_valid(enemy):
-				continue
-			var e_center = enemy.global_position + Vector2(0, 8)
-			if p_center.distance_to(e_center) < 70.0:
-				var dir_to_enemy = p_center.direction_to(e_center)
-				if direction.normalized().dot(dir_to_enemy) > 0.3:
-					enemy_hit = enemy
-					break
+	var enemy_hit: Node = null
+	var closest_enemy_distance: float = INF
+	var direction_length: float = direction.length()
+	var enemies := get_tree().get_nodes_in_group("enemies")
+	var player_center := global_position + Vector2(0, -24)
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		var e_center: Vector2 = enemy.global_position + Vector2(0, 8)
+		var distance_to_enemy: float = player_center.distance_to(e_center)
+		var should_auto_defend: bool = direction_length <= 0.001 and distance_to_enemy <= AUTO_DEFEND_DISTANCE
+		var is_direction_target: bool = false
+		if direction_length > 0.001 and distance_to_enemy < 70.0:
+			var dir_to_enemy: Vector2 = player_center.direction_to(e_center)
+			is_direction_target = direction.normalized().dot(dir_to_enemy) > 0.3
+		if (should_auto_defend or is_direction_target) and distance_to_enemy < closest_enemy_distance:
+			enemy_hit = enemy
+			closest_enemy_distance = distance_to_enemy
 
 	if enemy_hit:
-		var p_center = global_position + Vector2(0, -24)
-		var e_center = enemy_hit.global_position + Vector2(0, 8)
-		if p_center.distance_to(e_center) < 42.0:
+		var target_center: Vector2 = enemy_hit.global_position + Vector2(0, 8)
+		if player_center.distance_to(target_center) < 42.0:
 			velocity = Vector2.ZERO
 
 	move_and_slide()
@@ -434,9 +514,6 @@ func _physics_process(delta: float) -> void:
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
 			attack_timer = 0.0
-			action_anim_timer = 0.0
-			action_anim_active = true
-			magic_orb_last_animation_cycle = -1
 		if current_hero_name == "Druid" and not druid_mole_active:
 			_maybe_shoot_magic_orb(enemy_hit.global_position + Vector2(0, 8), true)
 	else:
@@ -448,100 +525,121 @@ func _physics_process(delta: float) -> void:
 		walk_timer = 0.0
 		$Sprite2D.frame = current_anim_row * 8
 
-	var is_performing_action = nerubian_cast_timer > 0.0 if current_hero_name == "Nerubian" else currently_attacking_enemy != null or currently_digging_cell != null
+	var is_performing_action := _is_currently_performing_action()
+
 	if druid_mole_active and tex_druid_mole != null:
 		var mole_is_attacking := currently_attacking_enemy != null or currently_digging_cell != null
-		var desired_mole_texture := tex_druid_mole_attack if mole_is_attacking and tex_druid_mole_attack != null else tex_druid_mole
-		if $Sprite2D.texture != desired_mole_texture:
-			$Sprite2D.texture = desired_mole_texture
-			_apply_druid_mole_visuals()
-			if mole_is_attacking:
-				_reset_action_animation()
+		_use_druid_mole_animation_state(mole_is_attacking)
 		if mole_is_attacking:
 			_update_mole_attack_animation(delta)
 		elif velocity.length() > 0.0:
 			_update_mole_walk_animation(delta)
 		else:
+			walk_timer = 0.0
 			action_anim_timer = 0.0
 			action_anim_active = false
-			$Sprite2D.frame = current_anim_row * 8
+			$Sprite2D.frame = current_anim_row * int(_get_hero_animation_settings().get("mole_walk_frames", 8))
 	elif is_performing_action:
-		if $Sprite2D.texture != tex_attack:
-			$Sprite2D.texture = tex_attack
-			_apply_sprite_visuals(true)
+		_use_action_animation_state()
 		_update_action_animation(delta)
 	else:
 		if action_anim_active:
 			_reset_action_animation()
-		if $Sprite2D.texture != tex_walk:
-			$Sprite2D.texture = tex_walk
-			_apply_sprite_visuals(false)
+		_use_walk_animation_state()
+		if velocity.length() > 0.0:
+			_update_walk_animation(delta)
+		else:
+			walk_timer = 0.0
+			var walk_frames: int = maxi(1, int(_get_hero_animation_settings().get("walk_frames", 8)))
+			$Sprite2D.frame = current_anim_row * walk_frames
 
-func _update_directional_animation(direction: Vector2, delta: float) -> void:
-	var angle = direction.angle()
-	var PI_8 = PI / 8.0
-	if angle > -PI_8 and angle <= PI_8:
+func _update_direction_row(direction: Vector2) -> void:
+	var angle := direction.angle()
+	var pi_8 := PI / 8.0
+	if angle > -pi_8 and angle <= pi_8:
 		current_anim_row = 6
-	elif angle > PI_8 and angle <= 3 * PI_8:
+	elif angle > pi_8 and angle <= 3.0 * pi_8:
 		current_anim_row = 7
-	elif angle > 3 * PI_8 and angle <= 5 * PI_8:
+	elif angle > 3.0 * pi_8 and angle <= 5.0 * pi_8:
 		current_anim_row = 0
-	elif angle > 5 * PI_8 and angle <= 7 * PI_8:
+	elif angle > 5.0 * pi_8 and angle <= 7.0 * pi_8:
 		current_anim_row = 1
-	elif angle > 7 * PI_8 or angle <= -7 * PI_8:
+	elif angle > 7.0 * pi_8 or angle <= -7.0 * pi_8:
 		current_anim_row = 2
-	elif angle > -7 * PI_8 and angle <= -5 * PI_8:
+	elif angle > -7.0 * pi_8 and angle <= -5.0 * pi_8:
 		current_anim_row = 3
-	elif angle > -5 * PI_8 and angle <= -3 * PI_8:
+	elif angle > -5.0 * pi_8 and angle <= -3.0 * pi_8:
 		current_anim_row = 4
-	elif angle > -3 * PI_8 and angle <= -PI_8:
+	elif angle > -3.0 * pi_8 and angle <= -pi_8:
 		current_anim_row = 5
+
+func _update_walk_animation(delta: float) -> void:
+	var settings := _get_hero_animation_settings()
+	var walk_frames: int = maxi(1, int(settings.get("walk_frames", 8)))
+	var walk_fps := float(settings.get("walk_fps", 12.0))
 	$Sprite2D.flip_h = false
-	var settings = _get_hero_animation_settings()
-	var walk_frames = max(1, int(settings.get("walk_frames", 8)))
-	var walk_fps = float(settings.get("walk_fps", 12.0))
 	walk_timer += delta * walk_fps
 	$Sprite2D.frame = current_anim_row * walk_frames + (int(walk_timer) % walk_frames)
 
+func _update_directional_animation(direction: Vector2, delta: float) -> void:
+	# Kept as one public animation helper for characterization tests and any
+	# external callers; runtime state selection now chooses the walk texture
+	# before advancing its frames.
+	_update_direction_row(direction)
+	_update_walk_animation(delta)
+
 func _update_action_animation(delta: float) -> void:
-	var settings = _get_hero_animation_settings()
-	var attack_frames = max(1, int(settings.get("attack_frames", 8)))
-	var attack_fps = float(settings.get("attack_fps", 12.0))
-	var hold_frames = max(0.0, float(settings.get("attack_hold_frames", 0.0)))
+	var settings := _get_hero_animation_settings()
+	var attack_frames: int = maxi(1, int(settings.get("attack_frames", 8)))
+	var attack_fps := float(settings.get("attack_fps", 12.0))
+	var hold_frames: float = maxf(0.0, float(settings.get("attack_hold_frames", 0.0)))
+	var cycle_frames: float = maxf(float(attack_frames), float(attack_frames) + hold_frames)
 	action_anim_active = true
 	action_anim_timer += delta * attack_fps
-	var frame_index = mini(int(action_anim_timer), attack_frames - 1)
-	$Sprite2D.frame = current_anim_row * attack_frames + frame_index
-	if action_anim_timer >= float(attack_frames + hold_frames):
-		action_anim_timer = float(attack_frames + hold_frames)
+	var cycle_position: float = fmod(action_anim_timer, cycle_frames)
+	var frame_index: int = mini(int(cycle_position), attack_frames - 1)
+	$Sprite2D.flip_h = _uses_mirrored_action_animation()
+	$Sprite2D.frame = _get_action_animation_row() * attack_frames + frame_index
 
 func _update_mole_walk_animation(delta: float) -> void:
-	var settings = _get_hero_animation_settings()
-	var walk_frames = max(1, int(settings.get("mole_walk_frames", 8)))
-	var walk_fps = float(settings.get("mole_walk_fps", 10.0))
+	var settings := _get_hero_animation_settings()
+	var walk_frames: int = maxi(1, int(settings.get("mole_walk_frames", 8)))
+	var walk_fps := float(settings.get("mole_walk_fps", 10.0))
+	$Sprite2D.flip_h = false
 	walk_timer += delta * walk_fps
 	$Sprite2D.frame = current_anim_row * walk_frames + (int(walk_timer) % walk_frames)
 
 func _update_mole_attack_animation(delta: float) -> void:
-	var settings = _get_hero_animation_settings()
-	var attack_frames = max(1, int(settings.get("mole_attack_frames", 8)))
-	var attack_fps = float(settings.get("mole_attack_fps", 8.0))
-	var hold_frames = max(0.0, float(settings.get("mole_attack_hold_frames", 0.0)))
+	# Mole digging/attacking uses the reviewed action sheet while preserving
+	# the same direction-row and frame cadence as the restored crawl state.
+	var settings := _get_hero_animation_settings()
+	var attack_frames: int = maxi(1, int(settings.get("mole_attack_frames", 8)))
+	var attack_fps := float(settings.get("mole_attack_fps", 8.0))
 	action_anim_active = true
 	action_anim_timer += delta * attack_fps
-	var frame_index = mini(int(action_anim_timer), attack_frames - 1)
-	$Sprite2D.frame = current_anim_row * attack_frames + frame_index
-	if action_anim_timer >= float(attack_frames + hold_frames):
-		action_anim_timer = float(attack_frames + hold_frames)
+	$Sprite2D.flip_h = false
+	$Sprite2D.frame = current_anim_row * attack_frames + (int(action_anim_timer) % attack_frames)
 
 func _reset_action_animation() -> void:
 	action_anim_timer = 0.0
 	action_anim_active = false
 	magic_orb_last_animation_cycle = -1
 	if has_node("Sprite2D"):
-		var settings = _get_hero_animation_settings()
-		var attack_frames = max(1, int(settings.get("attack_frames", 8)))
-		$Sprite2D.frame = current_anim_row * attack_frames
+		var settings := _get_hero_animation_settings()
+		if $Sprite2D.texture == tex_attack:
+			var attack_frames: int = maxi(1, int(settings.get("attack_frames", 8)))
+			$Sprite2D.flip_h = _uses_mirrored_action_animation()
+			$Sprite2D.frame = _get_action_animation_row() * attack_frames
+		elif druid_mole_active and $Sprite2D.texture == tex_druid_mole_attack:
+			var mole_attack_frames: int = maxi(1, int(settings.get("mole_attack_frames", 8)))
+			$Sprite2D.flip_h = false
+			$Sprite2D.frame = current_anim_row * mole_attack_frames
+		else:
+			var walk_frames: int = maxi(1, int(settings.get("walk_frames", 8)))
+			if druid_mole_active and $Sprite2D.texture == tex_druid_mole:
+				walk_frames = maxi(1, int(settings.get("mole_walk_frames", 8)))
+			$Sprite2D.flip_h = false
+			$Sprite2D.frame = current_anim_row * walk_frames
 
 func handle_digging(delta: float) -> void:
 	if current_hero_name == "Nerubian":
@@ -573,6 +671,7 @@ func handle_digging(delta: float) -> void:
 			var cell = tile_map.local_to_map(tile_map.to_local(point))
 			if tile_map.get_cell_source_id(cell) != -1:
 				if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
+					_show_protected_dig_feedback(cell)
 					_stop_digging()
 					return
 				if currently_digging_cell == cell:
@@ -580,6 +679,9 @@ func handle_digging(delta: float) -> void:
 					if mining_feedback_timer <= 0.0 and get_parent().has_method("spawn_mining_feedback"):
 						var impact_position = tile_map.to_global(tile_map.map_to_local(cell))
 						get_parent().spawn_mining_feedback(impact_position)
+						var sound_fx := get_node_or_null("/root/SoundFX")
+						if sound_fx:
+							sound_fx.play_dig_hit(tile_map.get_cell_source_id(cell))
 						mining_feedback_timer = 0.12
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
@@ -601,9 +703,16 @@ func handle_digging(delta: float) -> void:
 						damage_layer.erase_cell(cell)
 						front_damage_layer.erase_cell(below_cell)
 						var cell_had_gem = get_parent().has_gem(cell)
+						if get_parent().has_method("notify_tutorial_cell_dug"):
+							get_parent().notify_tutorial_cell_dug(cell, cell_had_gem)
+						if get_parent().has_method("try_spawn_cave_reward"):
+							get_parent().try_spawn_cave_reward(cell)
 						if get_parent().has_method("spawn_mining_feedback"):
 							var break_position = tile_map.to_global(tile_map.map_to_local(cell))
 							get_parent().spawn_mining_feedback(break_position, true, cell_had_gem)
+						var break_sound_fx := get_node_or_null("/root/SoundFX")
+						if break_sound_fx:
+							break_sound_fx.play_block_break(cell_had_gem)
 						get_parent().on_cell_dug(cell)
 						var gems_to_spawn = 1 if cell_had_gem else 0
 						if _roll_shaman_gem_bonus():
@@ -628,6 +737,24 @@ func handle_digging(delta: float) -> void:
 			_maybe_shoot_magic_orb(active_ray.get_collision_point())
 		elif current_hero_name == "Druid" and not druid_mole_active:
 			_maybe_shoot_magic_orb(active_ray.get_collision_point(), true)
+
+func _show_protected_dig_feedback(cell: Vector2i) -> void:
+	var now_msec := Time.get_ticks_msec()
+	var last_feedback_msec := int(get_meta("last_protected_dig_feedback_msec", -10000))
+	if now_msec - last_feedback_msec < 1150:
+		return
+	set_meta("last_protected_dig_feedback_msec", now_msec)
+	var message := "The surface supports are protected. Dig down through the central shaft."
+	if cell.y < 0:
+		message = "You cannot mine upward into the base floor. Continue deeper or return through the shaft."
+	var world_position := tile_map.to_global(tile_map.map_to_local(cell))
+	var world := get_parent()
+	if world and world.has_method("notify_protected_dig"):
+		world.notify_protected_dig(world_position, message)
+	else:
+		var hud := world.get_node_or_null("HUD") if world else null
+		if hud and hud.has_method("show_notice"):
+			hud.show_notice(message, 1.8)
 
 func _stop_digging() -> void:
 	if currently_digging_cell != null:
@@ -779,6 +906,8 @@ func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
 	for i in range(count):
 		var gem = GEM_SCENE.instantiate()
 		gem.global_position = spawn_pos + Vector2(randf_range(-12, 12), randf_range(-8, 8))
+		if get_parent().has_method("notify_tutorial_gem_spawned"):
+			get_parent().notify_tutorial_gem_spawned(gem)
 		get_parent().call_deferred("add_child", gem)
 
 func _maybe_shoot_magic_orb(target_pos: Vector2, green_orb := false) -> void:
@@ -847,6 +976,9 @@ func add_xp(amount: int) -> void:
 		hud.update_xp(level, xp, max_xp)
 
 func level_up() -> void:
+	var level_sound_fx := get_node_or_null("/root/SoundFX")
+	if level_sound_fx:
+		level_sound_fx.play_level_up()
 	xp -= max_xp
 	level += 1
 	max_xp = int(max_xp * 1.5)
@@ -860,10 +992,16 @@ func level_up() -> void:
 	var menu_scene = preload("res://scenes/ui/overlays/level_up/level_up_menu.tscn")
 	var menu = menu_scene.instantiate()
 	get_parent().add_child(menu)
-	menu.setup(stomp_level > 0)
+	if menu.has_method("setup_for_player"):
+		menu.setup_for_player(self)
+	else:
+		menu.setup(stomp_level > 0)
 	menu.upgrade_selected.connect(_on_upgrade_selected)
 
 func _on_upgrade_selected(upgrade_type: String) -> void:
+	var upgrade_sound_fx := get_node_or_null("/root/SoundFX")
+	if upgrade_sound_fx:
+		upgrade_sound_fx.play_upgrade()
 	if upgrade_type == "stomp":
 		stomp_level += 1
 	elif upgrade_type == "health":

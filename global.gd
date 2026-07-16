@@ -8,6 +8,19 @@ const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
 const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Druid", "Undead King"]
 const GAME_UI_THEME_PATH = "res://assets/themes/global/global_theme.tres"
 const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
+const DEFAULT_HERO_ID := "Dwarf"
+const DEFAULT_BASE_ID := "default_base"
+const PERMANENT_UPGRADE_IDS := ["reinforced_core", "starter_cache", "miners_harness"]
+const PERMANENT_UPGRADE_MAX_LEVELS := {
+	"reinforced_core": 5,
+	"starter_cache": 3,
+	"miners_harness": 4
+}
+const PERMANENT_UPGRADE_BASE_COSTS := {
+	"reinforced_core": 1,
+	"starter_cache": 2,
+	"miners_harness": 1
+}
 
 var _game_ui_theme: Theme
 var _game_ui_theme_enabled = false
@@ -91,9 +104,19 @@ func _get_game_ui_theme() -> Theme:
 
 var unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
 var first_level_beaten = false
-var current_hero = "Dwarf"
-var hero_p1 = "Dwarf"
-var hero_p2 = "Dwarf"
+var current_hero = DEFAULT_HERO_ID
+var hero_p1 = DEFAULT_HERO_ID
+var hero_p2 = DEFAULT_HERO_ID
+var selected_hero_id := DEFAULT_HERO_ID
+var selected_base_id := DEFAULT_BASE_ID
+var prototype_onboarding_completed := false
+var legacy_ore := 0
+var last_run_legacy_ore_earned := 0
+var permanent_upgrade_levels := {
+	"reinforced_core": 0,
+	"starter_cache": 0,
+	"miners_harness": 0
+}
 
 var hero_data = {
 	"Dwarf": {
@@ -135,6 +158,71 @@ var monster_data = {
 	"Trogg": preload("res://character_sprites/trogg_walk_spritesheet.png")
 }
 
+func set_run_loadout(hero_id: String = DEFAULT_HERO_ID, base_id: String = DEFAULT_BASE_ID) -> void:
+	selected_hero_id = hero_id if hero_data.has(hero_id) else DEFAULT_HERO_ID
+	selected_base_id = base_id if not base_id.is_empty() else DEFAULT_BASE_ID
+	apply_selected_loadout()
+	save_game()
+
+func apply_selected_loadout() -> void:
+	if not hero_data.has(selected_hero_id):
+		selected_hero_id = DEFAULT_HERO_ID
+	if selected_base_id.is_empty():
+		selected_base_id = DEFAULT_BASE_ID
+	current_hero = selected_hero_id
+	hero_p1 = selected_hero_id
+	hero_p2 = selected_hero_id
+
+func reset_to_default_loadout() -> void:
+	set_run_loadout(DEFAULT_HERO_ID, DEFAULT_BASE_ID)
+
+func complete_prototype_onboarding() -> void:
+	if prototype_onboarding_completed:
+		return
+	prototype_onboarding_completed = true
+	save_game()
+
+func get_permanent_upgrade_level(upgrade_id: String) -> int:
+	return int(permanent_upgrade_levels.get(upgrade_id, 0))
+
+func get_permanent_upgrade_cost(upgrade_id: String) -> int:
+	if not PERMANENT_UPGRADE_IDS.has(upgrade_id):
+		return 999999
+	var level := get_permanent_upgrade_level(upgrade_id)
+	return int(PERMANENT_UPGRADE_BASE_COSTS[upgrade_id]) * (level + 1)
+
+func is_permanent_upgrade_maxed(upgrade_id: String) -> bool:
+	return get_permanent_upgrade_level(upgrade_id) >= int(PERMANENT_UPGRADE_MAX_LEVELS.get(upgrade_id, 0))
+
+func purchase_permanent_upgrade(upgrade_id: String) -> bool:
+	if not PERMANENT_UPGRADE_IDS.has(upgrade_id) or is_permanent_upgrade_maxed(upgrade_id):
+		return false
+	var cost := get_permanent_upgrade_cost(upgrade_id)
+	if legacy_ore < cost:
+		return false
+	legacy_ore -= cost
+	permanent_upgrade_levels[upgrade_id] = get_permanent_upgrade_level(upgrade_id) + 1
+	save_game()
+	return true
+
+func award_run_legacy_ore(wave_reached: int, victory: bool) -> int:
+	var reward := maxi(1, int(ceil(float(maxi(wave_reached, 1)) / 3.0)))
+	if victory:
+		reward += 3
+	legacy_ore += reward
+	last_run_legacy_ore_earned = reward
+	save_game()
+	return reward
+
+func get_permanent_base_health_bonus() -> int:
+	return get_permanent_upgrade_level("reinforced_core") * 15
+
+func get_permanent_starting_gems() -> int:
+	return get_permanent_upgrade_level("starter_cache")
+
+func get_permanent_carry_bonus() -> int:
+	return get_permanent_upgrade_level("miners_harness")
+
 func is_hero_unlocked(hero_name: String) -> bool:
 	return unlocked_heroes.has(hero_name)
 
@@ -172,7 +260,12 @@ func save_game() -> void:
 	if file:
 		file.store_var({
 			"unlocked_heroes": unlocked_heroes,
-			"first_level_beaten": first_level_beaten
+			"first_level_beaten": first_level_beaten,
+			"selected_hero_id": selected_hero_id,
+			"selected_base_id": selected_base_id,
+			"prototype_onboarding_completed": prototype_onboarding_completed,
+			"legacy_ore": legacy_ore,
+			"permanent_upgrade_levels": permanent_upgrade_levels
 		})
 		file.close()
 
@@ -188,7 +281,21 @@ func load_game() -> void:
 					unlocked_heroes = loaded["unlocked_heroes"]
 				if loaded.has("first_level_beaten"):
 					first_level_beaten = bool(loaded["first_level_beaten"])
+				if loaded.has("selected_hero_id"):
+					selected_hero_id = str(loaded["selected_hero_id"])
+				if loaded.has("selected_base_id"):
+					selected_base_id = str(loaded["selected_base_id"])
+				if loaded.has("prototype_onboarding_completed"):
+					prototype_onboarding_completed = bool(loaded["prototype_onboarding_completed"])
+				if loaded.has("legacy_ore"):
+					legacy_ore = maxi(0, int(loaded["legacy_ore"]))
+				if loaded.has("permanent_upgrade_levels") and typeof(loaded["permanent_upgrade_levels"]) == TYPE_DICTIONARY:
+					var loaded_upgrades: Dictionary = loaded["permanent_upgrade_levels"]
+					for upgrade_id in PERMANENT_UPGRADE_IDS:
+						var max_level := int(PERMANENT_UPGRADE_MAX_LEVELS[upgrade_id])
+						permanent_upgrade_levels[upgrade_id] = clampi(int(loaded_upgrades.get(upgrade_id, 0)), 0, max_level)
 			file.close()
+	apply_selected_loadout()
 
 func _sanitize_unlock_progress() -> void:
 	var valid_unlocked = []

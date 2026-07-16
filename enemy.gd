@@ -15,6 +15,12 @@ const HEALTH_BAR_HOLD_TIME := 2.8
 const HEALTH_BAR_FADE_SPEED := 7.5
 const HEALTH_BAR_VALUE_SPEED := 18.0
 const HEALTH_BAR_LAG_SPEED := 4.5
+const PATH_REFRESH_INTERVAL := 1.25
+const SEPARATION_RADIUS := 54.0
+const SEPARATION_STRENGTH := 0.58
+const OPEN_SPACE_LANE_STRENGTH := 0.16
+const STUCK_CHECK_INTERVAL := 0.75
+const STUCK_DISTANCE_THRESHOLD := 5.0
 
 var enemy_type: EnemyType = EnemyType.RAT
 var speed = 80.0
@@ -28,6 +34,14 @@ var health_bar_hold_timer := 0.0
 var sprite_rest_scale := Vector2.ONE
 var sprite_rest_position := Vector2.ZERO
 var hit_reaction_tween: Tween
+var emergence_tween: Tween
+var emergence_timer := 0.0
+var stored_collision_layer := 4
+var lane_bias := 0.0
+var lane_phase := 0.0
+var last_topology_revision := -1
+var stuck_check_timer := 0.0
+var last_stuck_check_position := Vector2.ZERO
 
 @onready var world = get_parent()
 @onready var tile_map = world.get_node("BlockLayer")
@@ -49,6 +63,11 @@ var attack_cooldown_timer = 0.0
 func _ready():
 	sprite_rest_scale = sprite.scale
 	sprite_rest_position = sprite.position
+	lane_bias = randf_range(-1.0, 1.0)
+	if absf(lane_bias) < 0.25:
+		lane_bias = 0.25 if lane_bias >= 0.0 else -0.25
+	lane_phase = randf_range(0.0, TAU)
+	last_stuck_check_position = global_position
 	_set_health_bar_values(true)
 	health_bar_container.visible = false
 	recalculate_path()
@@ -96,6 +115,20 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 	speed = base_speed * randf_range(0.9, 1.1)
 	gold_drop = int(base_gold + wave_number * 0.5)
 	xp_drop = int(base_xp + wave_number * 1.0)
+	if wave_number == 1 and not is_boss and enemy_type == EnemyType.RAT:
+		# Wave one is a combat lesson. It must create urgency without deleting the
+		# base while the player is still learning that contact triggers attacks.
+		health = 18
+		max_health = health
+		damage = 1
+		speed = minf(speed, 60.0)
+		gold_drop = maxi(gold_drop, 5)
+		xp_drop = maxi(xp_drop, 15)
+	elif not is_boss and wave_number <= 5:
+		# Early waves should escalate visibly without deleting the base before the
+		# player has time to leave the mine and react to the breach warning.
+		var early_damage_cap: int = wave_number + 1
+		damage = mini(damage, early_damage_cap)
 	
 	if sprite:
 		sprite.texture = enemy_texture
@@ -114,23 +147,32 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 
 func recalculate_path():
 	var start_cell = tile_map.local_to_map(tile_map.to_local(global_position))
+	path.clear()
 	if world.astar.is_in_bounds(start_cell.x, start_cell.y) and world.astar.is_in_bounds(target_base_cell.x, target_base_cell.y):
 		var id_path = world.astar.get_id_path(start_cell, target_base_cell)
-		path.clear()
 		for id in id_path:
 			path.append(tile_map.to_global(tile_map.map_to_local(id)))
 		current_path_index = 0
+	last_topology_revision = int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
 
 func _physics_process(delta: float):
 	_update_health_bar(delta)
+	if emergence_timer > 0.0:
+		emergence_timer = maxf(emergence_timer - delta, 0.0)
+		velocity = Vector2.ZERO
+		if emergence_timer <= 0.0:
+			collision_layer = stored_collision_layer
+		return
+
 	path_timer += delta
-	if path_timer > 1.0:
+	var world_revision := int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
+	if path_timer > PATH_REFRESH_INTERVAL or world_revision != last_topology_revision:
 		recalculate_path()
 		path_timer = 0.0
 	
 	if attack_cooldown_timer > 0.0:
 		attack_cooldown_timer -= delta
-	
+
 	var is_attacking_base = false
 	for i in get_slide_collision_count():
 		var col = get_slide_collision(i)
@@ -143,10 +185,10 @@ func _physics_process(delta: float):
 
 	if is_attacking_base:
 		velocity = Vector2.ZERO
+		_update_stuck_tracking(delta, true)
 		if sprite:
 			walk_timer = 0.0
 			sprite.frame = current_anim_row * 8
-		
 		if attack_cooldown_timer <= 0.0:
 			if base.has_method("take_damage"):
 				base.take_damage(damage)
@@ -154,51 +196,111 @@ func _physics_process(delta: float):
 				take_damage(15 * base.spikes_level)
 			attack_cooldown_timer = 1.0
 	elif path.size() > 0 and current_path_index < path.size():
-		var target_pos = path[current_path_index]
-		var dir = (target_pos - global_position).normalized()
-		var dist = global_position.distance_to(target_pos)
-		
-		if dist < 15.0:
+		var target_pos: Vector2 = path[current_path_index]
+		var target_delta := target_pos - global_position
+		var dist := target_delta.length()
+		if dist < 13.0:
 			current_path_index += 1
+			velocity = Vector2.ZERO
 		else:
-			velocity = dir * speed
+			var dir: Vector2 = target_delta / maxf(dist, 0.001)
+			var open_factor: float = float(world.get_enemy_open_space_factor(global_position)) if world.has_method("get_enemy_open_space_factor") else 0.0
+			var lateral: Vector2 = dir.orthogonal() * lane_bias * speed * OPEN_SPACE_LANE_STRENGTH * open_factor
+			var separation: Vector2 = _calculate_separation_velocity()
+			velocity = dir * speed + lateral + separation
+			var max_velocity: float = speed * 1.16
+			if velocity.length() > max_velocity:
+				velocity = velocity.normalized() * max_velocity
 			move_and_slide()
-			
-			# Animation logic
-			var angle = dir.angle()
-			var PI_8 = PI / 8.0
-			if angle > -PI_8 and angle <= PI_8:
-				current_anim_row = 6 # Right
-			elif angle > PI_8 and angle <= 3*PI_8:
-				current_anim_row = 7 # Down-Right
-			elif angle > 3*PI_8 and angle <= 5*PI_8:
-				current_anim_row = 0 # Down
-			elif angle > 5*PI_8 and angle <= 7*PI_8:
-				current_anim_row = 1 # Down-Left
-			elif angle > 7*PI_8 or angle <= -7*PI_8:
-				current_anim_row = 2 # Left
-			elif angle > -7*PI_8 and angle <= -5*PI_8:
-				current_anim_row = 3 # Up-Left
-			elif angle > -5*PI_8 and angle <= -3*PI_8:
-				current_anim_row = 4 # Up
-			elif angle > -3*PI_8 and angle <= -PI_8:
-				current_anim_row = 5 # Up-Right
-				
-			if sprite:
-				walk_timer += delta * 12.0
-				sprite.frame = current_anim_row * 8 + (int(walk_timer) % 8)
-			
-			for i in get_slide_collision_count():
-				var col = get_slide_collision(i)
-				var collider = col.get_collider()
-				if collider.name == "Player":
-					if collider.has_method("take_damage"):
-						collider.take_damage(damage)
+			var movement_direction := velocity.normalized() if velocity.length_squared() > 0.01 else dir
+			_update_walk_animation(movement_direction, delta)
+			_damage_colliding_players()
+		_update_stuck_tracking(delta, false)
 	else:
+		velocity = Vector2.ZERO
 		recalculate_path()
+		_update_stuck_tracking(delta, false)
 		if sprite:
 			walk_timer = 0.0
 			sprite.frame = current_anim_row * 8
+
+func begin_breach_emergence(duration: float = 0.55) -> void:
+	emergence_timer = maxf(duration, 0.05)
+	stored_collision_layer = collision_layer
+	collision_layer = 0
+	if not sprite:
+		return
+	if emergence_tween and emergence_tween.is_running():
+		emergence_tween.kill()
+	sprite.scale = sprite_rest_scale * 0.28
+	sprite.position = sprite_rest_position + Vector2(0, 14)
+	sprite.modulate = Color(1.8, 0.35, 0.18, 0.0)
+	emergence_tween = create_tween().set_parallel(true)
+	emergence_tween.tween_property(sprite, "scale", sprite_rest_scale, emergence_timer).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	emergence_tween.tween_property(sprite, "position", sprite_rest_position, emergence_timer).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	emergence_tween.tween_property(sprite, "modulate", Color.WHITE, emergence_timer * 0.72)
+
+func _calculate_separation_velocity() -> Vector2:
+	var force := Vector2.ZERO
+	for other_value in get_tree().get_nodes_in_group("enemies"):
+		var other := other_value as Node2D
+		if other == null or other == self or not is_instance_valid(other):
+			continue
+		if world and not world.is_ancestor_of(other):
+			continue
+		var away := global_position - other.global_position
+		var distance := away.length()
+		if distance <= 0.001 or distance >= SEPARATION_RADIUS:
+			continue
+		force += away.normalized() * (1.0 - distance / SEPARATION_RADIUS)
+	if force.length_squared() <= 0.001:
+		return Vector2.ZERO
+	return force.limit_length(1.0) * speed * SEPARATION_STRENGTH
+
+func _update_stuck_tracking(delta: float, intentionally_stationary: bool) -> void:
+	if intentionally_stationary:
+		stuck_check_timer = 0.0
+		last_stuck_check_position = global_position
+		return
+	stuck_check_timer += delta
+	if stuck_check_timer < STUCK_CHECK_INTERVAL:
+		return
+	var moved_distance := global_position.distance_to(last_stuck_check_position)
+	if moved_distance < STUCK_DISTANCE_THRESHOLD and path.size() > 0:
+		lane_bias = -lane_bias
+		recalculate_path()
+	last_stuck_check_position = global_position
+	stuck_check_timer = 0.0
+
+func _update_walk_animation(direction: Vector2, delta: float) -> void:
+	var angle := direction.angle()
+	var pi_8 := PI / 8.0
+	if angle > -pi_8 and angle <= pi_8:
+		current_anim_row = 6
+	elif angle > pi_8 and angle <= 3.0 * pi_8:
+		current_anim_row = 7
+	elif angle > 3.0 * pi_8 and angle <= 5.0 * pi_8:
+		current_anim_row = 0
+	elif angle > 5.0 * pi_8 and angle <= 7.0 * pi_8:
+		current_anim_row = 1
+	elif angle > 7.0 * pi_8 or angle <= -7.0 * pi_8:
+		current_anim_row = 2
+	elif angle > -7.0 * pi_8 and angle <= -5.0 * pi_8:
+		current_anim_row = 3
+	elif angle > -5.0 * pi_8 and angle <= -3.0 * pi_8:
+		current_anim_row = 4
+	else:
+		current_anim_row = 5
+	if sprite:
+		walk_timer += delta * 12.0
+		sprite.frame = current_anim_row * 8 + (int(walk_timer) % 8)
+
+func _damage_colliding_players() -> void:
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		var collider := collision.get_collider()
+		if collider and str(collider.name).begins_with("Player") and collider.has_method("take_damage"):
+			collider.take_damage(damage)
 
 func take_damage(amount: int) -> void:
 	if amount <= 0 or health <= 0:
