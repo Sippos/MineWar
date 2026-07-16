@@ -31,10 +31,10 @@ func _build_streams() -> void:
 
 func play_dig_hit(block_id: int = 0) -> void:
 	var stream_name := "dig_hard" if block_id == 2 or block_id == 3 else "dig_soft"
-	_play(stream_name, -9.0, 0.07)
+	_play(stream_name, -16.0, 0.05)
 
 func play_block_break(has_gem: bool = false) -> void:
-	_play("block_break", -5.0, 0.045)
+	_play("block_break", -9.0, 0.035)
 	if has_gem:
 		_play("gem_found", -2.0, 0.025)
 

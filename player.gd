@@ -14,6 +14,7 @@ var base_dig_time = 0.4
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 const AUTO_DEFEND_DISTANCE := 140.0
+const MINING_FEEDBACK_INTERVAL := 0.28
 
 const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
@@ -682,7 +683,7 @@ func handle_digging(delta: float) -> void:
 						var sound_fx := get_node_or_null("/root/SoundFX")
 						if sound_fx:
 							sound_fx.play_dig_hit(tile_map.get_cell_source_id(cell))
-						mining_feedback_timer = 0.12
+						mining_feedback_timer = MINING_FEEDBACK_INTERVAL
 					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					if current_hero_name == "Druid" and druid_mole_active:
