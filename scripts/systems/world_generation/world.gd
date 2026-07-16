@@ -7,6 +7,7 @@ extends Node2D
 			$Player.player_id = val
 
 @export var is_vs_mode: bool = false
+@export var preparation_mode: bool = false
 
 @export_group("Mine Lighting")
 @export var show_fog_overlay: bool = false
@@ -18,6 +19,7 @@ extends Node2D
 var income: int = 1
 var income_timer: float = 3.0
 var minecart_trail_length: int = 16
+var preparation_active: bool = false
 
 
 @onready var bg_layer: TileMapLayer = $BackgroundLayer
@@ -100,7 +102,9 @@ func _ready() -> void:
 	world_generation_in_progress = true
 	generate_initial_world()
 	world_generation_in_progress = false
-	call_deferred("_begin_player_journey")
+	preparation_active = preparation_mode and not is_vs_mode
+	if not preparation_active:
+		call_deferred("_begin_player_journey")
 
 func _configure_mine_lighting() -> void:
 	# Keep the generated fog data available for future secrets or minimap use,
@@ -372,6 +376,21 @@ func _ensure_tutorial_gem() -> void:
 	_position_front_gem_sprite(front_sprite, TUTORIAL_GEM_CELL)
 	gem_blocks[TUTORIAL_GEM_CELL] = {"top": sprite, "front": front_sprite}
 
+func begin_run_from_preparation() -> void:
+	if not preparation_active:
+		return
+	preparation_active = false
+	preparation_mode = false
+	Global.apply_selected_loadout()
+	Global.save_game()
+	var player := get_node_or_null("Player")
+	if player and player.has_method("update_hero_sprites"):
+		player.update_hero_sprites()
+	var base := get_node_or_null("Base")
+	if base and base.has_method("refresh_base_sprite"):
+		base.refresh_base_sprite()
+	call_deferred("_begin_player_journey")
+
 func _begin_player_journey() -> void:
 	if is_vs_mode:
 		return
@@ -569,6 +588,8 @@ func try_spawn_cave_reward(cell: Vector2i) -> bool:
 var current_wave_number = 1
 
 func _process(delta: float) -> void:
+	if preparation_active:
+		return
 	if is_vs_mode:
 		income_timer -= delta
 		if income_timer <= 0:

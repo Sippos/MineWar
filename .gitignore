@@ -26,6 +26,11 @@ build/
 /.noop.gd
 /.noop.gd.uid
 
+# Temporary local probes and upload payloads
+/ability_icons/generated/.upload_*.b64
+/background_generator.tscn
+/tools/icon_workspace_probe.*
+
 # Local inspection, invalid experiments, and sprite render comparisons
 /.mcp_*
 /upgrade_tree_lab.*

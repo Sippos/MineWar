@@ -147,6 +147,29 @@ var hero_data = {
 	}
 }
 
+var base_data = {
+	"default_base": {
+		"name": "Dwarf Bastion",
+		"texture": preload("res://DwarfBase.png")
+	},
+	"shaman_base": {
+		"name": "Shaman Lodge",
+		"texture": preload("res://ShamanBase.png")
+	},
+	"nerubian_base": {
+		"name": "Nerubian Nest",
+		"texture": preload("res://NerubianBase.png")
+	},
+	"druid_base": {
+		"name": "Druid Grove",
+		"texture": preload("res://DruidBase.png")
+	},
+	"undead_king_base": {
+		"name": "Undead Citadel",
+		"texture": preload("res://UndeadKingBase.png")
+	}
+}
+
 var seen_monsters = []
 
 var monster_data = {
@@ -160,14 +183,14 @@ var monster_data = {
 
 func set_run_loadout(hero_id: String = DEFAULT_HERO_ID, base_id: String = DEFAULT_BASE_ID) -> void:
 	selected_hero_id = hero_id if hero_data.has(hero_id) else DEFAULT_HERO_ID
-	selected_base_id = base_id if not base_id.is_empty() else DEFAULT_BASE_ID
+	selected_base_id = base_id if base_data.has(base_id) else DEFAULT_BASE_ID
 	apply_selected_loadout()
 	save_game()
 
 func apply_selected_loadout() -> void:
 	if not hero_data.has(selected_hero_id):
 		selected_hero_id = DEFAULT_HERO_ID
-	if selected_base_id.is_empty():
+	if not base_data.has(selected_base_id):
 		selected_base_id = DEFAULT_BASE_ID
 	current_hero = selected_hero_id
 	hero_p1 = selected_hero_id

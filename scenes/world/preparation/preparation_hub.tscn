@@ -1,106 +1,13 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/systems/preparation/preparation_hub.gd" id="1_hub"]
-[ext_resource type="Script" path="res://scripts/systems/preparation/preparation_orb.gd" id="2_orb"]
+[ext_resource type="PackedScene" path="res://scenes/world/mine/level.tscn" id="1_level"]
+[ext_resource type="Script" path="res://scripts/systems/preparation/preparation_world_controller.gd" id="2_controller"]
 
-[sub_resource type="CircleShape2D" id="CircleShape_orb"]
-radius = 16.0
+[node name="PreparationHub" type="Node"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape_tunnel"]
-size = Vector2(190, 76)
+[node name="Level" parent="." instance=ExtResource("1_level")]
+preparation_mode = true
 
-[node name="PreparationHub" type="Node2D"]
-script = ExtResource("1_hub")
-
-[node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(0, 42)
-
-[node name="TunnelGate" type="Area2D" parent="."]
-position = Vector2(0, 270)
-collision_layer = 0
-collision_mask = 1
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TunnelGate"]
-shape = SubResource("RectangleShape_tunnel")
-
-[node name="Irlicht" type="CharacterBody2D" parent="."]
-position = Vector2(0, 26)
-collision_layer = 1
-collision_mask = 0
-script = ExtResource("2_orb")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Irlicht"]
-shape = SubResource("CircleShape_orb")
-
-[node name="Interface" type="CanvasLayer" parent="."]
-
-[node name="TopPanel" type="Panel" parent="Interface"]
-anchors_preset = 10
-anchor_right = 1.0
-offset_left = 150.0
-offset_top = 18.0
-offset_right = -150.0
-offset_bottom = 132.0
-grow_horizontal = 2
-
-[node name="Margin" type="MarginContainer" parent="Interface/TopPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 12
-
-[node name="VBox" type="VBoxContainer" parent="Interface/TopPanel/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="Title" type="Label" parent="Interface/TopPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 25
-text = "PREPARATION CHAMBER"
-horizontal_alignment = 1
-
-[node name="Loadout" type="Label" parent="Interface/TopPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 17
-text = "Current Loadout"
-horizontal_alignment = 1
-
-[node name="Status" type="Label" parent="Interface/TopPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Preparing..."
-horizontal_alignment = 1
-
-[node name="Instructions" type="Label" parent="Interface"]
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -56.0
-offset_right = -120.0
-offset_bottom = -18.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.72, 0.92, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 17
-text = "WASD / Left Stick  •  Walk into the tunnel to begin  •  Esc / B returns to menu"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Fade" type="ColorRect" parent="Interface"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 1)
+[node name="PreparationController" type="Node" parent="."]
+script = ExtResource("2_controller")
+world_path = NodePath("../Level")

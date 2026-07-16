@@ -6,11 +6,11 @@ signal base_damaged(new_health)
 signal game_over
 
 const BASE_TEXTURES = {
-	"Dwarf": preload("res://DwarfBase.png"),
-	"Shaman": preload("res://ShamanBase.png"),
-	"Nerubian": preload("res://NerubianBase.png"),
-	"Druid": preload("res://DruidBase.png"),
-	"Undead King": preload("res://UndeadKingBase.png")
+	"default_base": preload("res://DwarfBase.png"),
+	"shaman_base": preload("res://ShamanBase.png"),
+	"nerubian_base": preload("res://NerubianBase.png"),
+	"druid_base": preload("res://DruidBase.png"),
+	"undead_king_base": preload("res://UndeadKingBase.png")
 }
 const MINIMUM_GOLD_ACTION_COST := 10
 const PROMPT_TEXT := "E / Y  •  UPGRADE BASE"
@@ -39,13 +39,7 @@ func _ready() -> void:
 	call_deferred("refresh_base_sprite")
 
 func refresh_base_sprite() -> void:
-	_apply_base_sprite(_get_hero_name())
-
-func _get_hero_name() -> String:
-	var p_id = _get_player_id()
-	if p_id == 2:
-		return Global.hero_p2
-	return Global.hero_p1
+	_apply_base_sprite(Global.selected_base_id)
 
 func _get_player_id() -> int:
 	var parent = get_parent()
@@ -56,8 +50,8 @@ func _get_player_id() -> int:
 		return 1
 	return int(p_id)
 
-func _apply_base_sprite(hero_name: String) -> void:
-	var tex = BASE_TEXTURES.get(hero_name, BASE_TEXTURES["Dwarf"])
+func _apply_base_sprite(base_id: String) -> void:
+	var tex = BASE_TEXTURES.get(base_id, BASE_TEXTURES["default_base"])
 	if tex:
 		$Sprite2D.texture = tex
 		$Sprite2D.modulate = Color(1, 1, 1, 1)
