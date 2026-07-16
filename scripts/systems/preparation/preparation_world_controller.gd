@@ -74,33 +74,34 @@ const BASE_DETAILS := {
 	"default_base": {
 		"archetype": "DWARF ENGINEERING",
 		"summary": "The dependable all-round bastion.",
-		"upgrades": "Armor plating  •  Repair economy  •  Defensive engineering"
+		"upgrades": "MINECART  •  Build a cart for the dwarf rail network."
 	},
 	"shaman_base": {
 		"archetype": "TOTEM SANCTUARY",
 		"summary": "A support-focused lodge for utility-heavy runs.",
-		"upgrades": "Totem duration  •  Support aura  •  Gem utility"
+		"upgrades": "PEON  •  Recruit a worker to support the mine."
 	},
 	"nerubian_base": {
 		"archetype": "BROOD NEST",
 		"summary": "A living fortress designed around summoned defenders.",
-		"upgrades": "Spider capacity  •  Brood speed  •  Tunnel control"
+		"upgrades": "BROOD WORKER  •  Planned faction helper for tunnel control."
 	},
 	"druid_base": {
 		"archetype": "LIVING GROVE",
 		"summary": "A regenerative base with nature-driven utility.",
-		"upgrades": "Regeneration  •  Nature aura  •  Mobility support"
+		"upgrades": "GROVE WISP  •  Planned faction support for regeneration."
 	},
 	"undead_king_base": {
 		"archetype": "SOUL CITADEL",
 		"summary": "A dark stronghold built for attrition and summoned pressure.",
-		"upgrades": "Soul defenses  •  Summon support  •  Curse power"
+		"upgrades": "SOUL THRALL  •  Planned faction servant for base defense."
 	}
 }
 
 var world: Node2D
 var player: CharacterBody2D
 var base: Node
+var upgrade_menu: CanvasLayer
 var hero_pads: Array[Dictionary] = []
 var base_pads: Array[Dictionary] = []
 var interface: CanvasLayer
@@ -124,10 +125,12 @@ func _ready() -> void:
 		return
 	player = world.get_node_or_null("Player") as CharacterBody2D
 	base = world.get_node_or_null("Base")
+	upgrade_menu = world.get_node_or_null("UpgradeMenu") as CanvasLayer
 	if player == null or base == null:
 		push_error("Preparation controller requires the normal Player and Base nodes")
 		return
 
+	_disable_runtime_upgrade_menu()
 	Global.apply_selected_loadout()
 	player.position = PREPARATION_PLAYER_START
 	player.velocity = Vector2.ZERO
@@ -149,6 +152,23 @@ func _ready() -> void:
 	_refresh_selection_visuals()
 	_update_loadout_text()
 	_update_nearby_choice()
+
+func _disable_runtime_upgrade_menu() -> void:
+	if upgrade_menu == null:
+		return
+	if upgrade_menu.has_method("hide_menu"):
+		upgrade_menu.hide_menu()
+	upgrade_menu.set_process(false)
+	upgrade_menu.set_process_input(false)
+	upgrade_menu.visible = false
+
+func _enable_runtime_upgrade_menu() -> void:
+	if upgrade_menu == null:
+		return
+	upgrade_menu.set_process(true)
+	upgrade_menu.set_process_input(true)
+	if upgrade_menu.has_method("hide_menu"):
+		upgrade_menu.hide_menu()
 
 func _process(delta: float) -> void:
 	if _started or world == null or player == null:
@@ -633,6 +653,7 @@ func _begin_run() -> void:
 	Global.save_game()
 	base.set_process(true)
 	base.set_process_input(true)
+	_enable_runtime_upgrade_menu()
 	var choices := world.get_node_or_null("LoadoutChoices")
 	if choices:
 		choices.queue_free()
