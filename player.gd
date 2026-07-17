@@ -118,9 +118,9 @@ const HERO_VISUALS = {
 		"sprite_position": Vector2(0, -24)
 	},
 	"Shaman": {
-		# Shaman is rendered with the approved Druid humanoid walk and staff
-		# strike actions. Both atlases share one camera and foot line, so one
-		# grounded fit works without mirroring, shoulder jumps, or state popping.
+		# Shaman keeps its calibrated humanoid walk fit and uses a dedicated
+		# staff-swing attack authored from the Shaman rig; both sheets share the
+		# same camera and foot line.
 		"walk_scale": Vector2(0.64, 0.64),
 		"attack_scale": Vector2(0.64, 0.64),
 		"walk_position": Vector2(0, -5),
@@ -128,8 +128,8 @@ const HERO_VISUALS = {
 		"sprite_position": Vector2(0, -5)
 	},
 	"Nerubian": {
-		# The production pair is rendered together from the original rig: the
-		# 30-frame leg gait for movement and the matching v3 action for attacks.
+		# The production pair is rendered from the original rig: an eight-pose
+		# periodic leg gait for movement and the matching v3 action for attacks.
 		"walk_scale": Vector2(0.46, 0.46),
 		"attack_scale": Vector2(0.46, 0.46),
 		"sprite_position": Vector2(0, -9)
@@ -338,20 +338,41 @@ func deposit_gems() -> int:
 	carried_gems = remaining_items
 	return deposited
 
+func _rpg_controller() -> Node:
+	return get_node_or_null("HeroRPGController")
+
 func upgrade_strength() -> void:
-	strength += 1
+	var rpg: Node = _rpg_controller()
+	if rpg != null and rpg.has_method("register_stat_bonus"):
+		rpg.call("register_stat_bonus", "strength", 1)
+	else:
+		strength += 1
 
 func upgrade_agility() -> void:
-	agility += 1
+	var rpg: Node = _rpg_controller()
+	if rpg != null and rpg.has_method("register_stat_bonus"):
+		rpg.call("register_stat_bonus", "agility", 1)
+	else:
+		agility += 1
 
 func upgrade_intelligence() -> void:
-	intelligence += 1
+	var rpg: Node = _rpg_controller()
+	if rpg != null and rpg.has_method("register_stat_bonus"):
+		rpg.call("register_stat_bonus", "intelligence", 1)
+	else:
+		intelligence += 1
 
 func take_damage(amount: int) -> void:
 	if is_dead or invulnerability_timer > 0.0:
 		return
+	var applied_amount: int = amount
+	var rpg: Node = _rpg_controller()
+	if rpg != null and rpg.has_method("modify_incoming_damage"):
+		applied_amount = int(rpg.call("modify_incoming_damage", amount))
+	if applied_amount <= 0:
+		return
 	invulnerability_timer = 1.0
-	health -= amount
+	health -= applied_amount
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):
 		hud.update_player_health(health, max_health)
@@ -462,8 +483,12 @@ func _physics_process(delta: float) -> void:
 		_stop_digging()
 		return
 
-	var penalty = get_weight_penalty()
-	var current_speed = (base_speed + (agility - 1) * 20.0) * (1.0 - penalty)
+	var penalty: float = get_weight_penalty()
+	var rpg_movement: Node = _rpg_controller()
+	var current_speed: float = base_speed + float(agility - 1) * 3.0
+	if rpg_movement != null and rpg_movement.has_method("get_move_speed"):
+		current_speed = float(rpg_movement.call("get_move_speed"))
+	current_speed *= 1.0 - penalty
 	var direction = Vector2.ZERO
 	if can_move:
 		direction.x = Input.get_axis("p%d_left" % player_id, "p%d_right" % player_id)
@@ -509,9 +534,14 @@ func _physics_process(delta: float) -> void:
 			attack_timer = 0.0
 			_reset_action_animation()
 		attack_timer += delta
-		var attack_interval = base_dig_time * pow(0.9, agility - 1)
+		var rpg_combat: Node = _rpg_controller()
+		var attack_interval: float = base_dig_time * pow(0.965, agility - 1)
+		if rpg_combat != null and rpg_combat.has_method("get_attack_interval"):
+			attack_interval = float(rpg_combat.call("get_attack_interval"))
 		if attack_timer >= attack_interval:
-			var damage = 10 * strength
+			var damage: int = 10 * strength
+			if rpg_combat != null and rpg_combat.has_method("get_basic_attack_damage"):
+				damage = int(rpg_combat.call("get_basic_attack_damage"))
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
 			attack_timer = 0.0
@@ -671,7 +701,13 @@ func handle_digging(delta: float) -> void:
 			point += active_ray.target_position.normalized() * 5.0
 			var cell = tile_map.local_to_map(tile_map.to_local(point))
 			if tile_map.get_cell_source_id(cell) != -1:
-				if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
+				var world := get_parent()
+				var protected := false
+				if world and world.has_method("is_dig_cell_protected"):
+					protected = bool(world.call("is_dig_cell_protected", cell))
+				else:
+					protected = (cell.y <= 1 and cell.x != 0) or cell.y < 0
+				if protected:
 					_show_protected_dig_feedback(cell)
 					_stop_digging()
 					return
@@ -684,7 +720,12 @@ func handle_digging(delta: float) -> void:
 						if sound_fx:
 							sound_fx.play_dig_hit(tile_map.get_cell_source_id(cell))
 						mining_feedback_timer = MINING_FEEDBACK_INTERVAL
-					var calculated_dig_time = base_dig_time * pow(0.9, agility - 1)
+					var calculated_dig_time: float = base_dig_time
+					var rpg_mining: Node = _rpg_controller()
+					if rpg_mining != null and rpg_mining.has_method("get_dig_time_multiplier"):
+						calculated_dig_time *= float(rpg_mining.call("get_dig_time_multiplier"))
+					else:
+						calculated_dig_time *= pow(0.975, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					if current_hero_name == "Druid" and druid_mole_active:
 						calculated_dig_time *= 0.55
@@ -745,11 +786,13 @@ func _show_protected_dig_feedback(cell: Vector2i) -> void:
 	if now_msec - last_feedback_msec < 1150:
 		return
 	set_meta("last_protected_dig_feedback_msec", now_msec)
+	var world := get_parent()
 	var message := "The surface supports are protected. Dig down through the central shaft."
-	if cell.y < 0:
+	if world and world.has_method("get_protected_dig_message"):
+		message = str(world.call("get_protected_dig_message", cell))
+	elif cell.y < 0:
 		message = "You cannot mine upward into the base floor. Continue deeper or return through the shaft."
 	var world_position := tile_map.to_global(tile_map.map_to_local(cell))
-	var world := get_parent()
 	if world and world.has_method("notify_protected_dig"):
 		world.notify_protected_dig(world_position, message)
 	else:
@@ -1006,10 +1049,14 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 	if upgrade_type == "stomp":
 		stomp_level += 1
 	elif upgrade_type == "health":
-		max_health += 10
-		health += 10
+		var rpg_health: Node = _rpg_controller()
+		if rpg_health != null and rpg_health.has_method("register_health_bonus"):
+			rpg_health.call("register_health_bonus", 10)
+		else:
+			max_health += 10
+			health += 10
 	elif upgrade_type == "damage":
-		strength += 1
+		upgrade_strength()
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud:
 		if hud.has_method("update_player_health"):
@@ -1018,9 +1065,12 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 			hud.update_stats(strength, agility, intelligence)
 
 func perform_stomp() -> void:
-	stomp_cooldown_timer = max(1.0, 5.0 - stomp_level * 0.5)
+	var rpg_stomp: Node = _rpg_controller()
+	var stomp_base_cooldown: float = max(1.0, 5.0 - stomp_level * 0.5)
+	stomp_cooldown_timer = float(rpg_stomp.call("adjust_cooldown", stomp_base_cooldown)) if rpg_stomp != null and rpg_stomp.has_method("adjust_cooldown") else stomp_base_cooldown
 	var radius = 100.0 + stomp_level * 20.0
-	var stomp_damage = 20 * stomp_level * strength
+	var base_stomp_damage: int = 12 + stomp_level * 18 + strength * 5
+	var stomp_damage: int = int(rpg_stomp.call("scale_physical_ability_damage", base_stomp_damage)) if rpg_stomp != null and rpg_stomp.has_method("scale_physical_ability_damage") else base_stomp_damage
 	var sprite = $Sprite2D
 	if sprite:
 		var tween = create_tween()

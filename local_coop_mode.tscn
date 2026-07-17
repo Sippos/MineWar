@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://local_coop_mode.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/world/mine/level.tscn" id="2_level"]
+[ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="3_theme"]
+
+[node name="LocalCoopMode" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Level" parent="." instance=ExtResource("2_level")]
+
+[node name="SharedCamera" type="Camera2D" parent="."]
+zoom = Vector2(1.5, 1.5)
+enabled = true
+
+[node name="CoopHUD" type="CanvasLayer" parent="."]
+layer = 25
+
+[node name="ExitButton" type="Button" parent="CoopHUD"]
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 178.0
+offset_bottom = 60.0
+theme = ExtResource("3_theme")
+text = "Return to Modes"
+
+[node name="P2Panel" type="PanelContainer" parent="CoopHUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -390.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = 102.0
+grow_horizontal = 0
+mouse_filter = 2
+theme = ExtResource("3_theme")
+
+[node name="VBox" type="VBoxContainer" parent="CoopHUD/P2Panel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="P2Status" type="Label" parent="CoopHUD/P2Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "PLAYER 2 • JOINING..."
+horizontal_alignment = 1
+
+[node name="DistanceHint" type="Label" parent="CoopHUD/P2Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.8, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "P1: WASD • P2: Arrow Keys"
+horizontal_alignment = 1

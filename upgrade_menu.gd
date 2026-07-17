@@ -492,7 +492,7 @@ func _build_upgrade_tree_stat_bar() -> void:
 	heading.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35, 1.0))
 	upgrade_tree_stat_bar.add_child(heading)
 	_create_upgrade_tree_node("UpgradeStrength", "Strength +1", "More damage and free carrying thresholds.", 1, "gems", "res://assets/sprites/ui/common/stats/Strenght.png", Vector2.ZERO, Callable(self, "_on_upgrade_strength_pressed"), upgrade_tree_stat_bar)
-	_create_upgrade_tree_node("UpgradeAgility", "Agility +1", "Faster movement, attacks and digging.", 1, "gems", "res://assets/sprites/ui/common/stats/Agility.png", Vector2.ZERO, Callable(self, "_on_upgrade_agility_pressed"), upgrade_tree_stat_bar)
+	_create_upgrade_tree_node("UpgradeAgility", "Agility +1", "Attack speed, movement, armor, and a smaller mining bonus.", 1, "gems", "res://assets/sprites/ui/common/stats/Agility.png", Vector2.ZERO, Callable(self, "_on_upgrade_agility_pressed"), upgrade_tree_stat_bar)
 	_create_upgrade_tree_node("UpgradeIntelligence", "Intelligence +1", "Improve abilities and hero-specific summons.", 1, "gems", "res://assets/sprites/ui/common/stats/Int.png", Vector2.ZERO, Callable(self, "_on_upgrade_intelligence_pressed"), upgrade_tree_stat_bar)
 
 func _create_horizontal_upgrade_row(row_title: String, row_y: float, entries: Array) -> void:

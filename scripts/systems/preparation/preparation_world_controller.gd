@@ -2,8 +2,15 @@ extends Node
 
 @export var world_path: NodePath = NodePath("../Level")
 
-const START_Y := 104.0
-const START_HALF_WIDTH := 112.0
+const RUN_SCENE := "res://scenes/boot/main.tscn"
+const LINE_WARS_SCENE := "res://maze_vs_prototype.tscn"
+const MINEWARS_GATE_Y := 104.0
+const MINEWARS_GATE_HALF_WIDTH := 112.0
+const LINE_WARS_GATE_Y := -270.0
+const LINE_WARS_GATE_HALF_WIDTH := 92.0
+const ADVENTURE_GATE_X := 338.0
+const ADVENTURE_GATE_MIN_Y := -36.0
+const ADVENTURE_GATE_MAX_Y := 108.0
 const HERO_SELECT_RADIUS := 58.0
 const BASE_SELECT_RADIUS := 56.0
 const CHOICE_INSPECT_RADIUS := 104.0
@@ -147,6 +154,7 @@ func _ready() -> void:
 	if hud and hud.has_method("hide_objective"):
 		hud.hide_objective()
 
+	_carve_mode_routes()
 	_build_world_choices()
 	_build_interface()
 	_refresh_selection_visuals()
@@ -176,8 +184,26 @@ func _process(delta: float) -> void:
 	_float_time += delta
 	_animate_base_previews()
 	_update_nearby_choice()
-	if player.position.y >= START_Y and absf(player.position.x) <= START_HALF_WIDTH:
-		_begin_run()
+	if player.position.y >= MINEWARS_GATE_Y and absf(player.position.x) <= MINEWARS_GATE_HALF_WIDTH:
+		_begin_mode(GameMode.Mode.SIEGE, RUN_SCENE, "Descending into MineWars...")
+	elif player.position.y <= LINE_WARS_GATE_Y and absf(player.position.x) <= LINE_WARS_GATE_HALF_WIDTH:
+		_begin_mode(GameMode.Mode.LINE_WARS, LINE_WARS_SCENE, "Marching to the Line Wars battlefield...")
+	elif player.position.x >= ADVENTURE_GATE_X and player.position.y >= ADVENTURE_GATE_MIN_Y and player.position.y <= ADVENTURE_GATE_MAX_Y:
+		_begin_mode(GameMode.Mode.EXPLORATION, RUN_SCENE, "Setting out on an Adventure...")
+
+func _carve_mode_routes() -> void:
+	# Extend the already-existing preparation room into three readable exits.
+	# Down remains the mine shaft, up becomes the battlefield road, and the
+	# eastern corridor leads to Adventure.
+	var previous_generation_flag := bool(world.world_generation_in_progress)
+	world.world_generation_in_progress = true
+	for x in range(-1, 2):
+		for y in range(-7, -4):
+			world.on_cell_dug(Vector2i(x, y))
+	for x in range(5, 9):
+		for y in range(-2, 2):
+			world.on_cell_dug(Vector2i(x, y))
+	world.world_generation_in_progress = previous_generation_flag
 
 func _build_world_choices() -> void:
 	var choices_root := Node2D.new()
@@ -210,7 +236,7 @@ func _build_world_choices() -> void:
 		base_pads.append({"id": base_id, "node": pad, "phase": float(index) * 0.85})
 
 	var tunnel_marker := Node2D.new()
-	tunnel_marker.name = "TunnelStartMarker"
+	tunnel_marker.name = "MineWarsGateMarker"
 	tunnel_marker.position = Vector2(0, 112)
 	choices_root.add_child(tunnel_marker)
 	var gate := Polygon2D.new()
@@ -230,13 +256,46 @@ func _build_world_choices() -> void:
 	gate_label.name = "GateLabel"
 	gate_label.position = Vector2(-105, -10)
 	gate_label.size = Vector2(210, 28)
-	gate_label.text = "DESCEND TO START"
+	gate_label.text = "MINEWARS"
 	gate_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate_label.add_theme_font_size_override("font_size", 15)
 	gate_label.add_theme_color_override("font_color", Color(0.7, 0.96, 1.0, 1.0))
 	gate_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
 	gate_label.add_theme_constant_override("outline_size", 4)
 	tunnel_marker.add_child(gate_label)
+
+	_create_mode_gate(choices_root, "LineWarsGateMarker", Vector2(0, -292), "LINE WARS", Color(1.0, 0.48, 0.2, 1.0), false)
+	_create_mode_gate(choices_root, "AdventureGateMarker", Vector2(368, 36), "ADVENTURE", Color(0.42, 1.0, 0.48, 1.0), true)
+
+func _create_mode_gate(parent: Node2D, gate_name: String, gate_position: Vector2, gate_text: String, accent: Color, points_right: bool) -> void:
+	var marker := Node2D.new()
+	marker.name = gate_name
+	marker.position = gate_position
+	marker.z_index = 8
+	parent.add_child(marker)
+	var glow := Polygon2D.new()
+	if points_right:
+		glow.polygon = PackedVector2Array([Vector2(-30, -66), Vector2(42, -66), Vector2(92, 0), Vector2(42, 66), Vector2(-30, 66)])
+	else:
+		glow.polygon = PackedVector2Array([Vector2(-92, 32), Vector2(-44, -34), Vector2(0, -78), Vector2(44, -34), Vector2(92, 32)])
+	glow.color = Color(accent.r, accent.g, accent.b, 0.2)
+	marker.add_child(glow)
+	var outline := Line2D.new()
+	outline.closed = true
+	outline.points = glow.polygon
+	outline.width = 4.0
+	outline.default_color = Color(accent.r, accent.g, accent.b, 0.92)
+	marker.add_child(outline)
+	var label := Label.new()
+	label.position = Vector2(-100, -12) if points_right else Vector2(-105, 20)
+	label.size = Vector2(200, 30)
+	label.text = gate_text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", accent)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	marker.add_child(label)
 
 func _create_hero_pad(hero_id: String, pad_position: Vector2, unlocked: bool) -> Node2D:
 	var pad := Node2D.new()
@@ -385,7 +444,7 @@ func _build_interface() -> void:
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 8.0
 	title.offset_bottom = 36.0
-	title.text = "PREPARE AT THE MINE ENTRANCE"
+	title.text = "PREPARE, THEN CHOOSE YOUR PATH"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 21)
 	title.add_theme_color_override("font_color", Color(0.78, 0.95, 1.0, 1.0))
@@ -407,7 +466,7 @@ func _build_interface() -> void:
 	status_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	status_label.offset_top = 61.0
 	status_label.offset_bottom = 84.0
-	status_label.text = "Walk to a side-wall hero or a back-wall base to inspect and select it."
+	status_label.text = "Choose a hero and base, then go up, down, or right to begin."
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.add_theme_font_size_override("font_size", 12)
 	status_label.add_theme_color_override("font_color", Color(0.84, 0.88, 0.92, 1.0))
@@ -482,7 +541,7 @@ func _build_interface() -> void:
 	instructions.offset_top = -58.0
 	instructions.offset_right = -90.0
 	instructions.offset_bottom = -18.0
-	instructions.text = "Move normally  •  Approach a statue to inspect/select  •  Walk down the center shaft to begin"
+	instructions.text = "↑ LINE WARS   •   ↓ MINEWARS   •   → ADVENTURE   •   Approach statues to change hero or base"
 	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	instructions.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	instructions.add_theme_font_size_override("font_size", 14)
@@ -520,7 +579,7 @@ func _update_nearby_choice() -> void:
 
 	if nearest_entry.is_empty():
 		detail_panel.visible = false
-		status_label.text = "Walk to a side-wall hero or a back-wall base to inspect and select it."
+		status_label.text = "Choose a hero and base, then go up, down, or right to begin."
 		return
 
 	if nearest_kind == "hero" and nearest_distance <= HERO_SELECT_RADIUS:
@@ -569,7 +628,7 @@ func _show_choice_details(kind: String, entry: Dictionary, distance: float) -> v
 			detail_hint.add_theme_color_override("font_color", Color(0.66, 0.68, 0.7, 1.0))
 			status_label.text = "%s is locked, but its kit can still be inspected." % choice_id
 		elif selected:
-			detail_hint.text = "SELECTED  •  This hero will enter the mine."
+			detail_hint.text = "SELECTED  •  This hero will enter the selected destination."
 			detail_hint.add_theme_color_override("font_color", Color(0.38, 1.0, 0.68, 1.0))
 			status_label.text = "%s selected. Walk to another statue to change hero." % choice_id
 		else:
@@ -647,23 +706,18 @@ func _update_loadout_text() -> void:
 	var base_name := str(Global.base_data.get(Global.selected_base_id, Global.base_data["default_base"])["name"])
 	loadout_label.text = "Hero: %s   •   Base: %s   •   Legacy Ore: %d" % [Global.selected_hero_id, base_name, Global.legacy_ore]
 
-func _begin_run() -> void:
+func _begin_mode(mode: GameMode.Mode, scene_path: String, transition_text: String) -> void:
+	if _started:
+		return
 	_started = true
+	GameMode.set_mode(mode)
 	Global.apply_selected_loadout()
 	Global.save_game()
-	base.set_process(true)
-	base.set_process_input(true)
-	_enable_runtime_upgrade_menu()
-	var choices := world.get_node_or_null("LoadoutChoices")
-	if choices:
-		choices.queue_free()
-	if interface:
-		interface.queue_free()
-	world.begin_run_from_preparation()
-	var hud := world.get_node_or_null("HUD")
-	if hud and hud.has_method("show_notice"):
-		hud.show_notice("Loadout confirmed. The run starts now.", 2.2)
-	queue_free()
+	player.velocity = Vector2.ZERO
+	player.set_physics_process(false)
+	status_label.text = transition_text
+	await get_tree().create_timer(0.16).timeout
+	get_tree().change_scene_to_file(scene_path)
 
 func _animate_base_previews() -> void:
 	for entry in base_pads:

@@ -128,22 +128,22 @@ var hero_data = {
 		"attack": preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
 	},
 	"Shaman": {
-		"walk": preload("res://character_sprites/shaman_walk_spritesheet_25d.png"),
+		"walk": preload("res://character_sprites/shaman_walk_pre_restore_recovered_review.png"),
 		"attack": preload("res://character_sprites/shaman_attack_spritesheet_25d.png")
 	},
 	"Nerubian": {
-		"walk": preload("res://character_sprites/nerubian_walk_spritesheet_25d.png"),
+		"walk": preload("res://character_sprites/nerubian_walk_spritesheet_25d_review.png"),
 		"attack": preload("res://character_sprites/nerubian_attack_spritesheet_25d.png")
 	},
 	"Druid": {
 		"walk": preload("res://character_sprites/druid_walk_spritesheet_25d.png"),
-		"attack": preload("res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d.png"),
+		"attack": preload("res://character_sprites/druid_humanoid_staff_swing_spritesheet_25d_review.png"),
 		"mole": preload("res://character_sprites/druid_mole_crawl_spritesheet_25d.png"),
 		"mole_attack": preload("res://character_sprites/druid_mole_attack_spritesheet_25d.png")
 	},
 	"Undead King": {
-		"walk": preload("res://character_sprites/undead_king_float_idle_spritesheet_25d.png"),
-		"attack": preload("res://character_sprites/undead_king_staff_cast_spritesheet_25d.png")
+		"walk": preload("res://character_sprites/undead_king_float_idle_spritesheet_25d_review.png"),
+		"attack": preload("res://character_sprites/undead_king_staff_cast_spritesheet_25d_review.png")
 	}
 }
 

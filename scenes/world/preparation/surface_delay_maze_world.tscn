@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/surface_delay_maze_world.gd" id="1_script"]
+
+[node name="SurfaceDelayMaze" type="Node2D"]
+position = Vector2(0, 80)
+script = ExtResource("1_script")

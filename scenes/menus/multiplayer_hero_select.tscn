@@ -1,0 +1,103 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menus/multiplayer_hero_select.gd" id="1_script"]
+[ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
+
+[node name="MultiplayerHeroSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.01, 0.006, 0.003, 0.94)
+
+[node name="Center" type="CenterContainer" parent="Dimmer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Dimmer/Center"]
+custom_minimum_size = Vector2(680, 360)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Dimmer/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 28
+text = "CHOOSE CO-OP HEROES"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Selectors" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="P1Column" type="VBoxContainer" parent="Dimmer/Center/Panel/VBox/Selectors"]
+custom_minimum_size = Vector2(270, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="P1Label" type="Label" parent="Dimmer/Center/Panel/VBox/Selectors/P1Column"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 1 • WASD"
+horizontal_alignment = 1
+
+[node name="P1Option" type="OptionButton" parent="Dimmer/Center/Panel/VBox/Selectors/P1Column"]
+custom_minimum_size = Vector2(270, 58)
+layout_mode = 2
+
+[node name="P2Column" type="VBoxContainer" parent="Dimmer/Center/Panel/VBox/Selectors"]
+custom_minimum_size = Vector2(270, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="P2Label" type="Label" parent="Dimmer/Center/Panel/VBox/Selectors/P2Column"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 2 • ARROW KEYS"
+horizontal_alignment = 1
+
+[node name="P2Option" type="OptionButton" parent="Dimmer/Center/Panel/VBox/Selectors/P2Column"]
+custom_minimum_size = Vector2(270, 58)
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Dimmer/Center/Panel/VBox/Footer"]
+custom_minimum_size = Vector2(220, 54)
+layout_mode = 2
+text = "Back"
+
+[node name="StartButton" type="Button" parent="Dimmer/Center/Panel/VBox/Footer"]
+custom_minimum_size = Vector2(220, 54)
+layout_mode = 2
+text = "Enter Shared Mine"

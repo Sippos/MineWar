@@ -28,30 +28,34 @@ const HERO_PREVIEW_VISUALS = {
 }
 const HERO_ABILITY_PREVIEWS = {
 	"Dwarf": [
-		{"icon": preload("res://ability_icons/placeholder_stomp.svg"), "title": "Ground Stomp", "description": "Area damage and stun"},
-		{"icon": preload("res://ability_icons/placeholder_hammer.svg"), "title": "Throwing Hammer", "description": "Ranged stun; breaks blocks"},
-		{"icon": preload("res://ability_icons/placeholder_bash.svg"), "title": "Dwarven Bash", "description": "Every third hit is empowered"},
-		{"icon": preload("res://ability_icons/placeholder_avatar.svg"), "title": "Avatar", "description": "Level 6 combat form"}
+		{"icon": preload("res://ability_icons/generated/Dwarf_GroundStomp.png"), "title": "Ground Stomp", "description": "Area damage and stun"},
+		{"icon": preload("res://ability_icons/generated/Dwarf_ThrowingHammer.png"), "title": "Throwing Hammer", "description": "Ranged stun; breaks blocks"},
+		{"icon": preload("res://ability_icons/generated/Dwarf_DwarvenBash.png"), "title": "Dwarven Bash", "description": "Every third hit is empowered"},
+		{"icon": preload("res://ability_icons/generated/Dwarf_Avatar.png"), "title": "Avatar", "description": "Level 6 combat form"}
 	],
 	"Shaman": [
-		{"icon": preload("res://ability_icons/placeholder_totem.svg"), "title": "Totem Wheel", "description": "Dig, heal, radar or gem"},
-		{"icon": preload("res://ability_icons/placeholder_chain.svg"), "title": "Chain Lightning", "description": "Jumps between enemies"},
-		{"icon": preload("res://ability_icons/placeholder_wisdom.svg"), "title": "Ancestral Wisdom", "description": "Stronger totems and Int"},
-		{"icon": preload("res://ability_icons/placeholder_ascendance.svg"), "title": "Ascendance", "description": "Level 6 all-totem form"}
+		{"icon": preload("res://ability_icons/generated/Shaman_TotemWheel.png"), "title": "Totem Wheel", "description": "Dig, heal, radar or gem"},
+		{"icon": preload("res://ability_icons/generated/Shaman_ChainLighting.png"), "title": "Chain Lightning", "description": "Jumps between enemies"},
+		{"icon": preload("res://ability_icons/generated/Shaman_AncestralWisdom.png"), "title": "Ancestral Wisdom", "description": "Stronger totems and Int"},
+		{"icon": preload("res://ability_icons/generated/Shaman_AncestralAscendence.png"), "title": "Ascendance", "description": "Level 6 all-totem form"}
 	],
 	"Nerubian": [
-		{"icon": preload("res://ability_icons/placeholder_brood.svg"), "title": "Spawn Brood", "description": "Summon mining spiders"},
-		{"icon": preload("res://ability_icons/placeholder_web.svg"), "title": "Web Burst", "description": "Damage, root and slow"},
-		{"icon": preload("res://ability_icons/placeholder_carapace.svg"), "title": "Chitinous Carapace", "description": "Health and regeneration"},
-		{"icon": preload("res://ability_icons/placeholder_broodmother.svg"), "title": "Broodmother", "description": "Level 6 full brood"}
+		{"icon": preload("res://ability_icons/generated/Nerubian_SpwanBreed.png"), "title": "Spawn Brood", "description": "Summon mining spiders"},
+		{"icon": preload("res://ability_icons/generated/Nerubian_WebBurst.png"), "title": "Web Burst", "description": "Damage, root and slow"},
+		{"icon": preload("res://ability_icons/generated/Nerubian_ChitinousCarapace.png"), "title": "Chitinous Carapace", "description": "Health and regeneration"},
+		{"icon": preload("res://ability_icons/generated/Nerubian_BroodmothersCall.png"), "title": "Broodmother", "description": "Level 6 full brood"}
 	],
 	"Druid": [
-		{"sheet": preload("res://character_sprites/druid_mole_crawl_spritesheet_25d.png"), "title": "Mole Form", "description": "Alternate digging form"},
-		{"icon": preload("res://ability_icons/placeholder_wisdom.svg"), "title": "Ability kit", "description": "More abilities coming soon"}
+		{"icon": preload("res://ability_icons/generated/Druid_MoleForm.png"), "title": "Mole Form", "description": "Alternate digging form"},
+		{"icon": preload("res://ability_icons/generated/Druid_BurrowTunnel.png"), "title": "Burrow Tunnel", "description": "Place linked tunnel openings"},
+		{"icon": preload("res://ability_icons/generated/Druid_DeepRoot.png"), "title": "Deep Roots", "description": "Health and natural recovery"},
+		{"icon": preload("res://ability_icons/generated/Druid_WorldrootPassage.png"), "title": "Worldroot Passage", "description": "Return instantly through the roots"}
 	],
 	"Undead King": [
-		{"sheet": preload("res://character_sprites/undead_king_staff_cast_spritesheet_25d.png"), "title": "Staff Cast", "description": "Dark spell attack art"},
-		{"icon": preload("res://ability_icons/placeholder_ascendance.svg"), "title": "Ability kit", "description": "More abilities coming soon"}
+		{"icon": preload("res://ability_icons/generated/UndeadKing_RaiseDead.png"), "title": "Raise Dead", "description": "Summon an undead minion"},
+		{"icon": preload("res://ability_icons/generated/UndeadKing_GraveMight.png"), "title": "Grave Might", "description": "Strengthen the undead host"},
+		{"icon": preload("res://ability_icons/generated/UndeadKing_SoulHarvest.png"), "title": "Soul Harvest", "description": "Claim power from fallen souls"},
+		{"icon": preload("res://ability_icons/generated/UndeadKing_DeathMarch.png"), "title": "Death March", "description": "Level 6 undead army form"}
 	]
 }
 

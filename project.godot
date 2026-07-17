@@ -3,8 +3,8 @@
 ; since the parameters that go here are not all obvious.
 ;
 ; Format:
-;   [section] ; section goes between []
-;   param=value ; assign values to parameters
+;   [section] ; section between []
+;   param=value
 
 config_version=5
 
@@ -18,12 +18,16 @@ config/icon="res://icon.svg"
 [autoload]
 
 Global="*res://global.gd"
+GameMode="*res://game_mode.gd"
+SiegeModeBootstrap="*res://siege_mode_bootstrap.gd"
 WebIOSLightingFallback="*res://web_ios_lighting_fallback.gd"
 HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
 UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
 MatchFlow="*res://match_flow.gd"
 PeonCoordinator="*res://peon_coordinator.gd"
 SoundFX="*res://sound_fx.gd"
+ExplorationModeBootstrap="*res://exploration_mode_bootstrap.gd"
+EnemyApproachBootstrap="*res://enemy_approach_bootstrap.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]

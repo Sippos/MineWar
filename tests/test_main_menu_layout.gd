@@ -3,6 +3,7 @@ extends McpTestSuite
 
 const BUTTON_NAMES := [
 	"SinglePlayerButton",
+	"MazeModeButton",
 	"VSModeButton",
 	"VSOnlineButton",
 	"ControlsButton"

@@ -1,0 +1,62 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section between []
+;   param=value
+
+config_version=5
+
+[application]
+
+config/name="Mining"
+run/main_scene="res://launch_router.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Global="*res://global.gd"
+WebIOSLightingFallback="*res://web_ios_lighting_fallback.gd"
+HeroAbilityBootstrap="*res://hero_ability_bootstrap.gd"
+UpgradeMenuUIStyler="*res://upgrade_menu_ui_styler.gd"
+MatchFlow="*res://match_flow.gd"
+PeonCoordinator="*res://peon_coordinator.gd"
+SoundFX="*res://sound_fx.gd"
+EnemyApproachBootstrap="*res://enemy_approach_bootstrap.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[dotnet]
+
+project/assembly_name="Mining"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+
+[filesystem]
+
+import/blender/enabled=false
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true

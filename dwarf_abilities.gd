@@ -12,10 +12,10 @@ const AVATAR_HEALTH_BONUS := 50
 const ICON_SIZE := Vector2(68, 68)
 
 const ICON_FALLBACKS = {
-	"stomp": "res://ability_icons/placeholder_stomp.svg",
-	"hammer": "res://ability_icons/placeholder_hammer.svg",
-	"bash": "res://ability_icons/placeholder_bash.svg",
-	"avatar": "res://ability_icons/placeholder_avatar.svg"
+	"stomp": "res://ability_icons/generated/Dwarf_GroundStomp.png",
+	"hammer": "res://ability_icons/generated/Dwarf_ThrowingHammer.png",
+	"bash": "res://ability_icons/generated/Dwarf_DwarvenBash.png",
+	"avatar": "res://ability_icons/generated/Dwarf_Avatar.png"
 }
 
 const STOMP_KNOWN_PATHS = [
@@ -648,7 +648,10 @@ func _get_ability_icon(ability: String) -> Texture2D:
 	if icon_cache.has(ability):
 		return icon_cache[ability]
 	var texture: Texture2D = null
-	if ability == "stomp":
+	var configured_path := str(ICON_FALLBACKS.get(ability, ""))
+	if configured_path != "" and ResourceLoader.exists(configured_path):
+		texture = load(configured_path) as Texture2D
+	if texture == null and ability == "stomp":
 		for path in STOMP_KNOWN_PATHS:
 			if ResourceLoader.exists(path):
 				var resource = load(path)
@@ -657,10 +660,8 @@ func _get_ability_icon(ability: String) -> Texture2D:
 					break
 		if texture == null:
 			texture = _scan_for_texture("res://", "stomp", 0)
-	if texture == null:
-		var fallback_path = str(ICON_FALLBACKS.get(ability, ""))
-		if fallback_path != "" and ResourceLoader.exists(fallback_path):
-			texture = load(fallback_path) as Texture2D
+	if texture == null and configured_path != "" and ResourceLoader.exists(configured_path):
+		texture = load(configured_path) as Texture2D
 	icon_cache[ability] = texture
 	return texture
 

@@ -156,9 +156,9 @@ func _attach_investment_panel() -> void:
 	investment_panel.add_child(columns)
 	
 	var hero_column := _create_column(columns, "HERO POWER")
-	_add_action_button(hero_column, "strength", "Strength +1", "More attack and stomp damage; +1 free gem carry every 3 STR")
-	_add_action_button(hero_column, "agility", "Agility +1", "Faster movement, attacks, and digging")
-	_add_action_button(hero_column, "intelligence", "Intelligence +1", "Stronger and faster hero abilities; faster brood recovery")
+	_add_action_button(hero_column, "strength", "Strength +1", "Basic damage, +6 health, regeneration, carrying, and primary-attribute damage")
+	_add_action_button(hero_column, "agility", "Agility +1", "+3.5% attack speed, movement, armor, and a smaller mining bonus")
+	_add_action_button(hero_column, "intelligence", "Intelligence +1", "Spell and summon power, shorter cooldowns, and longer effects")
 	
 	var survival_column := _create_column(columns, "SURVIVAL")
 	_add_action_button(survival_column, "max_health", "Fortify Hero", "+20 maximum health")

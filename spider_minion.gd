@@ -22,6 +22,14 @@ var anim_timer = 0.0
 var current_anim_row = 0
 var lifetime = 70.0
 
+@export var attack_damage := 10
+@export var attack_range := 44.0
+@export var aggro_range := 260.0
+@export var attack_interval := 0.72
+var target_enemy: Node2D
+var combat_recheck_timer := 0.0
+var attack_cooldown := 0.0
+
 @onready var world = get_parent()
 @onready var block_layer: TileMapLayer = world.get_node("BlockLayer")
 @onready var damage_layer: TileMapLayer = world.get_node("DamageLayer")
@@ -41,6 +49,17 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	
+	attack_cooldown = maxf(0.0, attack_cooldown - delta)
+	combat_recheck_timer -= delta
+	if combat_recheck_timer <= 0.0 or not is_instance_valid(target_enemy) or global_position.distance_to(target_enemy.global_position) > aggro_range:
+		combat_recheck_timer = 0.25
+		target_enemy = _find_nearest_enemy()
+	if is_instance_valid(target_enemy):
+		_process_enemy_target()
+		_update_animation(delta)
+		_update_lifespan_visual()
+		return
+
 	target_recheck_timer -= delta
 	match state:
 		"FIND_TARGET":
@@ -91,6 +110,43 @@ func _update_lifespan_visual() -> void:
 		return
 	var ratio = get_lifetime_ratio()
 	$Sprite2D.modulate.a = clamp(0.35 + ratio * 0.65, 0.35, 1.0)
+
+func _find_nearest_enemy() -> Node2D:
+	var best: Node2D
+	var best_distance := aggro_range
+	for enemy: Node in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or not (enemy is Node2D):
+			continue
+		var enemy_2d := enemy as Node2D
+		var distance := global_position.distance_to(enemy_2d.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = enemy_2d
+	return best
+
+func _process_enemy_target() -> void:
+	if not is_instance_valid(target_enemy):
+		target_enemy = null
+		return
+	var distance := global_position.distance_to(target_enemy.global_position)
+	if distance <= attack_range:
+		velocity = Vector2.ZERO
+		if attack_cooldown <= 0.0:
+			if target_enemy.has_method("take_damage"):
+				target_enemy.call("take_damage", attack_damage)
+			attack_cooldown = attack_interval
+			_spawn_bite_flash()
+		return
+	velocity = global_position.direction_to(target_enemy.global_position) * speed * 1.08
+	move_and_slide()
+
+func _spawn_bite_flash() -> void:
+	if not has_node("Sprite2D"):
+		return
+	var sprite := $Sprite2D as Sprite2D
+	sprite.modulate = Color(1.25, 0.72, 1.35, sprite.modulate.a)
+	var tween := create_tween()
+	tween.tween_property(sprite, "modulate", Color(1.0, 1.0, 1.0, sprite.modulate.a), 0.14)
 
 func _choose_dig_target() -> bool:
 	var start_cell = _nearest_walkable_cell(global_position, 3)

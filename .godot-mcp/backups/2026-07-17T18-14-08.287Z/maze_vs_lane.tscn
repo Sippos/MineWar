@@ -1,0 +1,131 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://maze_vs_lane.gd" id="1_lane"]
+
+[node name="MazeLane" type="Control"]
+custom_minimum_size = Vector2(420, 470)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_lane")
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = 34.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.86, 0.46, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 34.0
+offset_right = -8.0
+offset_bottom = 56.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.84, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 10.0
+offset_top = 56.0
+offset_right = -10.0
+offset_bottom = 76.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.92, 0.82, 0.62, 1)
+theme_override_font_sizes/font_size = 11
+text_overrun_behavior = 3
+horizontal_alignment = 1
+
+[node name="RatButton" type="Button" parent="."]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 0.23
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -62.0
+offset_right = -3.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "RAT 2g"
+
+[node name="OrcButton" type="Button" parent="."]
+layout_mode = 1
+anchor_left = 0.24
+anchor_top = 1.0
+anchor_right = 0.47
+anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = -62.0
+offset_right = -3.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "ORC LOCKED"
+
+[node name="AbilityButton" type="Button" parent="."]
+layout_mode = 1
+anchor_left = 0.48
+anchor_top = 1.0
+anchor_right = 0.76
+anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = -62.0
+offset_right = -3.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "HERO ABILITY"
+
+[node name="ResetButton" type="Button" parent="."]
+layout_mode = 1
+anchor_left = 0.77
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = -62.0
+offset_right = -8.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "RESET"
+
+[node name="HintLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -25.0
+offset_right = -8.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Live digging • Rat = fast pressure • Orc = slow tank • Sends raise income"
+horizontal_alignment = 1

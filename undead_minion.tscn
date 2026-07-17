@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://undead_minion.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://character_sprites/undead_minion_walk_spritesheet_25d.png" id="2_texture"]
+[ext_resource type="Texture2D" path="res://character_sprites/undead_minion_walk_spritesheet_25d_review.png" id="2_texture"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_undead_minion"]
 size = Vector2(24, 22)

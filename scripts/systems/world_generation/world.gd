@@ -38,6 +38,9 @@ const CAVE_REWARD_MIN_DEPTH := 8
 const FRONT_GEM_Z_INDEX = 2
 const GEM_TOP_TEXTURE = preload("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
 const GEM_FRONT_TEXTURE = preload("res://Stat_Ressources_Overlay_Front.png")
+const GEM_INDICATOR_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats/StatRessources.png")
+const GEM_INDICATOR_TOP_SCALE := Vector2(0.58, 0.58)
+const GEM_INDICATOR_FRONT_SCALE := Vector2(0.46, 0.46)
 const TUTORIAL_GEM_CELL := Vector2i(0, 2)
 const FIRST_WAVE_DELAY := 32.0
 const STANDARD_WAVE_INTERVAL := 36.0
@@ -102,6 +105,7 @@ func _ready() -> void:
 	
 	world_generation_in_progress = true
 	generate_initial_world()
+	_normalize_gem_indicator_sprites()
 	world_generation_in_progress = false
 	preparation_active = preparation_mode and not is_vs_mode
 	if not preparation_active:
@@ -186,12 +190,7 @@ func update_fog_mask(cell: Vector2i) -> void:
 		edge_layer.erase_cell(cell)
 		
 	if gem_blocks.has(cell):
-		var sprites = gem_blocks[cell]
-		if is_instance_valid(sprites.top):
-			sprites.top.visible = (index != 0)
-			if index != 0:
-				sprites.top.region_enabled = true
-				sprites.top.region_rect = Rect2(atlas_x * 64, atlas_y * 64, 64, 64)
+		_refresh_gem_indicator(cell)
 
 func _add_wasd_input() -> void:
 	var keys_p1 = {
@@ -547,6 +546,16 @@ func notify_tutorial_upgrade_purchased() -> void:
 	wave_timer = min(wave_timer, 18.0)
 	_set_onboarding_stage(OnboardingStage.COMPLETE)
 
+func is_dig_cell_protected(cell: Vector2i) -> bool:
+	# Protect the original base foundation during standard runs. Specialized
+	# persistent-world subclasses can open deliberate routes through it.
+	return (cell.y <= 1 and cell.x != 0) or cell.y < 0
+
+func get_protected_dig_message(cell: Vector2i) -> String:
+	if cell.y < 0:
+		return "You cannot mine upward into the base floor. Continue deeper or return through the shaft."
+	return "The surface supports are protected. Dig down through the central shaft."
+
 func notify_protected_dig(world_position: Vector2, message: String) -> void:
 	var hud := get_node_or_null("HUD")
 	if hud and hud.has_method("show_notice"):
@@ -572,11 +581,15 @@ func spawn_blocked_dig_feedback(world_position: Vector2) -> void:
 
 func has_gem(cell: Vector2i) -> bool:
 	if gem_blocks.has(cell):
-		var sprites = gem_blocks[cell]
-		if is_instance_valid(sprites.top):
-			sprites.top.queue_free()
-		if is_instance_valid(sprites.front):
-			sprites.front.queue_free()
+		var sprites: Dictionary = gem_blocks[cell]
+		var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
+		var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
+		if is_instance_valid(top_sprite):
+			top_sprite.visible = false
+			top_sprite.queue_free()
+		if is_instance_valid(front_sprite):
+			front_sprite.visible = false
+			front_sprite.queue_free()
 		gem_blocks.erase(cell)
 		return true
 	return false
@@ -1037,10 +1050,60 @@ func update_front_wall(cell: Vector2i) -> void:
 		front_layer.erase_cell(below_cell)
 		
 	if gem_blocks.has(cell):
-		var sprites = gem_blocks[cell]
-		if is_instance_valid(sprites.front):
-			_position_front_gem_sprite(sprites.front, cell)
-			sprites.front.visible = has_front_wall
+		_refresh_gem_indicator(cell)
+
+func _normalize_gem_indicator_sprites() -> void:
+	for raw_cell: Variant in gem_blocks.keys():
+		var cell: Vector2i = raw_cell
+		var sprites: Dictionary = gem_blocks[cell]
+		var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
+		var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
+		if is_instance_valid(top_sprite):
+			if top_sprite.get_parent() != self:
+				top_sprite.reparent(self, true)
+			top_sprite.texture = GEM_INDICATOR_TEXTURE
+			top_sprite.region_enabled = false
+			top_sprite.scale = GEM_INDICATOR_TOP_SCALE
+			top_sprite.z_index = FRONT_GEM_Z_INDEX
+			top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		if is_instance_valid(front_sprite):
+			front_sprite.texture = GEM_INDICATOR_TEXTURE
+			front_sprite.region_enabled = false
+			front_sprite.offset = Vector2(0.0, -16.0)
+			front_sprite.scale = GEM_INDICATOR_FRONT_SCALE
+			front_sprite.z_index = FRONT_GEM_Z_INDEX
+			front_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_refresh_gem_indicator(cell)
+
+func _refresh_gem_indicator(cell: Vector2i) -> void:
+	if not gem_blocks.has(cell):
+		return
+	var sprites: Dictionary = gem_blocks[cell]
+	var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
+	var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
+	var solid: bool = block_layer.get_cell_source_id(cell) != -1
+	var top_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) == -1
+	var right_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) == -1
+	var bottom_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) == -1
+	var left_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
+	var show_front: bool = bottom_open
+	var show_top: bool = solid and not show_front and (top_open or right_open or left_open)
+
+	if is_instance_valid(top_sprite):
+		top_sprite.visible = show_top
+		if show_top:
+			var indicator_offset := Vector2.ZERO
+			if top_open:
+				indicator_offset = Vector2(0.0, -18.0)
+			elif left_open and not right_open:
+				indicator_offset = Vector2(-18.0, 0.0)
+			elif right_open and not left_open:
+				indicator_offset = Vector2(18.0, 0.0)
+			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell)) + indicator_offset
+
+	if is_instance_valid(front_sprite):
+		_position_front_gem_sprite(front_sprite, cell)
+		front_sprite.visible = show_front
 
 func _position_front_gem_sprite(sprite: Sprite2D, cell: Vector2i) -> void:
 	var below_cell = Vector2i(cell.x, cell.y + 1)

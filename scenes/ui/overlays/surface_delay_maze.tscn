@@ -1,0 +1,108 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/surface_delay_maze.gd" id="1_script"]
+[ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
+
+[node name="SurfaceDelayMaze" type="Control"]
+custom_minimum_size = Vector2(880, 520)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+mouse_filter = 0
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.018, 0.014, 0.011, 0.98)
+show_behind_parent = true
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = -20.0
+offset_bottom = 42.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.28, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "SURFACE DELAY MAZE"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 44.0
+offset_right = -20.0
+offset_bottom = 66.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.65, 0.86, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Dig 42 • Route 17 tiles • Invaders 0 • First arrival CLEAR"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 66.0
+offset_right = -20.0
+offset_bottom = 86.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.88, 0.78, 0.62, 1)
+theme_override_font_sizes/font_size = 12
+text = "Move the flying peon, then dig within its working radius."
+text_overrun_behavior = 3
+horizontal_alignment = 1
+
+[node name="ResetButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_right = 0.24
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -58.0
+offset_right = -6.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "RESET MAZE"
+
+[node name="HintLabel" type="Label" parent="."]
+layout_mode = 1
+anchor_left = 0.25
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -58.0
+offset_right = -18.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.68, 0.68, 0.68, 1)
+theme_override_font_sizes/font_size = 11
+text = "WASD / arrows move peon • Click nearby rock to dig • Click tunnel to reinforce • Purple = portal"
+horizontal_alignment = 1
+vertical_alignment = 1

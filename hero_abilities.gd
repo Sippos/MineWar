@@ -17,26 +17,26 @@ const ULTIMATE_REQUIRED_LEVEL := 6
 const ICON_SIZE := Vector2(68, 68)
 
 const ICON_PATHS := {
-	"stomp": "res://ability_icons/placeholder_stomp.svg",
-	"hammer": "res://ability_icons/placeholder_hammer.svg",
-	"bash": "res://ability_icons/placeholder_bash.svg",
-	"avatar": "res://ability_icons/placeholder_avatar.svg",
-	"totem": "res://ability_icons/placeholder_totem.svg",
-	"chain": "res://ability_icons/placeholder_chain.svg",
-	"wisdom": "res://ability_icons/placeholder_wisdom.svg",
-	"ascendance": "res://ability_icons/placeholder_ascendance.svg",
-	"brood": "res://ability_icons/placeholder_brood.svg",
-	"web": "res://ability_icons/placeholder_web.svg",
-	"carapace": "res://ability_icons/placeholder_carapace.svg",
-	"broodmother": "res://ability_icons/placeholder_broodmother.svg",
-	"mole": "res://ability_icons/placeholder_avatar.svg",
-	"tunnel": "res://ability_icons/placeholder_hammer.svg",
-	"deep_roots": "res://ability_icons/placeholder_wisdom.svg",
-	"worldroot": "res://ability_icons/placeholder_ascendance.svg",
-	"raise_dead": "res://ability_icons/placeholder_brood.svg",
-	"grave_might": "res://ability_icons/placeholder_bash.svg",
-	"soul_harvest": "res://ability_icons/placeholder_wisdom.svg",
-	"death_march": "res://ability_icons/placeholder_broodmother.svg"
+	"stomp": "res://ability_icons/generated/Dwarf_GroundStomp.png",
+	"hammer": "res://ability_icons/generated/Dwarf_ThrowingHammer.png",
+	"bash": "res://ability_icons/generated/Dwarf_DwarvenBash.png",
+	"avatar": "res://ability_icons/generated/Dwarf_Avatar.png",
+	"totem": "res://ability_icons/generated/Shaman_TotemWheel.png",
+	"chain": "res://ability_icons/generated/Shaman_ChainLighting.png",
+	"wisdom": "res://ability_icons/generated/Shaman_AncestralWisdom.png",
+	"ascendance": "res://ability_icons/generated/Shaman_AncestralAscendence.png",
+	"brood": "res://ability_icons/generated/Nerubian_SpwanBreed.png",
+	"web": "res://ability_icons/generated/Nerubian_WebBurst.png",
+	"carapace": "res://ability_icons/generated/Nerubian_ChitinousCarapace.png",
+	"broodmother": "res://ability_icons/generated/Nerubian_BroodmothersCall.png",
+	"mole": "res://ability_icons/generated/Druid_MoleForm.png",
+	"tunnel": "res://ability_icons/generated/Druid_BurrowTunnel.png",
+	"deep_roots": "res://ability_icons/generated/Druid_DeepRoot.png",
+	"worldroot": "res://ability_icons/generated/Druid_WorldrootPassage.png",
+	"raise_dead": "res://ability_icons/generated/UndeadKing_RaiseDead.png",
+	"grave_might": "res://ability_icons/generated/UndeadKing_GraveMight.png",
+	"soul_harvest": "res://ability_icons/generated/UndeadKing_SoulHarvest.png",
+	"death_march": "res://ability_icons/generated/UndeadKing_DeathMarch.png"
 }
 
 const STOMP_KNOWN_PATHS := [
@@ -156,6 +156,7 @@ func _physics_process(delta: float) -> void:
 	_tick_cooldowns(delta)
 	var hero := _hero_name()
 	if hero != current_hud_hero:
+		_initialize_starting_skill()
 		_rebuild_hud()
 	if bool(player.get("is_dead")):
 		_cancel_temporary_forms()
@@ -182,6 +183,29 @@ func _player_id() -> int:
 
 func _action(suffix: String) -> String:
 	return "p%d_%s" % [_player_id(), suffix]
+
+func _rpg_controller() -> Node:
+	return player.get_node_or_null("HeroRPGController")
+
+func _rpg_cooldown(value: float) -> float:
+	var rpg: Node = _rpg_controller()
+	return float(rpg.call("adjust_cooldown", value)) if rpg != null and rpg.has_method("adjust_cooldown") else value
+
+func _rpg_duration(value: float) -> float:
+	var rpg: Node = _rpg_controller()
+	return float(rpg.call("adjust_duration", value)) if rpg != null and rpg.has_method("adjust_duration") else value
+
+func _rpg_spell_damage(value: int) -> int:
+	var rpg: Node = _rpg_controller()
+	return int(rpg.call("scale_spell_damage", value)) if rpg != null and rpg.has_method("scale_spell_damage") else value
+
+func _rpg_summon_damage(value: int) -> int:
+	var rpg: Node = _rpg_controller()
+	return int(rpg.call("scale_summon_damage", value)) if rpg != null and rpg.has_method("scale_summon_damage") else value
+
+func _rpg_physical_damage(value: int) -> int:
+	var rpg: Node = _rpg_controller()
+	return int(rpg.call("scale_physical_ability_damage", value)) if rpg != null and rpg.has_method("scale_physical_ability_damage") else value
 
 func _ensure_inputs() -> void:
 	var current_player_id := _player_id()
@@ -217,9 +241,11 @@ func _initialize_starting_skill() -> void:
 			if int(player.get("stomp_level")) <= 0:
 				player.set("stomp_level", 1)
 		HERO_SHAMAN:
-			totem_level = 1
+			if totem_level <= 0:
+				totem_level = 1
 		HERO_NERUBIAN:
-			brood_level = 1
+			if brood_level <= 0:
+				brood_level = 1
 
 func _tick_cooldowns(delta: float) -> void:
 	hammer_cooldown = max(0.0, hammer_cooldown - delta)
@@ -303,7 +329,7 @@ func _try_throw_hammer() -> void:
 	_show_notice("Throwing Hammer!")
 
 func _hammer_max_cooldown() -> float:
-	return max(4.5, 9.0 - hammer_level * 0.75 - (int(player.get("intelligence")) - 1) * 0.08)
+	return _rpg_cooldown(max(4.5, 9.0 - hammer_level * 0.75))
 
 func _hit_enemies_with_hammer(origin: Vector2, direction: Vector2, range_value: float) -> void:
 	var candidates := []
@@ -318,7 +344,7 @@ func _hit_enemies_with_hammer(origin: Vector2, direction: Vector2, range_value: 
 			candidates.append({"enemy": enemy, "distance": forward_distance})
 	candidates.sort_custom(func(a, b): return float(a["distance"]) < float(b["distance"]))
 	var hit_limit := 3 if avatar_active else 1
-	var damage_value := 70 + hammer_level * 55 + int(player.get("strength")) * 16
+	var damage_value: int = _rpg_physical_damage(70 + hammer_level * 55 + int(player.get("strength")) * 16)
 	for i in range(min(hit_limit, candidates.size())):
 		var enemy = candidates[i]["enemy"]
 		_apply_enemy_stun(enemy, 0.75 + hammer_level * 0.2, direction * (150.0 + hammer_level * 20.0))
@@ -400,7 +426,7 @@ func _advance_bash_counter() -> bool:
 func _register_bash_attack(primary_enemy: Node) -> void:
 	if not _advance_bash_counter():
 		return
-	var bonus_damage := 25 + bash_level * 25 + int(player.get("strength")) * 8
+	var bonus_damage: int = _rpg_physical_damage(25 + bash_level * 25 + int(player.get("strength")) * 8)
 	var knockback := player.global_position.direction_to(primary_enemy.global_position) * (115.0 + bash_level * 25.0)
 	_apply_enemy_stun(primary_enemy, 0.35 + bash_level * 0.2, knockback)
 	if primary_enemy.has_method("take_damage"):
@@ -544,14 +570,14 @@ func _totem_max_cooldown() -> float:
 	var cooldown := 8.0 - totem_level * 0.7 - wisdom_level * 0.45
 	if ascendance_active:
 		cooldown *= 0.55
-	return max(3.0, cooldown)
+	return _rpg_cooldown(max(3.0, cooldown))
 
 func _configure_shaman_totem(totem: Node) -> void:
 	if _hero_name() != HERO_SHAMAN:
 		return
 	totem.set_meta("hero_owner_id", player.get_instance_id())
 	totem.set_meta("totem_rank", totem_level)
-	var lifetime_value := 18.0 + totem_level * 5.0 + wisdom_level * 3.0
+	var lifetime_value: float = _rpg_duration(18.0 + totem_level * 5.0 + wisdom_level * 3.0)
 	var radius_value := 145.0 + totem_level * 24.0 + wisdom_level * 12.0
 	if ascendance_active:
 		lifetime_value = max(lifetime_value, ascendance_duration + 3.0)
@@ -604,7 +630,7 @@ func _try_chain_lightning() -> void:
 		hit_enemies.append(next_enemy)
 		current = next_enemy
 	var points := PackedVector2Array([player.global_position + Vector2(0, -22)])
-	var damage_value := 35 + chain_level * 38 + int(player.get("intelligence")) * 12
+	var damage_value: int = _rpg_spell_damage(35 + chain_level * 38 + int(player.get("intelligence")) * 12)
 	for i in range(hit_enemies.size()):
 		var enemy = hit_enemies[i]
 		points.append(enemy.global_position + Vector2(0, 4))
@@ -618,7 +644,7 @@ func _chain_max_cooldown() -> float:
 	var cooldown := 9.0 - chain_level * 0.75 - wisdom_level * 0.3
 	if ascendance_active:
 		cooldown *= 0.45
-	return max(2.5, cooldown)
+	return _rpg_cooldown(max(2.5, cooldown))
 
 func _find_primary_enemy(max_range: float) -> Node:
 	var origin := player.global_position
@@ -676,8 +702,8 @@ func _try_ascendance() -> void:
 	if ascendance_active:
 		return
 	ascendance_active = true
-	ascendance_duration = 12.0
-	ascendance_cooldown = 65.0
+	ascendance_duration = _rpg_duration(12.0)
+	ascendance_cooldown = _rpg_cooldown(65.0)
 	ascendance_int_bonus = 2 + wisdom_level
 	ascendance_speed_bonus = 30.0
 	player.set("intelligence", int(player.get("intelligence")) + ascendance_int_bonus)
@@ -724,8 +750,8 @@ func _try_cast_mole_form() -> void:
 		_show_notice("Mole Form ready in %.1fs" % mole_cooldown, 0.8)
 		return
 	mole_active = true
-	mole_duration = 6.0 + float(mole_level) * 2.0
-	mole_cooldown = max(8.0, 16.0 - float(mole_level))
+	mole_duration = _rpg_duration(6.0 + float(mole_level) * 2.0)
+	mole_cooldown = _rpg_cooldown(max(8.0, 16.0 - float(mole_level)))
 	player.set("druid_mole_active", true)
 	_show_notice("Mole Form!")
 
@@ -756,7 +782,7 @@ func _try_place_or_use_tunnel() -> void:
 		tunnel_exit_position = placement
 		tunnel_has_exit = true
 		tunnel_exit_visual = _spawn_tunnel_marker(tunnel_exit_position, true)
-		tunnel_cooldown = max(5.0, 10.0 - tunnel_level)
+		tunnel_cooldown = _rpg_cooldown(max(5.0, 10.0 - tunnel_level))
 		_show_notice("Burrow Tunnel completed")
 		return
 	var entrance_distance := player.global_position.distance_to(tunnel_entrance_position)
@@ -767,7 +793,7 @@ func _try_place_or_use_tunnel() -> void:
 		return
 	player.global_position = tunnel_exit_position if entrance_distance <= exit_distance else tunnel_entrance_position
 	player.velocity = Vector2.ZERO
-	tunnel_cooldown = max(3.5, 7.0 - tunnel_level * 0.75)
+	tunnel_cooldown = _rpg_cooldown(max(3.5, 7.0 - tunnel_level * 0.75))
 	_spawn_burst(player.global_position, Color(0.35, 0.72, 0.35, 0.9), 24)
 
 func _spawn_tunnel_marker(position: Vector2, is_exit: bool) -> Node2D:
@@ -796,7 +822,7 @@ func _try_worldroot_passage() -> void:
 	var origin := player.global_position
 	player.global_position = base.global_position + Vector2(0, 86)
 	player.velocity = Vector2.ZERO
-	worldroot_cooldown = 45.0
+	worldroot_cooldown = _rpg_cooldown(45.0)
 	_spawn_burst(origin, Color(0.28, 0.82, 0.4, 0.9), 36)
 	_spawn_burst(player.global_position, Color(0.28, 0.82, 0.4, 0.9), 36)
 	_show_notice("Worldroot Passage!")
@@ -823,7 +849,7 @@ func _try_summon_undead_minion() -> void:
 	world.add_child(minion)
 	player.set("undead_cast_timer", 8.0 / 12.0)
 	player.call("_reset_action_animation")
-	undead_summon_cooldown = max(5.0, 11.0 - float(int(player.get("intelligence")) - 1) * 0.25)
+	undead_summon_cooldown = _rpg_cooldown(max(5.0, 11.0 - float(undead_summon_level) * 0.65))
 	_spawn_burst(minion.global_position, Color(0.55, 0.25, 0.8, 0.9), 28)
 	_show_notice("Raised Undead Minion!")
 
@@ -831,8 +857,8 @@ func _configure_undead_minion(minion: Node) -> void:
 	if minion == null:
 		return
 	var intelligence := int(player.get("intelligence"))
-	minion.set("max_lifetime", 36.0 + float(intelligence - 1) * 2.0 + grave_might_level * 8.0)
-	minion.set("attack_damage", 10 + intelligence * 4 + grave_might_level * 7)
+	minion.set("max_lifetime", _rpg_duration(36.0 + float(intelligence - 1) * 2.0 + grave_might_level * 8.0))
+	minion.set("attack_damage", _rpg_summon_damage(10 + intelligence * 4 + grave_might_level * 7))
 	minion.set("speed", 112.0 + grave_might_level * 12.0)
 	minion.set("attack_interval", max(0.42, 0.75 - grave_might_level * 0.08))
 	minion.set("life_steal", 0.06 * soul_harvest_level)
@@ -845,7 +871,7 @@ func _try_death_march() -> void:
 	if death_march_cooldown > 0.0:
 		_show_notice("Death March ready in %.1fs" % death_march_cooldown, 0.8)
 		return
-	death_march_cooldown = 60.0
+	death_march_cooldown = _rpg_cooldown(60.0)
 	for minion in _owned_undead_minions():
 		minion.set("lifetime", float(minion.get("lifetime")) + 18.0)
 		minion.set("speed", float(minion.get("speed")) * 1.35)
@@ -877,7 +903,7 @@ func _brood_max_count() -> int:
 	return 2 + brood_level
 
 func _brood_max_cooldown() -> float:
-	return max(2.4, 5.8 - brood_level * 0.75 - carapace_level * 0.15)
+	return _rpg_cooldown(max(2.4, 5.8 - brood_level * 0.75 - carapace_level * 0.15))
 
 func _try_spawn_brood(ignore_limit: bool) -> bool:
 	if brood_level <= 0:
@@ -906,10 +932,14 @@ func _try_spawn_brood(ignore_limit: bool) -> bool:
 func _configure_spider(spider: Node) -> void:
 	if spider == null:
 		return
-	spider.set("max_lifetime", 48.0 + brood_level * 14.0 + carapace_level * 6.0)
+	var intelligence := int(player.get("intelligence"))
+	spider.set("max_lifetime", _rpg_duration(48.0 + brood_level * 14.0 + carapace_level * 6.0))
 	spider.set("lifetime", float(spider.get("max_lifetime")))
 	spider.set("speed", 112.0 + brood_level * 17.0)
 	spider.set("dig_speed_multiplier", 1.0 + carapace_level * 0.18)
+	spider.set("attack_damage", _rpg_summon_damage(5 + intelligence * 3 + brood_level * 4))
+	spider.set("attack_interval", maxf(0.38, 0.78 - float(brood_level) * 0.08))
+	spider.set("aggro_range", 220.0 + float(brood_level) * 35.0)
 	spider.set_meta("hero_owner_id", player.get_instance_id())
 	if broodmother_active:
 		_buff_spider(spider)
@@ -928,12 +958,12 @@ func _try_web_burst() -> void:
 	if web_cooldown > 0.0:
 		_show_notice("Web Burst ready in %.1fs" % web_cooldown, 0.8)
 		return
-	web_cooldown = max(5.5, 10.5 - web_level * 1.1 - carapace_level * 0.2)
+	web_cooldown = _rpg_cooldown(max(5.5, 10.5 - web_level * 1.1 - carapace_level * 0.2))
 	_cast_web_burst(115.0 + web_level * 35.0, 0.9 + web_level * 0.55, 18 + web_level * 24)
 	_show_notice("Web Burst!")
 
 func _cast_web_burst(radius: float, root_duration: float, base_damage: int) -> void:
-	var damage_value := base_damage + int(player.get("intelligence")) * 7
+	var damage_value: int = _rpg_spell_damage(base_damage + int(player.get("intelligence")) * 7)
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy):
 			continue
@@ -982,8 +1012,8 @@ func _try_broodmother() -> void:
 	if broodmother_active:
 		return
 	broodmother_active = true
-	broodmother_duration = 14.0
-	broodmother_cooldown = 70.0
+	broodmother_duration = _rpg_duration(14.0)
+	broodmother_cooldown = _rpg_cooldown(70.0)
 	for _i in range(3):
 		_try_spawn_brood(true)
 	for spider in _owned_spiders():
@@ -997,7 +1027,11 @@ func _buff_spider(spider: Node) -> void:
 		return
 	if not spider.has_meta("broodmother_base_speed"):
 		spider.set_meta("broodmother_base_speed", float(spider.get("speed")))
+		spider.set_meta("broodmother_base_damage", int(spider.get("attack_damage")))
+		spider.set_meta("broodmother_base_interval", float(spider.get("attack_interval")))
 	spider.set("speed", float(spider.get_meta("broodmother_base_speed")) * 1.45)
+	spider.set("attack_damage", int(round(float(spider.get_meta("broodmother_base_damage")) * 1.55)))
+	spider.set("attack_interval", maxf(0.26, float(spider.get_meta("broodmother_base_interval")) * 0.72))
 	spider.set("lifetime", float(spider.get("lifetime")) + 15.0)
 
 func _end_broodmother() -> void:
@@ -1007,7 +1041,11 @@ func _end_broodmother() -> void:
 	for spider in _owned_spiders():
 		if spider.has_meta("broodmother_base_speed"):
 			spider.set("speed", float(spider.get_meta("broodmother_base_speed")))
+			spider.set("attack_damage", int(spider.get_meta("broodmother_base_damage")))
+			spider.set("attack_interval", float(spider.get_meta("broodmother_base_interval")))
 			spider.remove_meta("broodmother_base_speed")
+			spider.remove_meta("broodmother_base_damage")
+			spider.remove_meta("broodmother_base_interval")
 
 func _on_world_child_entered(node: Node) -> void:
 	_configure_world_child(node)
@@ -1267,6 +1305,7 @@ func _ensure_hud() -> void:
 func _rebuild_hud() -> void:
 	if ability_bar == null or not is_instance_valid(ability_bar):
 		return
+	_initialize_starting_skill()
 	for child in ability_bar.get_children():
 		ability_bar.remove_child(child)
 		child.queue_free()
@@ -1482,6 +1521,9 @@ func _hide_legacy_stomp_slot() -> void:
 			legacy.visible = false
 
 func _icon_path(ability: String) -> String:
+	var configured_path := str(ICON_PATHS.get(ability, ""))
+	if configured_path != "" and ResourceLoader.exists(configured_path):
+		return configured_path
 	if ability == "stomp":
 		for path in STOMP_KNOWN_PATHS:
 			if ResourceLoader.exists(path):
@@ -1489,7 +1531,7 @@ func _icon_path(ability: String) -> String:
 		var scanned := _scan_for_texture_path("res://", "stomp", 0)
 		if scanned != "":
 			return scanned
-	return str(ICON_PATHS.get(ability, ""))
+	return configured_path
 
 func _scan_for_texture_path(directory_path: String, keyword: String, depth: int) -> String:
 	if depth > 5:

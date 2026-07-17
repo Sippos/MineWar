@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menus/main/menu.gd" id="1_menu"]
-[ext_resource type="Texture2D" path="res://MainMenuBackground.png" id="2_mae5d"]
+[ext_resource type="Script" path="res://scripts/ui/menus/main/main_menu_background_loader.gd" id="2_background_loader"]
 [ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://assets/sprites/ui/common/MenuPanel.png" id="2_muqf4"]
 [ext_resource type="Texture2D" uid="uid://bi6220dhdgqdk" path="res://Beastary.png" id="3_4hy44"]
 
@@ -21,9 +21,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("2_mae5d")
 expand_mode = 1
 stretch_mode = 6
+mouse_filter = 2
+script = ExtResource("2_background_loader")
 metadata/_edit_lock_ = true
 
 [node name="MenuPanel" type="Sprite2D" parent="."]
@@ -51,19 +52,46 @@ horizontal_alignment = 1
 [node name="SinglePlayerButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 451.0
-offset_top = 214.0
+offset_top = 194.0
 offset_right = 701.0
-offset_bottom = 279.0
+offset_bottom = 246.0
 text = "Single Player"
 
-[node name="ControlsButton" type="Button" parent="."]
-custom_minimum_size = Vector2(250, 65)
+[node name="LocalMultiplayerButton" type="Button" parent="."]
+custom_minimum_size = Vector2(250, 52)
 layout_mode = 0
 offset_left = 451.0
-offset_top = 402.0
+offset_top = 254.0
 offset_right = 701.0
-offset_bottom = 467.0
+offset_bottom = 306.0
+text = "Local Multiplayer"
+
+[node name="OnlineMultiplayerButton" type="Button" parent="."]
+custom_minimum_size = Vector2(250, 52)
+layout_mode = 0
+offset_left = 451.0
+offset_top = 314.0
+offset_right = 701.0
+offset_bottom = 366.0
+text = "Online Multiplayer"
+
+[node name="ControlsButton" type="Button" parent="."]
+custom_minimum_size = Vector2(250, 52)
+layout_mode = 0
+offset_left = 451.0
+offset_top = 374.0
+offset_right = 701.0
+offset_bottom = 426.0
 text = "Controls"
+
+[node name="SettingsButton" type="Button" parent="."]
+custom_minimum_size = Vector2(250, 52)
+layout_mode = 0
+offset_left = 451.0
+offset_top = 434.0
+offset_right = 701.0
+offset_bottom = 486.0
+text = "Settings"
 
 [node name="LexikonButton" type="TextureButton" parent="."]
 layout_mode = 0
@@ -74,21 +102,3 @@ offset_bottom = 576.0
 texture_normal = ExtResource("3_4hy44")
 ignore_texture_size = true
 stretch_mode = 5
-
-[node name="VSModeButton" type="Button" parent="."]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 0
-offset_left = 451.0
-offset_top = 279.0
-offset_right = 701.0
-offset_bottom = 344.0
-text = "VS Mode (Local)"
-
-[node name="VSOnlineButton" type="Button" parent="."]
-custom_minimum_size = Vector2(250, 65)
-layout_mode = 0
-offset_left = 451.0
-offset_top = 344.0
-offset_right = 701.0
-offset_bottom = 409.0
-text = "VS Mode (Online)"
