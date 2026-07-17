@@ -24,6 +24,7 @@ var signs: Node2D
 var hub_hud: CanvasLayer
 var status_label: Label
 var _committing := false
+var _last_locked_message := ""
 
 func _ready() -> void:
 	world = get_node_or_null(world_path) as Node2D
@@ -43,6 +44,12 @@ func _ready() -> void:
 	world.set_process(false)
 	world.preparation_active = true
 	world.preparation_mode = true
+
+	# Older saves may have completed the first level before every implemented
+	# hero was part of the reward list. Normalize them when entering the hub.
+	if Global.first_level_beaten:
+		for hero_name in Global.hero_data.keys():
+			Global.unlock_hero(str(hero_name))
 
 	Global.apply_selected_loadout()
 	player.visible = true
@@ -69,7 +76,8 @@ func _ready() -> void:
 	hub_hud = HUB_HUD_SCENE.instantiate() as CanvasLayer
 	add_child(hub_hud)
 	status_label = hub_hud.get_node("StatusPanel/Margin/Status") as Label
-	_set_status("Stand on the glowing shaft marker: hold Down for MineWars, Up for LineWars, or dig east for Adventure.")
+	_configure_progression_signs()
+	_set_initial_status()
 
 func _process(_delta: float) -> void:
 	if _committing or world == null or player == null:
@@ -83,14 +91,63 @@ func _process(_delta: float) -> void:
 	if in_shared_lane and cell.y <= LINE_WARS_APPROACH_Y:
 		var cap_cell := Vector2i(cell.x, LINE_WARS_CAP_Y)
 		if block_layer.get_cell_source_id(cap_cell) == -1:
-			_activate_line_wars()
+			if _advanced_modes_unlocked():
+				_activate_line_wars()
+			else:
+				_show_locked_message("LINEWARS LOCKED  •  Win MineWars once to unlock the peon maze route.")
 			return
 
 	# Adventure is checked before MineWars because its side chamber spans y=0.
 	if cell.x >= ADVENTURE_ENTRY_X and cell.y >= ADVENTURE_MIN_Y and cell.y <= ADVENTURE_MAX_Y:
-		_activate_standard_mode(GameMode.Mode.EXPLORATION, "Adventure active — explore the same mine for nests and artifacts.")
+		if _advanced_modes_unlocked():
+			_activate_standard_mode(GameMode.Mode.EXPLORATION, "Adventure active — explore the same mine for nests and artifacts.")
+		else:
+			_show_locked_message("ADVENTURE LOCKED  •  Win MineWars once to open the eastern expedition route.")
 	elif cell.y >= MINEWARS_ENTRY_Y and in_shared_lane:
 		_activate_standard_mode(GameMode.Mode.SIEGE, "MineWars active — mine, return resources, and survive the assault.")
+
+func _advanced_modes_unlocked() -> bool:
+	return Global.first_level_beaten
+
+func _configure_progression_signs() -> void:
+	if signs == null:
+		return
+	var hub_title := signs.get_node_or_null("HubTitle") as Label
+	var line_wars := signs.get_node_or_null("LineWars") as Label
+	var mine_wars := signs.get_node_or_null("MineWars") as Label
+	var adventure := signs.get_node_or_null("Adventure") as Label
+	if hub_title:
+		hub_title.text = "HERO HALL  •  HEROES AT ALTARS  •  BASE AT THE CORE"
+	if mine_wars:
+		mine_wars.text = "↓  MINEWARS\nFIRST EXPEDITION • WAVES"
+		mine_wars.modulate = Color.WHITE
+	if _advanced_modes_unlocked():
+		if line_wars:
+			line_wars.text = "↑  LINEWARS\nDIG UP THE SAME SHAFT"
+			line_wars.modulate = Color.WHITE
+		if adventure:
+			adventure.text = "ADVENTURE  →\nDIG EAST • EXPLORE"
+			adventure.modulate = Color.WHITE
+	else:
+		if line_wars:
+			line_wars.text = "↑  LINEWARS  •  LOCKED\nWIN MINEWARS ONCE"
+			line_wars.modulate = Color(0.42, 0.44, 0.48, 0.9)
+		if adventure:
+			adventure.text = "ADVENTURE  •  LOCKED  →\nWIN MINEWARS ONCE"
+			adventure.modulate = Color(0.42, 0.44, 0.48, 0.9)
+
+func _set_initial_status() -> void:
+	var base_name := str(Global.base_data.get(Global.selected_base_id, Global.base_data["default_base"]).get("name", "Dwarf Bastion"))
+	if _advanced_modes_unlocked():
+		_set_status("%s + %s ready. Approach a hero altar to change hero, use the central base to change fortress, then enter a route." % [Global.selected_hero_id, base_name])
+	else:
+		_set_status("FIRST EXPEDITION  •  Approach the Dwarf altar for abilities. The central base changes your fortress. Then enter MineWars.")
+
+func _show_locked_message(message: String) -> void:
+	if message == _last_locked_message:
+		return
+	_last_locked_message = message
+	_set_status(message)
 
 func _activate_standard_mode(mode: GameMode.Mode, message: String) -> void:
 	if _committing:

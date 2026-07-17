@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [sub_resource type="StyleBoxFlat" id="TopStyle"]
-bg_color = Color(0.015, 0.025, 0.04, 0.9)
+bg_color = Color(0.012, 0.02, 0.032, 0.94)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -11,73 +11,77 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StatusStyle"]
-bg_color = Color(0.02, 0.025, 0.03, 0.86)
+bg_color = Color(0.018, 0.022, 0.028, 0.91)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.82, 0.55, 0.2, 0.7)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+border_color = Color(0.82, 0.55, 0.2, 0.72)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 4
 
 [node name="SinglePlayerHubHUD" type="CanvasLayer"]
 layer = 24
 
 [node name="TopPanel" type="PanelContainer" parent="."]
-offset_left = 286.0
+offset_left = 226.0
 offset_top = 12.0
-offset_right = 866.0
-offset_bottom = 82.0
+offset_right = 926.0
+offset_bottom = 80.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("TopStyle")
 
 [node name="Margin" type="MarginContainer" parent="TopPanel"]
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 9
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 9
+theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="TopPanel/Margin"]
-theme_override_constants/separation = 2
+theme_override_constants/separation = 1
 
 [node name="Title" type="Label" parent="TopPanel/Margin/VBox"]
-text = "SINGLE PLAYER • ONE CONTINUOUS WORLD"
+text = "SINGLE PLAYER  •  HERO HALL"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.55, 0.92, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 19
 
 [node name="Subtitle" type="Label" parent="TopPanel/Margin/VBox"]
-text = "The base is your menu. Choose a mode by digging into its route."
+text = "Approach a hero for abilities  •  E / Y selects  •  The central base changes your fortress"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.86, 0.9, 0.94, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.84, 0.89, 0.94, 1)
+theme_override_font_sizes/font_size = 12
 
 [node name="StatusPanel" type="PanelContainer" parent="."]
-offset_left = 226.0
-offset_top = 572.0
-offset_right = 926.0
-offset_bottom = 628.0
+offset_left = 246.0
+offset_top = 580.0
+offset_right = 906.0
+offset_bottom = 632.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StatusStyle")
 
 [node name="Margin" type="MarginContainer" parent="StatusPanel"]
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 7
 theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_bottom = 7
 
 [node name="Status" type="Label" parent="StatusPanel/Margin"]
-text = "Choose through play."
+text = "Choose a hero, choose a fortress, then carve your route."
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 theme_override_colors/font_color = Color(1, 0.84, 0.48, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13

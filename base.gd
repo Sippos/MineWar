@@ -12,8 +12,10 @@ const BASE_TEXTURES = {
 	"druid_base": preload("res://DruidBase.png"),
 	"undead_king_base": preload("res://UndeadKingBase.png")
 }
+const LOADOUT_SELECTION_MENU = preload("res://scenes/menus/loadout_selection_menu.tscn")
 const MINIMUM_GOLD_ACTION_COST := 10
 const PROMPT_TEXT := "E / Y  •  UPGRADE BASE"
+const HUB_PROMPT_TEXT := "E / Y  •  CHOOSE BASE"
 const DEPOSIT_PROMPT_TEXT := "RETURN HERE  •  GEMS AUTO-DEPOSIT"
 const DEPOSIT_GUIDE_DISTANCE := 560.0
 
@@ -24,6 +26,7 @@ var spikes_level = 0
 var heal_timer = 0.0
 var prompt_tween: Tween
 var prompt_should_show := false
+var loadout_menu_open := false
 
 @onready var prompt = $PromptLabel
 
@@ -61,6 +64,10 @@ func _is_vs_mode() -> bool:
 	var world = get_parent()
 	return world != null and bool(world.get("is_vs_mode"))
 
+func _is_single_player_hub() -> bool:
+	var world := get_parent()
+	return world != null and bool(world.get_meta("single_player_hub_active", false))
+
 func _get_minimum_stat_upgrade_cost(player: Node) -> int:
 	if player == null:
 		return 999999
@@ -70,7 +77,7 @@ func _get_minimum_stat_upgrade_cost(player: Node) -> int:
 	return min(strength_cost, min(agility_cost, intelligence_cost))
 
 func _can_afford_any_base_action() -> bool:
-	if _is_vs_mode():
+	if _is_single_player_hub() or _is_vs_mode():
 		return true
 	var world = get_parent()
 	if world == null:
@@ -103,6 +110,10 @@ func _set_prompt_visible(should_show: bool) -> void:
 func _refresh_prompt_visibility() -> void:
 	var world := get_parent()
 	var player := world.get_node_or_null("Player") if world else null
+	if _is_single_player_hub() and player_in_zone:
+		prompt.text = HUB_PROMPT_TEXT
+		_set_prompt_visible(true)
+		return
 	var carry_load := int(player.get_carry_load()) if player and player.has_method("get_carry_load") else 0
 	if carry_load > 0 and player and player.global_position.distance_to(global_position) <= DEPOSIT_GUIDE_DISTANCE:
 		prompt.text = DEPOSIT_PROMPT_TEXT
@@ -168,9 +179,24 @@ func _input(event: InputEvent) -> void:
 	if p_id == null:
 		p_id = 1
 	if player_in_zone and event.is_action_pressed("p%d_interact" % p_id):
+		if _is_single_player_hub():
+			_open_loadout_menu()
+			return
 		if get_parent().has_method("notify_tutorial_upgrade_opened"):
 			get_parent().notify_tutorial_upgrade_opened()
 		upgrade_requested.emit()
+
+func _open_loadout_menu() -> void:
+	if loadout_menu_open:
+		return
+	loadout_menu_open = true
+	var menu := LOADOUT_SELECTION_MENU.instantiate()
+	var world := get_parent()
+	var player := world.get_node_or_null("Player") if world else null
+	if menu.has_method("setup"):
+		menu.setup(world, player, self)
+	world.add_child(menu)
+	menu.tree_exited.connect(func(): loadout_menu_open = false)
 
 func take_damage(amount: int) -> void:
 	health = max(health - amount, 0)
@@ -193,7 +219,6 @@ func upgrade_max_health(amount: int) -> void:
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_base_health"):
 		hud.update_base_health(health, max_health)
-
 
 func spawn_rail():
 	var item = preload("res://scenes/entities/collectibles/rail_items/rail_item.tscn").instantiate()

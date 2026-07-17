@@ -47,3 +47,4 @@ build/
 /character_sprites/Shaman_*.png*
 /character_sprites/UndeadKing_*.png*
 /character_sprites/UndeadMinion_*.png*
+.godot-mcp/
