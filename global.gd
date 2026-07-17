@@ -129,7 +129,7 @@ var hero_data = {
 	},
 	"Shaman": {
 		"walk": preload("res://character_sprites/shaman_walk_pre_restore_recovered_review.png"),
-		"attack": preload("res://character_sprites/shaman_attack_spritesheet_25d.png")
+		"attack": preload("res://character_sprites/shaman_attack_spritesheet_25d_review.png")
 	},
 	"Nerubian": {
 		"walk": preload("res://character_sprites/nerubian_walk_spritesheet_25d_review.png"),

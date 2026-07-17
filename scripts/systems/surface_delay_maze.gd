@@ -295,8 +295,9 @@ func _find_path_from(start: Vector2i) -> Array[Vector2i]:
 
 func _neighbors(cell: Vector2i) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
-	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var neighbor := cell + direction
+	var directions: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+	for direction: Vector2i in directions:
+		var neighbor: Vector2i = cell + direction
 		if _is_in_bounds(neighbor):
 			result.append(neighbor)
 	return result
