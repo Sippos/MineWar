@@ -6,12 +6,14 @@ const MOBILE_CONTROLS_SCENE = preload("res://mobile_controls.tscn")
 var enabled = false
 var apply_timer = 0.0
 var mobile_controls_layer = null
+const WEB_LOW_MEMORY_META := "web_low_memory_mode"
 
 func _ready() -> void:
 	enabled = OS.has_feature("web") and _is_mobile_or_touch_browser()
 	if not enabled:
 		set_process(false)
 		return
+	get_tree().root.set_meta(WEB_LOW_MEMORY_META, true)
 	get_tree().node_added.connect(_on_node_added)
 	set_process(true)
 	call_deferred("_apply_mobile_web_fallbacks")
@@ -60,7 +62,15 @@ func _apply_to_node(node: Node) -> void:
 		node.color = MOBILE_CANVAS_MODULATE_COLOR
 	elif node is PointLight2D:
 		node.shadow_enabled = false
+		node.energy = minf(node.energy, 0.72)
 		node.visible = true
+	elif node is GPUParticles2D:
+		# Safari/WebGL2 is much more sensitive to particle overdraw and transient
+		# allocations than desktop browsers. Keep the gameplay readable and drop
+		# decorative emitters in the low-memory mobile web profile.
+		node.emitting = false
+	elif node is LightOccluder2D:
+		node.visible = false
 
 func _update_mobile_controls() -> void:
 	var should_show = _current_scene_has_player()

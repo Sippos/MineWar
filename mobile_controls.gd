@@ -44,22 +44,27 @@ func _process(_delta: float) -> void:
 	pass
 
 func _on_size_changed() -> void:
-	var viewport_size = get_viewport().get_visible_rect().size
-	var min_axis = min(viewport_size.x, viewport_size.y)
+	# Under canvas-item stretching, draw coordinates are in the expanded logical
+	# canvas while touch coordinates are in the physical viewport. Scale the
+	# native mobile layout into that canvas so it stays correctly sized on both.
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var physical_size: Vector2 = get_viewport().size
+	var stretch_scale: float = viewport_size.x / maxf(physical_size.x, 1.0)
+	var min_axis: float = min(physical_size.x, physical_size.y)
 	var compact = min_axis < 520.0
-	var margin = 18.0 if compact else 30.0
-	button_radius = clamp(min_axis * 0.062, 29.0, 42.0)
-	joystick_radius = clamp(min_axis * 0.13, 52.0, 80.0)
+	var margin: float = (18.0 if compact else 30.0) * stretch_scale
+	button_radius = clamp(min_axis * 0.062, 29.0, 42.0) * stretch_scale
+	joystick_radius = clamp(min_axis * 0.13, 52.0, 80.0) * stretch_scale
 	joystick_knob_radius = joystick_radius * 0.5
-	menu_button_radius = clamp(min_axis * 0.055, 26.0, 36.0)
-	base_tap_radius = clamp(min_axis * 0.18, 72.0, 112.0)
+	menu_button_radius = clamp(min_axis * 0.055, 26.0, 36.0) * stretch_scale
+	base_tap_radius = clamp(min_axis * 0.18, 72.0, 112.0) * stretch_scale
 	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
 	joystick_current_pos = joystick_center
 
 	var gap: float = button_radius * 2.15
 	# Keep the context actions in a compact, matching row above the ability bar.
 	# Their hit targets never intercept the ability or Stomp taps below them.
-	var controls_row_offset: float = 192.0 + button_radius
+	var controls_row_offset: float = (192.0 * stretch_scale) + button_radius
 	var bottom_y: float = viewport_size.y - controls_row_offset
 	var right_x: float = viewport_size.x - margin - button_radius
 	buttons[1].pos = Vector2(right_x, bottom_y) # Drop
@@ -71,8 +76,9 @@ func _on_size_changed() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
+		var touch_position := _screen_to_canvas(event.position)
 		if event.pressed:
-			if event.position.distance_to(menu_button_pos) < menu_button_radius * 1.4:
+			if touch_position.distance_to(menu_button_pos) < menu_button_radius * 1.4:
 				menu_button_active = true
 				menu_button_touch_id = event.index
 				queue_redraw()
@@ -80,21 +86,21 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 			for btn in buttons:
-				if event.position.distance_to(btn.pos) < button_radius * 1.05:
+				if touch_position.distance_to(btn.pos) < button_radius * 1.05:
 					btn.active = true
 					btn.touch_id = event.index
 					Input.action_press(btn.action)
 					queue_redraw()
 					get_viewport().set_input_as_handled()
 					return
-			if _try_open_upgrade_menu_from_base_tap(event.position):
+			if _try_open_upgrade_menu_from_base_tap(touch_position):
 				get_viewport().set_input_as_handled()
 				return
-			if event.position.x < get_viewport().get_visible_rect().size.x / 2.0:
+			if touch_position.x < get_viewport().get_visible_rect().size.x / 2.0:
 				joystick_active = true
 				joystick_touch_id = event.index
-				joystick_center = event.position
-				joystick_current_pos = event.position
+				joystick_center = touch_position
+				joystick_current_pos = touch_position
 				queue_redraw()
 				get_viewport().set_input_as_handled()
 		else:
@@ -119,12 +125,20 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
 		if joystick_touch_id == event.index:
-			joystick_current_pos = event.position
+			joystick_current_pos = _screen_to_canvas(event.position)
 			if joystick_current_pos.distance_to(joystick_center) > joystick_radius:
 				joystick_current_pos = joystick_center + (joystick_current_pos - joystick_center).normalized() * joystick_radius
 			update_joystick_input()
 			queue_redraw()
 			get_viewport().set_input_as_handled()
+
+func _screen_to_canvas(screen_position: Vector2) -> Vector2:
+	var physical_size: Vector2 = get_viewport().size
+	var canvas_size: Vector2 = get_viewport().get_visible_rect().size
+	return Vector2(
+		screen_position.x * canvas_size.x / maxf(physical_size.x, 1.0),
+		screen_position.y * canvas_size.y / maxf(physical_size.y, 1.0)
+	)
 
 func update_joystick_input() -> void:
 	if not joystick_active:
@@ -193,7 +207,7 @@ func _draw() -> void:
 
 func _draw_action_button(btn: Dictionary) -> void:
 	var c: Color = btn.color
-	var size := button_radius * 2.0
+	var size: float = button_radius * 2.0
 	var rect := Rect2(btn.pos - Vector2.ONE * button_radius, Vector2.ONE * size)
 	var style := StyleBoxFlat.new()
 	style.bg_color = UI_PANEL_ACTIVE if btn.active else UI_PANEL
@@ -217,7 +231,7 @@ func _draw_action_button(btn: Dictionary) -> void:
 		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color(0.96, 0.96, 0.98, 1.0))
 
 func _draw_menu_button() -> void:
-	var diameter := menu_button_radius * 2.0
+	var diameter: float = menu_button_radius * 2.0
 	var rect := Rect2(menu_button_pos - Vector2.ONE * menu_button_radius, Vector2.ONE * diameter)
 	var style := StyleBoxFlat.new()
 	style.bg_color = UI_PANEL_ACTIVE if menu_button_active else UI_PANEL

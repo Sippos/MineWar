@@ -185,12 +185,18 @@ func update_fog_mask(cell: Vector2i) -> void:
 	# Source 9 is the new fog_mask_atlas
 	fog_layer.set_cell(cell, 9, Vector2i(atlas_x, atlas_y))
 	
-	if index != 0:
+	# The imported edge atlas has a bright cap on its top-open variants. Keep
+	# side/bottom seams for depth, but omit that cap so open ceilings stay dark
+	# and continuous instead of reading as white scaffolding.
+	var edge_index: int = index - (1 if top_open else 0)
+	if edge_index != 0:
 		var block_type = block_layer.get_cell_source_id(cell)
 		var edge_source = 4 # Easy
 		if block_type == 2: edge_source = 5
 		elif block_type == 3: edge_source = 6
-		edge_layer.set_cell(cell, edge_source, Vector2i(atlas_x, atlas_y))
+		var edge_atlas_x := edge_index % 4
+		var edge_atlas_y := edge_index / 4
+		edge_layer.set_cell(cell, edge_source, Vector2i(edge_atlas_x, edge_atlas_y))
 	else:
 		edge_layer.erase_cell(cell)
 		

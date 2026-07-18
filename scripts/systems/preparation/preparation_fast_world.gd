@@ -7,9 +7,21 @@ extends "res://scripts/systems/world_generation/world_terrain_runtime.gd"
 # Buried resources use tile-sized transparent decals. They read as crystals
 # embedded in an exposed dirt face instead of a scaled-down loose gem/UI icon.
 const GEM_TEXTURE_FACTORY = preload("res://scripts/systems/preparation/gem_indicator_texture_factory.gd")
-const PREPARATION_GEM_EDGE_PATH := "res://assets/sprites/world/terrain/gem_embedded_edge.svg"
-const PREPARATION_GEM_FRONT_PATH := "res://assets/sprites/world/terrain/gem_embedded_front.svg"
-const PREPARATION_GEM_Z_INDEX := 2
+const PREPARATION_GEM_ATLAS_PATH := "res://assets/sprites/world/terrain/gem_overlays/minewars_gem_overlay_atlas.png"
+const PREPARATION_GEM_Z_INDEX := 5
+const GEM_CELL_SIZE := 64
+const GEM_TOP_REGIONS := [
+	Rect2(0, 0, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE, 0, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE * 2, 0, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE * 3, 0, GEM_CELL_SIZE, GEM_CELL_SIZE),
+]
+const GEM_FRONT_REGIONS := [
+	Rect2(0, GEM_CELL_SIZE, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE, GEM_CELL_SIZE, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE * 2, GEM_CELL_SIZE, GEM_CELL_SIZE, GEM_CELL_SIZE),
+	Rect2(GEM_CELL_SIZE * 3, GEM_CELL_SIZE, GEM_CELL_SIZE, GEM_CELL_SIZE),
+]
 const PREPARATION_TUTORIAL_GEM_CELL := Vector2i(0, 9)
 const INPUT_REGISTRATION_META := "single_player_runtime_input_ready"
 
@@ -52,8 +64,7 @@ const ADVENTURE_ROOM_X_MAX := 18
 const ADVENTURE_ROOM_Y_MIN := -4
 const ADVENTURE_ROOM_Y_MAX := 3
 
-var preparation_gem_edge_texture: Texture2D
-var preparation_gem_front_texture: Texture2D
+var preparation_gem_overlay_atlas: Texture2D
 
 func _init() -> void:
 	# MatchFlow only recognizes committed MineWars runs. The neutral hub,
@@ -183,11 +194,27 @@ func _normalize_gem_indicator_sprites() -> void:
 		_refresh_gem_indicator(Vector2i(raw_cell))
 
 func _ensure_gem_indicator_textures() -> bool:
-	if preparation_gem_edge_texture == null:
-		preparation_gem_edge_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_EDGE_PATH)
-	if preparation_gem_front_texture == null:
-		preparation_gem_front_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_FRONT_PATH)
-	return preparation_gem_edge_texture != null and preparation_gem_front_texture != null
+	if preparation_gem_overlay_atlas == null:
+		var image: Image = Image.load_from_file(ProjectSettings.globalize_path(PREPARATION_GEM_ATLAS_PATH))
+		if image != null and not image.is_empty():
+			preparation_gem_overlay_atlas = ImageTexture.create_from_image(image)
+	return preparation_gem_overlay_atlas != null
+
+func _gem_variant(cell: Vector2i) -> int:
+	return absi(cell.x * 17 + cell.y * 31) & 1
+
+func _gem_cluster_size(cell: Vector2i) -> int:
+	var size := 1
+	for direction in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]:
+		if gem_blocks.has(cell + direction):
+			size += 1
+	return size
+
+func _apply_gem_regions(cell: Vector2i, top_sprite: Sprite2D, front_sprite: Sprite2D) -> void:
+	var variant := _gem_variant(cell)
+	var rich_cluster := _gem_cluster_size(cell) >= 3
+	top_sprite.region_rect = GEM_TOP_REGIONS[variant]
+	front_sprite.region_rect = GEM_FRONT_REGIONS[3 if rich_cluster else variant]
 
 func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 	var sprites: Dictionary = gem_blocks.get(cell, {"top": null, "front": null})
@@ -199,8 +226,8 @@ func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 	if not is_instance_valid(top_sprite):
 		top_sprite = Sprite2D.new()
 		top_sprite.name = "GemTop_%d_%d" % [cell.x, cell.y]
-		top_sprite.texture = preparation_gem_edge_texture
-		top_sprite.region_enabled = false
+		top_sprite.texture = preparation_gem_overlay_atlas
+		top_sprite.region_enabled = true
 		top_sprite.scale = Vector2.ONE
 		top_sprite.z_index = PREPARATION_GEM_Z_INDEX
 		top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -211,8 +238,8 @@ func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 	if not is_instance_valid(front_sprite):
 		front_sprite = Sprite2D.new()
 		front_sprite.name = "GemFront_%d_%d" % [cell.x, cell.y]
-		front_sprite.texture = preparation_gem_front_texture
-		front_sprite.region_enabled = false
+		front_sprite.texture = preparation_gem_overlay_atlas
+		front_sprite.region_enabled = true
 		front_sprite.offset = Vector2.ZERO
 		front_sprite.scale = Vector2.ONE
 		front_sprite.z_index = PREPARATION_GEM_Z_INDEX
@@ -221,6 +248,7 @@ func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 		add_child(front_sprite)
 		sprites["front"] = front_sprite
 
+	_apply_gem_regions(cell, top_sprite, front_sprite)
 	gem_blocks[cell] = sprites
 	return sprites
 
@@ -235,6 +263,7 @@ func _refresh_gem_indicator(cell: Vector2i) -> void:
 	var left_open := solid and block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
 	var show_front := bottom_open
 	var show_top := solid and not show_front and (top_open or right_open or left_open)
+	var variant := _gem_variant(cell)
 
 	var sprites: Dictionary = gem_blocks[cell]
 	var top_sprite := sprites.get("top") as Sprite2D
@@ -243,17 +272,14 @@ func _refresh_gem_indicator(cell: Vector2i) -> void:
 		sprites = _ensure_lazy_gem_sprites(cell)
 		top_sprite = sprites.get("top") as Sprite2D
 		front_sprite = sprites.get("front") as Sprite2D
+	if is_instance_valid(top_sprite) and is_instance_valid(front_sprite):
+		_apply_gem_regions(cell, top_sprite, front_sprite)
 
 	if is_instance_valid(top_sprite):
 		top_sprite.visible = show_top
 		if show_top:
 			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell))
-			if top_open:
-				top_sprite.rotation_degrees = 0.0
-			elif left_open and not right_open:
-				top_sprite.rotation_degrees = -90.0
-			else:
-				top_sprite.rotation_degrees = 90.0
+			top_sprite.region_rect = GEM_TOP_REGIONS[variant if top_open else (2 if left_open and not right_open else 3)]
 
 	if is_instance_valid(front_sprite):
 		_position_front_gem_sprite(front_sprite, cell)
