@@ -182,6 +182,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	_select_hero(nearby_hero)
 
 func _build_hero_shrines() -> void:
+	# A fresh save already has its starting Dwarf. Keep the first room focused on
+	# the actual character and bastion; the physical hero gallery appears only
+	# after the first completed MineWars expedition.
+	if not Global.first_level_beaten:
+		return
 	shrine_root = Node2D.new()
 	shrine_root.name = "PhysicalHeroShrines"
 	shrine_root.z_index = 12
