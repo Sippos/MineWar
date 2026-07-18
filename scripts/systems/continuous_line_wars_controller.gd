@@ -5,6 +5,7 @@ signal vs_run_finished(side_label: String, victory: bool, base_health: int)
 
 const BUILDER_PEON_SCENE := preload("res://scenes/entities/workers/peon/builder_peon_player.tscn")
 const WAR_MACHINE_CONTROLLER := preload("res://scripts/systems/linewars_war_machine_controller.gd")
+const LINEWARS_ECONOMY := preload("res://scripts/systems/linewars_economy.gd")
 const HUD_SCENE := preload("res://scenes/ui/overlays/continuous_line_wars_hud.tscn")
 const ENEMY_SCENE := preload("res://enemy.tscn")
 
@@ -104,6 +105,9 @@ var last_gate_eruption_msec := -10000
 var vs_match_gate_enabled := false
 var vs_match_started := true
 var vs_side_label := "SIDE"
+var vs_match_elapsed := 0.0
+var passive_gold_timer := LINEWARS_ECONOMY.PASSIVE_GOLD_INTERVAL
+var last_passive_gold := 0
 
 func _ready() -> void:
 	world = get_parent() as Node2D
@@ -201,6 +205,7 @@ func _process(delta: float) -> void:
 
 	_animate_world_markers(delta)
 	_update_order_visual()
+	_process_vs_economy(delta)
 
 	if Input.is_action_just_pressed("switch_front"):
 		_toggle_front()
@@ -384,6 +389,10 @@ func configure_vs_match(side_label: String) -> void:
 	vs_match_gate_enabled = true
 	vs_match_started = false
 	vs_side_label = side_label
+	vs_match_elapsed = 0.0
+	passive_gold_timer = LINEWARS_ECONOMY.PASSIVE_GOLD_INTERVAL
+	last_passive_gold = LINEWARS_ECONOMY.BASE_PASSIVE_GOLD
+	_set_starting_vs_resources()
 	world.set_meta("linewars_vs_mirror_active", true)
 	command_message = "Build the five-tile opening route. Your side becomes READY when it is complete."
 	_update_interface()
@@ -392,6 +401,7 @@ func start_vs_match() -> void:
 	if not vs_match_gate_enabled or opening_build_active or run_finished:
 		return
 	vs_match_started = true
+	passive_gold_timer = LINEWARS_ECONOMY.PASSIVE_GOLD_INTERVAL
 	invasion_timer = FIRST_INVASION_DELAY
 	first_wave_warning_shown = false
 	command_message = "VS MATCH LIVE. Mine, defend, and use the War Machine to pressure the opponent."
@@ -417,8 +427,31 @@ func get_vs_state() -> Dictionary:
 		"finished": run_finished,
 		"base_health": int(base.get("health")) if base else 0,
 		"enemy_pressure": _count_world_enemies(),
-		"wave": current_wave
+		"wave": current_wave,
+		"gold": _available_gold(),
+		"gems": _available_gems(),
+		"passive_gold": LINEWARS_ECONOMY.passive_gold_for_elapsed(vs_match_elapsed),
+		"next_income_in": passive_gold_timer,
 	}
+
+func _set_starting_vs_resources() -> void:
+	if world_hud == null:
+		return
+	if world_hud.has_method("add_gold"):
+		world_hud.call("add_gold", LINEWARS_ECONOMY.STARTING_GOLD - _available_gold())
+	if world_hud.has_method("add_gems"):
+		world_hud.call("add_gems", LINEWARS_ECONOMY.STARTING_GEMS - _available_gems())
+
+func _process_vs_economy(delta: float) -> void:
+	if not vs_match_gate_enabled or not vs_match_started or run_finished:
+		return
+	vs_match_elapsed += delta
+	passive_gold_timer -= delta
+	while passive_gold_timer <= 0.0:
+		passive_gold_timer += LINEWARS_ECONOMY.PASSIVE_GOLD_INTERVAL
+		last_passive_gold = LINEWARS_ECONOMY.passive_gold_for_elapsed(vs_match_elapsed)
+		_add_gold(last_passive_gold)
+		command_message = "+%d passive war gold. Save for a push or send pressure now." % last_passive_gold
 
 func _spawn_vs_payload(payload: Dictionary) -> void:
 	last_spawn_cell = _find_farthest_tunnel_cell()
@@ -845,7 +878,7 @@ func _clear_opening_dig_overlays() -> void:
 	opening_overlay_cells.clear()
 
 func _world_topology_revision() -> int:
-	varrld.get("topology_revision") if world else null
+	var revision: Variant = world.get("topology_revision") if world else null
 	return int(revision) if revision != null else 0
 
 func _opening_new_tiles_dug() -> int:
@@ -920,7 +953,8 @@ func _snap_command_cell(cell: Vector2i) -> Vector2i:
 			var candidate := Vector2i(x, y)
 			if not _is_valid_command_target(candidate):
 				continue
-			var distance: int = absi(candidate.x - cell.x			if distance < best_distance:
+				var distance: int = absi(candidate.x - cell.x) + absi(candidate.y - cell.y)
+				if distance < best_distance:
 				best_distance = distance
 				best_cell = candidate
 	return best_cell
@@ -940,4 +974,286 @@ func _confirm_touch_command() -> void:
 	if touch_selected_cell == INVALID_CELL or not _is_valid_command_target(touch_selected_cell):
 		_play_sound("play_error")
 		return
-	_issue_command(touc) + absi(candidate.y - cell.y)
+	var target_cell := touch_selected_cell
+	touch_selected_cell = INVALID_CELL
+	_issue_command(target_cell)
+
+func _build_touch_command_panel() -> void:
+	touch_action_panel = PanelContainer.new()
+	touch_action_panel.name = "TouchCommandPanel"
+	touch_action_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	touch_action_panel.offset_left = -250.0
+	touch_action_panel.offset_top = -82.0
+	touch_action_panel.offset_right = 250.0
+	touch_action_panel.offset_bottom = -18.0
+	touch_action_panel.visible = false
+	touch_action_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	hud.add_child(touch_action_panel)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	touch_action_panel.add_child(row)
+	touch_confirm_button = Button.new()
+	touch_confirm_button.text = "DIG HERE"
+	touch_confirm_button.custom_minimum_size = Vector2(310, 56)
+	touch_confirm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	touch_confirm_button.disabled = true
+	touch_confirm_button.pressed.connect(_confirm_touch_command)
+	row.add_child(touch_confirm_button)
+	touch_cancel_button = Button.new()
+	touch_cancel_button.text = "CANCEL"
+	touch_cancel_button.custom_minimum_size = Vector2(150, 56)
+	touch_cancel_button.pressed.connect(_cancel_touch_command)
+	row.add_child(touch_cancel_button)
+
+func _cancel_touch_command() -> void:
+	if opening_build_active:
+		touch_selected_cell = INVALID_CELL
+		if touch_confirm_button:
+			touch_confirm_button.disabled = true
+		return
+	_exit_command_view()
+
+func _handle_touch_opening_input(event: InputEvent) -> bool:
+	var pressed_position := Vector2.ZERO
+	if event is InputEventScreenTouch and event.pressed:
+		pressed_position = event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		pressed_position = event.position
+	else:
+		return false
+	if peon == null or bool(peon.call("is_order_active")):
+		return true
+	var peon_cell := block_layer.local_to_map(block_layer.to_local(peon.global_position))
+	var target_cell := _snap_command_cell(_viewport_to_command_cell(pressed_position))
+	if target_cell == INVALID_CELL or absi(target_cell.x - peon_cell.x) + absi(target_cell.y - peon_cell.y) != 1:
+		command_message = "Tap one highlighted dirt block beside the peon."
+		_play_sound("play_error")
+		_update_interface()
+		return true
+	if bool(peon.call("issue_dig_order", target_cell)):
+		command_message = "Opening tile commissioned. Waves remain paused until the safe route reaches 5/5."
+		_show_order_visual(target_cell, "DIG")
+		_play_sound("play_purchase")
+	return true
+
+func _build_command_line_points(target_cell: Vector2i, mode: String) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	if peon == null:
+		return points
+	var start := peon.global_position
+	var target := _cell_world_position(target_cell)
+	points.append(start)
+	if mode == "DIG" and not is_equal_approx(start.x, target.x) and not is_equal_approx(start.y, target.y):
+		points.append(Vector2(target.x, start.y))
+	points.append(target)
+	return points
+
+func _show_order_visual(target_cell: Vector2i, kind: String) -> void:
+	active_order_target = target_cell
+	if order_marker:
+		order_marker.global_position = _cell_world_position(target_cell)
+		order_marker.visible = true
+		var caption := order_marker.get_node_or_null("Caption") as Label
+		if caption:
+			caption.text = "%s ORDER" % kind
+	if order_line:
+		order_line.points = _build_command_line_points(target_cell, kind)
+		order_line.visible = true
+
+func _hide_order_visual() -> void:
+	active_order_target = INVALID_CELL
+	if order_marker:
+		order_marker.visible = false
+	if order_line:
+		order_line.visible = false
+
+func _update_order_visual() -> void:
+	if active_order_target == INVALID_CELL or peon == null or order_line == null:
+		return
+	if not bool(peon.call("is_order_active")):
+		_hide_order_visual()
+		return
+	order_line.points = _build_command_line_points(active_order_target, str(peon.call("get_order_kind")))
+
+func _animate_world_markers(delta: float) -> void:
+	for marker_value in portal_nodes.values() + radar_nodes.values():
+		var marker := marker_value as Node2D
+		if marker == null or not marker.visible:
+			continue
+		var outer := marker.get_node_or_null("Outer") as Polygon2D
+		if outer:
+			outer.rotation += delta * 0.7
+
+func _spawn_portal_transfer_effect(position: Vector2, color: Color, caption: String) -> void:
+	var effect := Node2D.new()
+	effect.global_position = position
+	effect.z_index = 30
+	world.add_child(effect)
+	var ring := Polygon2D.new()
+	ring.polygon = _circle_polygon(28.0, 20)
+	ring.color = Color(color.r, color.g, color.b, 0.58)
+	effect.add_child(ring)
+	var label := Label.new()
+	label.position = Vector2(-70, -48)
+	label.size = Vector2(140, 28)
+	label.text = caption
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 3)
+	effect.add_child(label)
+	var tween := effect.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(effect, "scale", Vector2(2.1, 2.1), 0.42)
+	tween.tween_property(effect, "modulate:a", 0.0, 0.42)
+	tween.set_parallel(false)
+	tween.tween_callback(effect.queue_free)
+
+func _play_breach_feedback() -> void:
+	last_breach_feedback_msec = Time.get_ticks_msec()
+	_show_alert("MINE BREACH\nRETURN TO THE HERO", 1.7)
+	_play_sound("play_breach")
+	if breach_flash:
+		breach_flash.color.a = 0.34
+		var tween := breach_flash.create_tween()
+		tween.tween_property(breach_flash, "color:a", 0.0, 0.5)
+
+func _update_interface() -> void:
+	if mode_label == null or threat_label == null or hint_label == null or switch_button == null or radar_button == null:
+		return
+	var peon_status := str(peon.call("get_order_progress_text")) if peon else "IDLE"
+	if opening_build_active:
+		var newly_dug_tiles := _opening_new_tiles_dug()
+		if opening_progress:
+			opening_progress.visible = true
+			opening_progress.max_value = OPENING_REQUIRED_NEW_TILES
+			opening_progress.value = mini(newly_dug_tiles, OPENING_REQUIRED_NEW_TILES)
+		mode_label.text = "OPENING PEON • BUILD SAFE ROUTE"
+		switch_button.text = "TUNNEL %d/%d" % [mini(newly_dug_tiles, OPENING_REQUIRED_NEW_TILES), OPENING_REQUIRED_NEW_TILES]
+		switch_button.disabled = true
+		radar_button.text = "RADAR LOCKED"
+		radar_button.disabled = true
+		threat_label.text = "WAVES PAUSED • DIG %d MORE" % maxi(OPENING_REQUIRED_NEW_TILES - newly_dug_tiles, 0)
+		hint_label.text = command_message
+		return
+
+	if opening_progress:
+		opening_progress.visible = false
+	if touch_action_panel:
+		touch_action_panel.visible = touch_command_mode and command_view_active
+	switch_button.disabled = false
+	mode_label.text = "PEON COMMAND • %s" % command_mode if command_view_active else "HERO • MINE & INTERCEPT"
+	switch_button.text = "RETURN TO HERO" if command_view_active else ("VIEW PEON • %s" % peon_status if peon_status != "IDLE" else "COMMAND PEON")
+	radar_button.text = "RADAR %d/%d • %d GOLD" % [radar_cells.size(), MAX_RADARS, RADAR_GOLD_COST]
+	radar_button.disabled = command_view_active or bool(peon.call("is_order_active")) or radar_cells.size() >= MAX_RADARS or _available_gold() < RADAR_GOLD_COST
+
+	var radar_contacts := _radar_contact_count()
+	if vs_match_gate_enabled and not vs_match_started:
+		threat_label.text = "READY • WAITING FOR OPPONENT"
+	elif spawning:
+		threat_label.text = "RADAR ALERT • WAVE %d • PORTAL %s • %.1fs" % [current_wave, _format_cell(last_spawn_cell), current_telegraph_duration]
+	elif wave_in_progress:
+		threat_label.text = "WAVE %d • TUNNEL %d • MINE %d" % [current_wave, _count_enemies_in_layer("tunnel"), _count_enemies_in_layer("mine")]
+		if radar_contacts > 0:
+			threat_label.text += " • RADAR %d" % radar_contacts
+	elif _count_world_enemies() > 0:
+		threat_label.text = "VS PRESSURE • TUNNEL %d • MINE %d" % [_count_enemies_in_layer("tunnel"), _count_enemies_in_layer("mine")]
+	else:
+		threat_label.text = "WAVE %d IN %ds • ROUTE %d • GOLD +%d/%ds" % [next_wave, int(ceil(invasion_timer)), _tunnel_route_length(), last_passive_gold, int(LINEWARS_ECONOMY.PASSIVE_GOLD_INTERVAL)]
+
+	hint_label.text = command_message
+	if command_view_active:
+		hint_label.text += "  •  Tap to select, then confirm. No precise dragging required." if touch_command_mode else "  •  Click to confirm. Tab / RB cancels."
+	elif wave_in_progress or _count_world_enemies() > 0:
+		hint_label.text += "  •  Orange gate transfers survivors to the blue mine gate; leaks damage the base."
+
+func _tunnel_route_length() -> int:
+	var endpoint := _find_farthest_tunnel_cell()
+	if endpoint == tunnel_exit_cell:
+		return 1
+	var astar_value: Variant = world.get("astar") if world else null
+	if astar_value == null:
+		return 1
+	var path: Array[Vector2i] = astar_value.get_id_path(tunnel_exit_cell, endpoint)
+	return maxi(path.size(), 1)
+
+func _available_gems() -> int:
+	if world_hud == null:
+		return 0
+	var value: Variant = world_hud.get("total_gems")
+	return int(value) if value != null else 0
+
+func _available_gold() -> int:
+	if world_hud == null:
+		return 0
+	var value: Variant = world_hud.get("total_gold")
+	return int(value) if value != null else 0
+
+func _add_gold(amount: int) -> void:
+	if world_hud and world_hud.has_method("add_gold"):
+		world_hud.call("add_gold", amount)
+
+func _spend_gold(amount: int) -> void:
+	_add_gold(-amount)
+
+func _cell_world_position(cell: Vector2i) -> Vector2:
+	return block_layer.to_global(block_layer.map_to_local(cell))
+
+func _format_cell(cell: Vector2i) -> String:
+	return "%d,%d" % [cell.x, cell.y]
+
+func _finish_run(victory: bool) -> void:
+	if run_finished:
+		return
+	run_finished = true
+	spawning = false
+	wave_in_progress = false
+	command_view_active = false
+	touch_selected_cell = INVALID_CELL
+	if touch_action_panel:
+		touch_action_panel.visible = false
+	_hide_order_visual()
+	_apply_control()
+	if threat_label:
+		threat_label.text = "LINEWARS COMPLETE" if victory else "BASE DESTROYED"
+	if vs_match_gate_enabled:
+		vs_run_finished.emit(vs_side_label, victory, int(base.get("health")) if base else 0)
+	if hint_label:
+		hint_label.text = "Victory: the tunnel bought time and the mine held every breach." if victory else "Defeat: extend the tunnel, invest gems in the hero, and intercept earlier."
+
+func _surface_movement_bounds() -> Rect2:
+	var top_left := _cell_world_position(SURFACE_MIN_CELL) - Vector2(28, 28)
+	var bottom_right := _cell_world_position(SURFACE_MAX_CELL) + Vector2(28, 28)
+	return Rect2(top_left, bottom_right - top_left)
+
+func _ensure_switch_action() -> void:
+	if not InputMap.has_action("switch_front"):
+		InputMap.add_action("switch_front")
+	var has_tab := false
+	var has_shoulder := false
+	for existing in InputMap.action_get_events("switch_front"):
+		if existing is InputEventKey and existing.physical_keycode == KEY_TAB:
+			has_tab = true
+		elif existing is InputEventJoypadButton and existing.button_index == JOY_BUTTON_RIGHT_SHOULDER:
+			has_shoulder = true
+	if not has_tab:
+		var key_event := InputEventKey.new()
+		key_event.physical_keycode = KEY_TAB
+		InputMap.action_add_event("switch_front", key_event)
+	if not has_shoulder:
+		var joy_event := InputEventJoypadButton.new()
+		joy_event.button_index = JOY_BUTTON_RIGHT_SHOULDER
+		InputMap.action_add_event("switch_front", joy_event)
+
+func _play_sound(method_name: String) -> void:
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method(method_name):
+		sound_fx.call(method_name)
+
+func _circle_polygon(radius: float, point_count: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for index in range(point_count):
+		var angle := TAU * float(index) / float(maxi(point_count, 1))
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
