@@ -1199,7 +1199,7 @@ func _on_upgrade_minimap_pressed():
 
 func _on_upgrade_max_health_pressed():
 	var cost := 2 if _is_vs_mode() else 15
-	var can_afford := hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
+	var can_afford: bool = hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
 	if can_afford:
 		if _is_vs_mode():
 			hud.add_gems(-cost)
@@ -1283,7 +1283,7 @@ func _on_swap_hero_pressed():
 
 func _on_heal_player_pressed():
 	var cost := 1 if _is_vs_mode() else 10
-	var can_afford := hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
+	var can_afford: bool = hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
 	if can_afford and player.health < player.max_health:
 		if _is_vs_mode():
 			hud.add_gems(-cost)
