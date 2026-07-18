@@ -1292,11 +1292,14 @@ func _ensure_hud() -> void:
 	ability_bar.name = "HeroAbilityBarP%d" % _player_id()
 	ability_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var mobile_runtime := _is_mobile_runtime()
-	ability_bar.offset_left = -326.0
-	ability_bar.offset_top = (-182.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
-	ability_bar.offset_right = -20.0
-	ability_bar.offset_bottom = (-106.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
-	ability_bar.add_theme_constant_override("separation", 8)
+	# Mobile abilities share the same compact card language as the pick/drop
+	# controls. Three active abilities fit in a single row without pushing into
+	# the browser safe area; desktop keeps the wider legacy footprint.
+	ability_bar.offset_left = (-228.0 if mobile_runtime else -326.0)
+	ability_bar.offset_top = (-186.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.offset_right = -18.0
+	ability_bar.offset_bottom = (-118.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.add_theme_constant_override("separation", 7 if mobile_runtime else 8)
 	ability_bar.alignment = BoxContainer.ALIGNMENT_END
 	hud.add_child(ability_bar)
 	_rebuild_hud()
@@ -1368,20 +1371,21 @@ func _mobile_action_for_ability(ability: String) -> String:
 
 func _create_ability_slot(ability: String, display_name: String, key_text: String) -> PanelContainer:
 	var slot := PanelContainer.new()
-	slot.custom_minimum_size = ICON_SIZE
+	var mobile_runtime := _is_mobile_runtime()
+	var slot_size := Vector2(64, 64) if mobile_runtime else ICON_SIZE
+	slot.custom_minimum_size = slot_size
 	slot.tooltip_text = display_name
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.055, 0.05, 0.92)
-	style.border_color = Color(0.62, 0.47, 0.25, 1.0)
+	style.bg_color = Color(0.035, 0.045, 0.06, 0.94) if mobile_runtime else Color(0.06, 0.055, 0.05, 0.92)
+	style.border_color = Color(0.95, 0.72, 0.28, 0.96) if mobile_runtime else Color(0.62, 0.47, 0.25, 1.0)
 	style.set_border_width_all(2)
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
+	style.set_corner_radius_all(11 if mobile_runtime else 6)
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 4
 	slot.add_theme_stylebox_override("panel", style)
 	var root := Control.new()
 	root.name = "Root"
-	root.custom_minimum_size = ICON_SIZE
+	root.custom_minimum_size = slot_size
 	slot.add_child(root)
 	var icon := TextureRect.new()
 	icon.name = "Icon"
@@ -1389,10 +1393,10 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	icon.offset_left = 5
-	icon.offset_top = 5
-	icon.offset_right = -5
-	icon.offset_bottom = -5
+	icon.offset_left = 5 if not mobile_runtime else 6
+	icon.offset_top = 5 if not mobile_runtime else 6
+	icon.offset_right = -5 if not mobile_runtime else -6
+	icon.offset_bottom = -5 if not mobile_runtime else -6
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(icon)
 	var overlay := ColorRect.new()
@@ -1425,7 +1429,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	key_label.offset_top = -17.0
 	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key_label.text = key_text
-	key_label.visible = not _is_mobile_runtime()
+	key_label.visible = not mobile_runtime
 	key_label.add_theme_font_size_override("font_size", 9)
 	key_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.55))
 	key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1440,7 +1444,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	level_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.55))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(level_label)
-	if _is_mobile_runtime():
+	if mobile_runtime:
 		var action_name := _mobile_action_for_ability(ability)
 		if action_name != "":
 			var touch_button := Button.new()
