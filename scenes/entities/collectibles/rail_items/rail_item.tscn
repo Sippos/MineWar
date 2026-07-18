@@ -1,10 +1,9 @@
-[gd_scene format=3 uid="uid://railitemuid"]
+[gd_scene load_steps=4 format=3 uid="uid://railitemuid"]
 
 [ext_resource type="Script" path="res://scripts/gameplay/collectibles/rail_items/rail_item.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://rail_item_placeholder.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_gem"]
-size = Vector2(16, 16)
+size = Vector2(24, 16)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
 radius = 32.0
@@ -16,8 +15,39 @@ script = ExtResource("1_script")
 gravity_scale = 0.0
 linear_damp = 3.0
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-texture = ExtResource("2_tex")
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="SleeperLeft" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-11, -8, -7, -8, -7, 8, -11, 8)
+color = Color(0.27, 0.13, 0.06, 1)
+
+[node name="SleeperCenter" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-2, -8, 2, -8, 2, 8, -2, 8)
+color = Color(0.31, 0.16, 0.07, 1)
+
+[node name="SleeperRight" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(7, -8, 11, -8, 11, 8, 7, 8)
+color = Color(0.27, 0.13, 0.06, 1)
+
+[node name="RailTopShadow" type="Line2D" parent="Visual"]
+points = PackedVector2Array(-13, -4, 13, -4)
+width = 4.0
+default_color = Color(0.08, 0.09, 0.11, 1)
+
+[node name="RailBottomShadow" type="Line2D" parent="Visual"]
+points = PackedVector2Array(-13, 4, 13, 4)
+width = 4.0
+default_color = Color(0.08, 0.09, 0.11, 1)
+
+[node name="RailTop" type="Line2D" parent="Visual"]
+points = PackedVector2Array(-13, -4, 13, -4)
+width = 2.0
+default_color = Color(0.72, 0.75, 0.78, 1)
+
+[node name="RailBottom" type="Line2D" parent="Visual"]
+points = PackedVector2Array(-13, 4, 13, 4)
+width = 2.0
+default_color = Color(0.72, 0.75, 0.78, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_gem")

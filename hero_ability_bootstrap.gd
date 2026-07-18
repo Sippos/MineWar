@@ -3,6 +3,7 @@ extends Node
 const HERO_RPG_SCRIPT = preload("res://hero_rpg_controller.gd")
 const HERO_ABILITIES_SCRIPT = preload("res://hero_abilities.gd")
 const HERO_BALANCE_SCRIPT = preload("res://hero_balance_controller.gd")
+const MECH_PILOT_CONTROLLER_SCRIPT = preload("res://mech_pilot_controller.gd")
 
 func _ready() -> void:
 	get_tree().node_added.connect(_try_attach)
@@ -30,3 +31,8 @@ func _try_attach(node: Node) -> void:
 		balance_controller.name = "HeroBalanceController"
 		balance_controller.set_script(HERO_BALANCE_SCRIPT)
 		node.add_child(balance_controller)
+	if node.get_node_or_null("MechPilotController") == null:
+		var mech_pilot_controller := Node.new()
+		mech_pilot_controller.name = "MechPilotController"
+		mech_pilot_controller.set_script(MECH_PILOT_CONTROLLER_SCRIPT)
+		node.add_child(mech_pilot_controller)

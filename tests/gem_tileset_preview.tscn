@@ -1,0 +1,87 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/gem_tileset_preview.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/bricks/Easy_Brick.png" id="2_brick"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/front_walls/Easy_Brick-Front.png" id="3_front"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/stats/StatRessources.png" id="4_old_icon"]
+
+[node name="GemTilesetPreview" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.055, 0.065, 0.12, 1)
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(56, 34)
+theme_override_font_sizes/font_size = 28
+text = "BURIED GEM TILE OVERLAY PREVIEW"
+
+[node name="Subtitle" type="Label" parent="."]
+position = Vector2(58, 75)
+theme_override_colors/font_color = Color(0.7, 0.74, 0.86, 1)
+theme_override_font_sizes/font_size = 16
+text = "64 px tile-safe decals • no atlas regions • nearest filtering"
+
+[node name="OldLabel" type="Label" parent="."]
+position = Vector2(80, 135)
+theme_override_font_sizes/font_size = 18
+text = "OLD: loose UI gem scaled onto dirt"
+
+[node name="OldBrick" type="Sprite2D" parent="."]
+position = Vector2(205, 250)
+scale = Vector2(3, 3)
+texture = ExtResource("2_brick")
+texture_filter = 1
+
+[node name="OldIcon" type="Sprite2D" parent="."]
+position = Vector2(205, 250)
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("4_old_icon")
+texture_filter = 1
+
+[node name="NewLabel" type="Label" parent="."]
+position = Vector2(425, 135)
+theme_override_font_sizes/font_size = 18
+text = "NEW: crystal vein embedded in exposed face"
+
+[node name="NewBrickTop" type="Sprite2D" parent="."]
+position = Vector2(535, 250)
+scale = Vector2(3, 3)
+texture = ExtResource("2_brick")
+texture_filter = 1
+
+[node name="NewGemTop" type="Sprite2D" parent="."]
+position = Vector2(535, 250)
+scale = Vector2(3, 3)
+texture_filter = 1
+
+[node name="NewBrickSide" type="Sprite2D" parent="."]
+position = Vector2(825, 250)
+scale = Vector2(3, 3)
+texture = ExtResource("2_brick")
+texture_filter = 1
+
+[node name="NewGemSide" type="Sprite2D" parent="."]
+position = Vector2(825, 250)
+rotation = 1.57079632679
+scale = Vector2(3, 3)
+texture_filter = 1
+
+[node name="FrontLabel" type="Label" parent="."]
+position = Vector2(425, 405)
+theme_override_font_sizes/font_size = 18
+text = "Front-wall version occupies only the visible wall face"
+
+[node name="FrontTile" type="Sprite2D" parent="."]
+position = Vector2(650, 525)
+scale = Vector2(3, 3)
+texture = ExtResource("3_front")
+texture_filter = 1
+
+[node name="FrontGem" type="Sprite2D" parent="."]
+position = Vector2(650, 525)
+scale = Vector2(3, 3)
+texture_filter = 1

@@ -1,27 +1,53 @@
-extends "res://scripts/systems/world_generation/world.gd"
+extends "res://scripts/systems/world_generation/world_terrain_runtime.gd"
 
-# Single Player owns one persistent generated world. The base room is the hub,
-# MineWars and Adventure continue into the lower mine, and LineWars is a real
-# chamber above the base reached with the normal hero digging interaction.
+# Single Player owns one persistent generated world. The preparation area is a
+# deliberately composed hero hall: one rectangular room, three obvious exits,
+# and the same mine continuing beyond those exits.
 
-const PREPARATION_GEM_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats/StatRessources.png")
-const PREPARATION_GEM_TOP_SCALE := Vector2(0.58, 0.58)
-const PREPARATION_GEM_FRONT_SCALE := Vector2(0.46, 0.46)
+# Buried resources use tile-sized transparent decals. They read as crystals
+# embedded in an exposed dirt face instead of a scaled-down loose gem/UI icon.
+const GEM_TEXTURE_FACTORY = preload("res://scripts/systems/preparation/gem_indicator_texture_factory.gd")
+const PREPARATION_GEM_EDGE_PATH := "res://assets/sprites/world/terrain/gem_embedded_edge.svg"
+const PREPARATION_GEM_FRONT_PATH := "res://assets/sprites/world/terrain/gem_embedded_front.svg"
 const PREPARATION_GEM_Z_INDEX := 2
-const PREPARATION_TUTORIAL_GEM_CELL := Vector2i(0, 2)
+const PREPARATION_TUTORIAL_GEM_CELL := Vector2i(0, 9)
 const INPUT_REGISTRATION_META := "single_player_runtime_input_ready"
 
 const WORLD_WIDTH := 40
 const WORLD_TOP := -33
 const WORLD_DEPTH := 30
-const SURFACE_ROOM_X_MIN := -10
-const SURFACE_ROOM_X_MAX := 10
-const SURFACE_ROOM_Y_MIN := -14
-const SURFACE_ROOM_Y_MAX := -7
-const ADVENTURE_ROOM_X_MIN := 11
+
+# The room is 15 × 9 tiles. At the hub camera zoom this fits as one readable
+# overview while still leaving enough space for the five hero statues.
+const HUB_ROOM_X_MIN := -7
+const HUB_ROOM_X_MAX := 7
+const HUB_ROOM_Y_MIN := -4
+const HUB_ROOM_Y_MAX := 4
+
+# Three-cell-wide doorways with short tunnels make every mode legible without
+# relying on floating instructional text.
+const LINE_WARS_ROUTE_X_MIN := -1
+const LINE_WARS_ROUTE_X_MAX := 1
+const LINE_WARS_ROUTE_Y_MIN := -7
+const LINE_WARS_ROUTE_Y_MAX := -5
+const MINE_WARS_ROUTE_X_MIN := -1
+const MINE_WARS_ROUTE_X_MAX := 1
+const MINE_WARS_ROUTE_Y_MIN := 5
+const MINE_WARS_ROUTE_Y_MAX := 8
+const ADVENTURE_ROUTE_X_MIN := 8
+const ADVENTURE_ROUTE_X_MAX := 11
+const ADVENTURE_ROUTE_Y_MIN := -1
+const ADVENTURE_ROUTE_Y_MAX := 1
+
+# Adventure keeps a buried side chamber beyond its short hall. The transition
+# happens in the doorway, but the chamber remains part of the persistent mine.
+const ADVENTURE_ROOM_X_MIN := 12
 const ADVENTURE_ROOM_X_MAX := 18
 const ADVENTURE_ROOM_Y_MIN := -4
 const ADVENTURE_ROOM_Y_MAX := 3
+
+var preparation_gem_edge_texture: Texture2D
+var preparation_gem_front_texture: Texture2D
 
 func _init() -> void:
 	# MatchFlow only recognizes committed MineWars runs. The neutral hub,
@@ -86,22 +112,20 @@ func generate_initial_world() -> void:
 		for y in range(WORLD_TOP, WORLD_DEPTH):
 			update_astar_weight(Vector2i(x, y))
 
-	# Original first-version base room: one compact clearing with solid rock in
-	# every direction. The player chooses a mode by mining out of this room.
-	for x in range(-5, 6):
-		for y in range(-4, 0):
-			_on_generation_cell_dug(Vector2i(x, y))
+	# Main hero hall.
+	_carve_rect(HUB_ROOM_X_MIN, HUB_ROOM_X_MAX, HUB_ROOM_Y_MIN, HUB_ROOM_Y_MAX)
 
-	# The LineWars chamber is already part of the same TileMap, but remains hidden
-	# behind a long column of actual mine blocks until the hero digs upward.
-	for x in range(SURFACE_ROOM_X_MIN, SURFACE_ROOM_X_MAX + 1):
-		for y in range(SURFACE_ROOM_Y_MIN, SURFACE_ROOM_Y_MAX + 1):
-			_on_generation_cell_dug(Vector2i(x, y))
+	# Short, centered entrances through the room walls.
+	_carve_rect(LINE_WARS_ROUTE_X_MIN, LINE_WARS_ROUTE_X_MAX, LINE_WARS_ROUTE_Y_MIN, LINE_WARS_ROUTE_Y_MAX)
+	_carve_rect(MINE_WARS_ROUTE_X_MIN, MINE_WARS_ROUTE_X_MAX, MINE_WARS_ROUTE_Y_MIN, MINE_WARS_ROUTE_Y_MAX)
+	_carve_rect(ADVENTURE_ROUTE_X_MIN, ADVENTURE_ROUTE_X_MAX, ADVENTURE_ROUTE_Y_MIN, ADVENTURE_ROUTE_Y_MAX)
 
-	# Adventure has a buried side chamber. The player still has to mine through
-	# the eastern wall before its controller activates.
-	for x in range(ADVENTURE_ROOM_X_MIN, ADVENTURE_ROOM_X_MAX + 1):
-		for y in range(ADVENTURE_ROOM_Y_MIN, ADVENTURE_ROOM_Y_MAX + 1):
+	# The Adventure chamber remains available after committing to the route.
+	_carve_rect(ADVENTURE_ROOM_X_MIN, ADVENTURE_ROOM_X_MAX, ADVENTURE_ROOM_Y_MIN, ADVENTURE_ROOM_Y_MAX)
+
+func _carve_rect(x_min: int, x_max: int, y_min: int, y_max: int) -> void:
+	for x in range(x_min, x_max + 1):
+		for y in range(y_min, y_max + 1):
 			_on_generation_cell_dug(Vector2i(x, y))
 
 func _on_generation_cell_dug(cell: Vector2i) -> void:
@@ -111,26 +135,24 @@ func _on_generation_cell_dug(cell: Vector2i) -> void:
 
 func is_dig_cell_protected(cell: Vector2i) -> bool:
 	if bool(get_meta("single_player_hub_active", false)):
-		# Three deliberate exits keep the base readable while every transition uses
-		# the exact same hero digging code as the lower mine.
-		var vertical_route := cell.x >= 2 and cell.x <= 4
-		var adventure_route := cell.x >= 5 and cell.x <= ADVENTURE_ROOM_X_MAX and cell.y >= -4 and cell.y <= 3
-		return not vertical_route and not adventure_route
+		# The hub is a composed menu room. Its three exits are already open, so the
+		# surrounding walls stay intact until a mode is committed.
+		return true
 	if GameMode.is_line_wars():
-		# The hero may mine normally below, revisit the breakthrough shaft, and
-		# explore the real upper chamber without destroying unrelated base supports.
-		if cell.y >= 0:
+		# The hero may mine normally below, revisit the entrance, and explore the
+		# upper LineWars field without destroying unrelated base-room supports.
+		if cell.y >= 5:
 			return false
-		if cell.x >= 2 and cell.x <= 4:
+		if cell.x >= LINE_WARS_ROUTE_X_MIN and cell.x <= LINE_WARS_ROUTE_X_MAX:
 			return false
-		if cell.y <= -22:
+		if cell.y <= -7:
 			return false
 		return true
 	return super.is_dig_cell_protected(cell)
 
 func get_protected_dig_message(_cell: Vector2i) -> String:
 	if bool(get_meta("single_player_hub_active", false)):
-		return "The base supports are protected. Dig through a marked route: up, down, or east."
+		return "The Hero Hall walls are protected. Walk through the top, right, or bottom doorway."
 	return super.get_protected_dig_message(_cell)
 
 func _ensure_tutorial_gem() -> void:
@@ -145,17 +167,26 @@ func _normalize_gem_indicator_sprites() -> void:
 	for raw_cell: Variant in gem_blocks.keys():
 		_refresh_gem_indicator(Vector2i(raw_cell))
 
+func _ensure_gem_indicator_textures() -> bool:
+	if preparation_gem_edge_texture == null:
+		preparation_gem_edge_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_EDGE_PATH)
+	if preparation_gem_front_texture == null:
+		preparation_gem_front_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_FRONT_PATH)
+	return preparation_gem_edge_texture != null and preparation_gem_front_texture != null
+
 func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 	var sprites: Dictionary = gem_blocks.get(cell, {"top": null, "front": null})
 	var top_sprite := sprites.get("top") as Sprite2D
 	var front_sprite := sprites.get("front") as Sprite2D
+	if not _ensure_gem_indicator_textures():
+		return sprites
 
 	if not is_instance_valid(top_sprite):
 		top_sprite = Sprite2D.new()
 		top_sprite.name = "GemTop_%d_%d" % [cell.x, cell.y]
-		top_sprite.texture = PREPARATION_GEM_TEXTURE
+		top_sprite.texture = preparation_gem_edge_texture
 		top_sprite.region_enabled = false
-		top_sprite.scale = PREPARATION_GEM_TOP_SCALE
+		top_sprite.scale = Vector2.ONE
 		top_sprite.z_index = PREPARATION_GEM_Z_INDEX
 		top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		top_sprite.visible = false
@@ -165,10 +196,10 @@ func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
 	if not is_instance_valid(front_sprite):
 		front_sprite = Sprite2D.new()
 		front_sprite.name = "GemFront_%d_%d" % [cell.x, cell.y]
-		front_sprite.texture = PREPARATION_GEM_TEXTURE
+		front_sprite.texture = preparation_gem_front_texture
 		front_sprite.region_enabled = false
-		front_sprite.offset = Vector2(0.0, -16.0)
-		front_sprite.scale = PREPARATION_GEM_FRONT_SCALE
+		front_sprite.offset = Vector2.ZERO
+		front_sprite.scale = Vector2.ONE
 		front_sprite.z_index = PREPARATION_GEM_Z_INDEX
 		front_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		front_sprite.visible = false
@@ -201,14 +232,13 @@ func _refresh_gem_indicator(cell: Vector2i) -> void:
 	if is_instance_valid(top_sprite):
 		top_sprite.visible = show_top
 		if show_top:
-			var indicator_offset := Vector2.ZERO
+			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell))
 			if top_open:
-				indicator_offset = Vector2(0.0, -18.0)
+				top_sprite.rotation_degrees = 0.0
 			elif left_open and not right_open:
-				indicator_offset = Vector2(-18.0, 0.0)
-			elif right_open and not left_open:
-				indicator_offset = Vector2(18.0, 0.0)
-			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell)) + indicator_offset
+				top_sprite.rotation_degrees = -90.0
+			else:
+				top_sprite.rotation_degrees = 90.0
 
 	if is_instance_valid(front_sprite):
 		_position_front_gem_sprite(front_sprite, cell)

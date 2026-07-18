@@ -25,6 +25,11 @@ const BASE_ENTRIES := [
 		"name": "Undead Crypt",
 		"hero": "Undead King",
 		"texture": preload("res://UndeadKingBase.png")
+	},
+	{
+		"name": "Goblin Mech Workshop",
+		"hero": "Mech",
+		"texture": preload("res://DwarfBase.png")
 	}
 ]
 
@@ -45,7 +50,9 @@ func _on_back_pressed() -> void:
 func _update_grid_columns() -> void:
 	var viewport_width := get_viewport().get_visible_rect().size.x
 	var bases_grid := $VBoxContainer/ScrollContainer/VBoxContainer/BasesGrid as GridContainer
-	if viewport_width >= 760.0:
+	if viewport_width >= 900.0:
+		bases_grid.columns = 6
+	elif viewport_width >= 760.0:
 		bases_grid.columns = 5
 	elif viewport_width >= 560.0:
 		bases_grid.columns = 4

@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_enemy"]
+resource_local_to_scene = true
 size = Vector2(40, 40)
 
 [sub_resource type="Gradient" id="Gradient_shadow"]

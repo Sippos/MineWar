@@ -1,5 +1,7 @@
 extends Area2D
 
+const BASE_IDENTITY_SCRIPT := preload("res://base_identity_controller.gd")
+
 signal gems_deposited(amount)
 signal upgrade_requested
 signal base_damaged(new_health)
@@ -10,13 +12,14 @@ const BASE_TEXTURES = {
 	"shaman_base": preload("res://ShamanBase.png"),
 	"nerubian_base": preload("res://NerubianBase.png"),
 	"druid_base": preload("res://DruidBase.png"),
-	"undead_king_base": preload("res://UndeadKingBase.png")
+	"undead_king_base": preload("res://UndeadKingBase.png"),
+	"mech_base": preload("res://DwarfBase.png")
 }
 const LOADOUT_SELECTION_MENU = preload("res://scenes/menus/loadout_selection_menu.tscn")
 const MINIMUM_GOLD_ACTION_COST := 10
-const PROMPT_TEXT := "E / Y  •  UPGRADE BASE"
-const HUB_PROMPT_TEXT := "E / Y  •  CHOOSE BASE"
-const DEPOSIT_PROMPT_TEXT := "RETURN HERE  •  GEMS AUTO-DEPOSIT"
+const PROMPT_TEXT := "E / Y  •  FORGE"
+const HUB_PROMPT_TEXT := "E / Y  •  STRONGHOLD"
+const DEPOSIT_PROMPT_TEXT := "◇  AUTO-BANK"
 const DEPOSIT_GUIDE_DISTANCE := 560.0
 
 var max_health := 100
@@ -39,6 +42,11 @@ func _ready() -> void:
 	prompt.add_theme_color_override("font_color", Color(1.0, 0.9, 0.58, 1.0))
 	prompt.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
 	prompt.add_theme_constant_override("outline_size", 5)
+	if get_node_or_null("BaseIdentityController") == null:
+		var identity := Node.new()
+		identity.name = "BaseIdentityController"
+		identity.set_script(BASE_IDENTITY_SCRIPT)
+		add_child(identity)
 	call_deferred("refresh_base_sprite")
 
 func refresh_base_sprite() -> void:
@@ -57,24 +65,22 @@ func _apply_base_sprite(base_id: String) -> void:
 	var tex = BASE_TEXTURES.get(base_id, BASE_TEXTURES["default_base"])
 	if tex:
 		$Sprite2D.texture = tex
-		$Sprite2D.modulate = Color(1, 1, 1, 1)
+		$Sprite2D.modulate = Color(1.16, 0.82, 0.46, 1.0) if base_id == "mech_base" else Color(1, 1, 1, 1)
 		$Sprite2D.scale = Vector2(128.0 / tex.get_width(), 128.0 / tex.get_height())
 
 func _is_vs_mode() -> bool:
 	var world = get_parent()
-	return world != null and bool(world.get("is_vs_mode"))
+	return world != null and world.get("is_vs_mode") == true
 
 func _is_single_player_hub() -> bool:
 	var world := get_parent()
-	return world != null and bool(world.get_meta("single_player_hub_active", false))
+	return world != null and world.get_meta("single_player_hub_active", false) == true
 
 func _get_minimum_stat_upgrade_cost(player: Node) -> int:
 	if player == null:
 		return 999999
-	var strength_cost: int = max(int(player.get("strength")), 1) * 2 - 1
-	var agility_cost: int = max(int(player.get("agility")), 1) * 2 - 1
-	var intelligence_cost: int = max(int(player.get("intelligence")), 1) * 2 - 1
-	return min(strength_cost, min(agility_cost, intelligence_cost))
+	# MineWars stat purchases remain affordable whenever the player has one gem.
+	return 1
 
 func _can_afford_any_base_action() -> bool:
 	if _is_single_player_hub() or _is_vs_mode():
@@ -111,7 +117,7 @@ func _refresh_prompt_visibility() -> void:
 	var world := get_parent()
 	var player := world.get_node_or_null("Player") if world else null
 	if _is_single_player_hub() and player_in_zone:
-		prompt.text = HUB_PROMPT_TEXT
+		prompt.text = "E / Y  •  LOADOUT" if Global.is_legacy_workshop_unlocked() or Global.unlocked_bases.size() > 1 else HUB_PROMPT_TEXT
 		_set_prompt_visible(true)
 		return
 	var carry_load := int(player.get_carry_load()) if player and player.has_method("get_carry_load") else 0

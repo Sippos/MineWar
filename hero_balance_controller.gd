@@ -5,6 +5,7 @@ const GRAVE_MIGHT_ICON: Texture2D = preload("res://ability_icons/generated/Undea
 
 const HERO_PROFILES := {
 	"Dwarf": {"health": 40, "speed": 190.0, "dig_time": 0.36},
+	"Mech": {"health": 52, "speed": 176.0, "dig_time": 0.34},
 	"Shaman": {"health": 32, "speed": 205.0, "dig_time": 0.42},
 	"Nerubian": {"health": 36, "speed": 215.0, "dig_time": 0.46},
 	"Druid": {"health": 34, "speed": 210.0, "dig_time": 0.39},
@@ -13,6 +14,7 @@ const HERO_PROFILES := {
 
 const HERO_SCALE_MULTIPLIERS := {
 	"Dwarf": 1.0,
+	"Mech": 1.08,
 	"Shaman": 1.0,
 	"Nerubian": 1.70,
 	"Druid": 1.07,

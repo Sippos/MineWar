@@ -3,8 +3,8 @@
 ; since the parameters that go here are not all obvious.
 ;
 ; Format:
-;   [section] ; section between []
-;   param=value
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -17,7 +17,9 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+GameInputBootstrap="*res://game_input_bootstrap.gd"
 Global="*res://global.gd"
+MechUnlockPersistence="*res://mech_unlock_persistence.gd"
 GameMode="*res://game_mode.gd"
 SiegeModeBootstrap="*res://siege_mode_bootstrap.gd"
 WebIOSLightingFallback="*res://web_ios_lighting_fallback.gd"
@@ -63,3 +65,4 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true
+renderer/rendering/method="gl_compatibility"

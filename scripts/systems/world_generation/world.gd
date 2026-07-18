@@ -36,11 +36,14 @@ const ENEMY_SCENE = preload("res://enemy.tscn")
 const MINERS_SATCHEL_SCENE = preload("res://scenes/entities/collectibles/rewards/miners_satchel.tscn")
 const CAVE_REWARD_MIN_DEPTH := 8
 const FRONT_GEM_Z_INDEX = 2
-const GEM_TOP_TEXTURE = preload("res://Easy_Edge_Atlas-1-Stat-Ressources.png")
-const GEM_FRONT_TEXTURE = preload("res://Stat_Ressources_Overlay_Front.png")
-const GEM_INDICATOR_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats/StatRessources.png")
-const GEM_INDICATOR_TOP_SCALE := Vector2(0.58, 0.58)
-const GEM_INDICATOR_FRONT_SCALE := Vector2(0.46, 0.46)
+const BASE_GEM_TEXTURE_FACTORY = preload("res://scripts/systems/preparation/gem_indicator_texture_factory.gd")
+const GEM_TOP_TEXTURE_PATH := "res://assets/sprites/world/terrain/gem_embedded_edge.svg"
+const GEM_FRONT_TEXTURE_PATH := "res://assets/sprites/world/terrain/gem_embedded_front.svg"
+const GEM_INDICATOR_TOP_SCALE := Vector2.ONE
+const GEM_INDICATOR_FRONT_SCALE := Vector2.ONE
+
+var gem_top_texture: Texture2D
+var gem_front_texture: Texture2D
 const TUTORIAL_GEM_CELL := Vector2i(0, 2)
 const FIRST_WAVE_DELAY := 32.0
 const STANDARD_WAVE_INTERVAL := 36.0
@@ -61,10 +64,11 @@ const BREACH_MARKER_Z_INDEX := 19
 enum OnboardingStage { DIG_DOWN, FIND_GEM, PICK_UP_GEM, BANK_GEM, OPEN_UPGRADES, COMPLETE }
 
 var gem_blocks = {}
+var minewars_motherlodes: Dictionary = {}
 var cave_reward_spawned := false
 var onboarding_active := false
 var onboarding_stage: int = OnboardingStage.DIG_DOWN
-var onboarding_entry_marker: Label
+var onboarding_entry_marker: Node2D
 var onboarding_entry_marker_tween: Tween
 var first_deposit_received := false
 
@@ -94,6 +98,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _ready() -> void:
 	$Player.player_id = player_id
 	_add_wasd_input()
+	_ensure_base_gem_indicator_textures()
 	_configure_mine_lighting()
 	breach_rng.randomize()
 	
@@ -276,6 +281,84 @@ func _add_wasd_input() -> void:
 	var esc_event = InputEventKey.new(); esc_event.physical_keycode = KEY_ESCAPE; InputMap.action_add_event("pause", esc_event)
 	var start_event = InputEventJoypadButton.new(); start_event.button_index = JOY_BUTTON_START; InputMap.action_add_event("pause", start_event)
 
+func _ensure_base_gem_indicator_textures() -> void:
+	if gem_top_texture == null:
+		gem_top_texture = BASE_GEM_TEXTURE_FACTORY.load_svg_texture(GEM_TOP_TEXTURE_PATH)
+	if gem_front_texture == null:
+		gem_front_texture = BASE_GEM_TEXTURE_FACTORY.load_svg_texture(GEM_FRONT_TEXTURE_PATH)
+
+func _gem_chance_for_cell(cell: Vector2i, block_type: int) -> float:
+	var base_chance := 0.05
+	if block_type == 2:
+		base_chance = 0.14
+	elif block_type == 3:
+		base_chance = 0.28
+	var depth_bonus := clampf(float(maxi(cell.y, 0)) / 30.0 * 0.08, 0.0, 0.08)
+	return minf(base_chance + depth_bonus, 0.38)
+
+func _create_gem_block(cell: Vector2i) -> void:
+	if gem_blocks.has(cell):
+		return
+	var sprite := Sprite2D.new()
+	sprite.texture = gem_top_texture
+	sprite.position = block_layer.map_to_local(cell)
+	sprite.visible = false
+	edge_layer.add_child(sprite)
+
+	var front_sprite := Sprite2D.new()
+	front_sprite.texture = gem_front_texture
+	front_sprite.offset.y = -17
+	front_sprite.z_index = FRONT_GEM_Z_INDEX
+	front_sprite.visible = false
+	add_child(front_sprite)
+	_position_front_gem_sprite(front_sprite, cell)
+	gem_blocks[cell] = {"top": sprite, "front": front_sprite}
+
+func _seed_expedition_motherlodes() -> void:
+	if is_vs_mode:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var definitions := [
+		{"stage": 1, "depth": 12, "count": 3, "rock": 2},
+		{"stage": 2, "depth": 18, "count": 4, "rock": 2},
+		{"stage": 3, "depth": 24, "count": 6, "rock": 3},
+		{"stage": 4, "depth": 28, "count": 8, "rock": 3},
+	]
+	var pattern: Array[Vector2i] = [
+		Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN,
+		Vector2i(-1, 1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1)
+	]
+	var motherlodes := {}
+	for definition_value in definitions:
+		var definition: Dictionary = definition_value
+		var side := -1 if rng.randi_range(0, 1) == 0 else 1
+		var center := Vector2i(side * rng.randi_range(6, 12), int(definition["depth"]))
+		motherlodes[int(definition["stage"])] = center
+		for index in range(int(definition["count"])):
+			var cell := center + pattern[index % pattern.size()]
+			if block_layer.get_cell_source_id(cell) == -1:
+				block_layer.set_cell(cell, int(definition["rock"]), Vector2i.ZERO)
+			if astar.is_in_bounds(cell.x, cell.y):
+				astar.set_point_solid(cell, true)
+			_create_gem_block(cell)
+			for refresh_cell in [cell, cell + Vector2i.LEFT, cell + Vector2i.RIGHT, cell + Vector2i.UP, cell + Vector2i.DOWN]:
+				update_fog_mask(refresh_cell)
+				update_front_wall(refresh_cell)
+	minewars_motherlodes = motherlodes
+
+func ensure_minewars_motherlodes() -> void:
+	if minewars_motherlodes.is_empty():
+		_seed_expedition_motherlodes()
+
+func get_minewars_prospect_hint(stage: int) -> String:
+	if not minewars_motherlodes.has(stage):
+		var fallback_depths := {1: 12, 2: 18, 3: 24, 4: 28}
+		return "A rich seam should lie near depth %d." % int(fallback_depths.get(stage, 8))
+	var cell: Vector2i = minewars_motherlodes[stage]
+	var direction := "west" if cell.x < 0 else "east"
+	return "Prospecting marks point %s near depth %d." % [direction, cell.y]
+
 func generate_initial_world() -> void:
 	var width = 40
 	var depth = 30
@@ -304,23 +387,10 @@ func generate_initial_world() -> void:
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 				
-			if y >= 0 and randf() < 0.10:
-				var sprite = Sprite2D.new()
-				sprite.texture = GEM_TOP_TEXTURE
-				sprite.position = block_layer.map_to_local(cell)
-				sprite.visible = false
-				edge_layer.add_child(sprite)
+			if y >= 0 and randf() < _gem_chance_for_cell(cell, block_type):
+				_create_gem_block(cell)
 				
-				var front_sprite = Sprite2D.new()
-				front_sprite.texture = GEM_FRONT_TEXTURE
-				front_sprite.offset.y = -17 # Visually shift it back up to its intended position
-				front_sprite.z_index = FRONT_GEM_Z_INDEX
-				front_sprite.visible = false
-				add_child(front_sprite)
-				_position_front_gem_sprite(front_sprite, cell)
-				
-				gem_blocks[cell] = { "top": sprite, "front": front_sprite }
-				
+	_seed_expedition_motherlodes()
 	_ensure_tutorial_gem()
 	# Now that all blocks are placed, calculate masks and front walls
 	for x in range(-width / 2, width / 2):
@@ -363,12 +433,12 @@ func _ensure_tutorial_gem() -> void:
 	if astar.is_in_bounds(TUTORIAL_GEM_CELL.x, TUTORIAL_GEM_CELL.y):
 		astar.set_point_solid(TUTORIAL_GEM_CELL, true)
 	var sprite := Sprite2D.new()
-	sprite.texture = GEM_TOP_TEXTURE
+	sprite.texture = gem_top_texture
 	sprite.position = block_layer.map_to_local(TUTORIAL_GEM_CELL)
 	sprite.visible = false
 	edge_layer.add_child(sprite)
 	var front_sprite := Sprite2D.new()
-	front_sprite.texture = GEM_FRONT_TEXTURE
+	front_sprite.texture = gem_front_texture
 	front_sprite.offset.y = -17
 	front_sprite.z_index = FRONT_GEM_Z_INDEX
 	front_sprite.visible = false
@@ -447,18 +517,25 @@ func _apply_permanent_run_upgrades(hud: Node) -> String:
 func _create_entry_marker() -> void:
 	if onboarding_entry_marker and is_instance_valid(onboarding_entry_marker):
 		return
-	onboarding_entry_marker = Label.new()
+	onboarding_entry_marker = Node2D.new()
 	onboarding_entry_marker.name = "FirstRunDigMarker"
-	onboarding_entry_marker.text = "▼  DIG DOWN  ▼"
-	onboarding_entry_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	onboarding_entry_marker.add_theme_font_size_override("font_size", 16)
-	onboarding_entry_marker.add_theme_color_override("font_color", Color(0.35, 0.95, 1.0, 1.0))
-	onboarding_entry_marker.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
-	onboarding_entry_marker.add_theme_constant_override("outline_size", 4)
-	onboarding_entry_marker.position = block_layer.map_to_local(TUTORIAL_GEM_CELL) + Vector2(-90, -46)
-	onboarding_entry_marker.size = Vector2(180, 30)
+	onboarding_entry_marker.position = block_layer.map_to_local(TUTORIAL_GEM_CELL) + Vector2(0, -34)
 	onboarding_entry_marker.z_index = 30
 	add_child(onboarding_entry_marker)
+	var glow := Polygon2D.new()
+	var glow_points := PackedVector2Array()
+	for index in range(25):
+		glow_points.append(Vector2.RIGHT.rotated(TAU * float(index) / 24.0) * 28.0)
+	glow.polygon = glow_points
+	glow.color = Color(0.25, 0.94, 1.0, 0.12)
+	onboarding_entry_marker.add_child(glow)
+	for chevron_index in range(2):
+		var chevron := Line2D.new()
+		chevron.width = 5.0
+		chevron.default_color = Color(0.38, 0.96, 1.0, 0.96 - float(chevron_index) * 0.22)
+		var y := -18.0 + float(chevron_index) * 17.0
+		chevron.points = PackedVector2Array([Vector2(-14, y), Vector2(0, y + 12), Vector2(14, y)])
+		onboarding_entry_marker.add_child(chevron)
 	onboarding_entry_marker_tween = create_tween().bind_node(onboarding_entry_marker).set_loops()
 	onboarding_entry_marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y + 7.0, 0.55).set_trans(Tween.TRANS_SINE)
 	onboarding_entry_marker_tween.tween_property(onboarding_entry_marker, "position:y", onboarding_entry_marker.position.y, 0.55).set_trans(Tween.TRANS_SINE)
@@ -481,23 +558,30 @@ func _set_onboarding_stage(stage: int) -> void:
 		return
 	match stage:
 		OnboardingStage.DIG_DOWN:
-			hud.show_objective("STEP 1 OF 5", "OPEN THE SHAFT", "Move below the base. Hold DOWN against the center block to dig.")
+			hud.show_objective("I", "DIG  ▼", "")
 		OnboardingStage.FIND_GEM:
-			hud.show_objective("STEP 2 OF 5", "BREAK THE GLOWING VEIN", "The first cyan gem vein is directly below the entrance.")
+			hud.show_objective("II", "CRYSTAL SEAM", "")
 		OnboardingStage.PICK_UP_GEM:
-			hud.show_objective("STEP 3 OF 5", "PICK UP THE GEM", "Stand beside the loose gem and press SPACE / A.")
+			hud.show_objective("III", "SPACE / A", "")
 		OnboardingStage.BANK_GEM:
-			hud.show_objective("STEP 4 OF 5", "BANK THE GEM", "Carry it back to the base. Enter its blue zone to deposit automatically.")
+			hud.show_objective("IV", "RETURN  ◇", "")
 		OnboardingStage.OPEN_UPGRADES:
-			hud.show_objective("STEP 5 OF 5", "SPEND YOUR GEM", "At the base, press E / Y and choose an upgrade.")
+			hud.show_objective("V", "FORGE  E / Y", "")
 		OnboardingStage.COMPLETE:
-			hud.show_objective("CORE LOOP LEARNED", "MINE • BANK • UPGRADE • DEFEND", "Keep digging before the next enemy wave reaches your base.")
+			hud.show_objective("READY", "MINE  •  RETURN  •  DEFEND", "")
 			Global.complete_prototype_onboarding()
 			var objective_hud := hud
-			get_tree().create_timer(4.0).timeout.connect(func():
+			get_tree().create_timer(2.2).timeout.connect(func():
 				if is_instance_valid(objective_hud) and objective_hud.has_method("hide_objective"):
 					objective_hud.hide_objective()
 			)
+
+func notify_minewars_gem_dug(cell: Vector2i) -> void:
+	if not bool(get_meta("minewars_expedition", false)):
+		return
+	var controller := get_node_or_null("SiegeModeController")
+	if controller != null and controller.has_method("notify_objective_gem_dug"):
+		controller.call("notify_objective_gem_dug", cell)
 
 func notify_tutorial_cell_dug(_cell: Vector2i, contained_gem: bool) -> void:
 	if not onboarding_active:
@@ -515,6 +599,25 @@ func notify_tutorial_gem_spawned(gem: Node) -> void:
 		_set_onboarding_stage(OnboardingStage.PICK_UP_GEM)
 	if gem and gem.has_method("set_tutorial_emphasis"):
 		gem.set_tutorial_emphasis(true)
+	_play_first_crystal_discovery(gem)
+
+func _play_first_crystal_discovery(gem: Node) -> void:
+	if gem == null or bool(get_meta("first_crystal_discovery_played", false)):
+		return
+	set_meta("first_crystal_discovery_played", true)
+	var position := (gem as Node2D).global_position if gem is Node2D else Vector2.ZERO
+	_spawn_resource_burst(position, Color(0.24, 1.0, 0.95, 1.0), "FirstCrystalDiscovery", 34)
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_objective_tick"):
+		sound_fx.play_objective_tick(2)
+	var player := get_node_or_null("Player")
+	var camera := player.get_node_or_null("Camera2D") as Camera2D if player else null
+	if camera != null:
+		var rest := camera.offset
+		var shake := create_tween()
+		shake.tween_property(camera, "offset", rest + Vector2(3, -2), 0.04)
+		shake.tween_property(camera, "offset", rest + Vector2(-2, 2), 0.04)
+		shake.tween_property(camera, "offset", rest, 0.07)
 
 func notify_tutorial_gem_picked(_gem: Node) -> void:
 	if onboarding_active and onboarding_stage <= OnboardingStage.BANK_GEM:
@@ -526,9 +629,6 @@ func notify_tutorial_gems_deposited(amount: int) -> void:
 	if not first_deposit_received:
 		first_deposit_received = true
 		wave_timer = min(wave_timer, 18.0)
-		var hud := get_node_or_null("HUD")
-		if hud and hud.has_method("show_notice"):
-			hud.show_notice("Gem banked! Spend it now — the first scout attacks after setup.", 3.2)
 	if onboarding_active and onboarding_stage <= OnboardingStage.OPEN_UPGRADES:
 		_set_onboarding_stage(OnboardingStage.OPEN_UPGRADES)
 
@@ -537,7 +637,7 @@ func notify_tutorial_upgrade_opened() -> void:
 		return
 	var hud := get_node_or_null("HUD")
 	if hud and hud.has_method("show_objective"):
-		hud.show_objective("STEP 5 OF 5", "CHOOSE A QUICK STAT", "Spend the gem on Strength, Agility, or Intelligence along the bottom row.")
+		hud.show_objective("V", "CHOOSE  STR  •  AGI  •  INT", "")
 
 func notify_tutorial_upgrade_purchased() -> void:
 	if not onboarding_active or onboarding_stage != OnboardingStage.OPEN_UPGRADES:
@@ -1061,15 +1161,16 @@ func _normalize_gem_indicator_sprites() -> void:
 		if is_instance_valid(top_sprite):
 			if top_sprite.get_parent() != self:
 				top_sprite.reparent(self, true)
-			top_sprite.texture = GEM_INDICATOR_TEXTURE
+			top_sprite.texture = gem_top_texture
 			top_sprite.region_enabled = false
+			top_sprite.offset = Vector2.ZERO
 			top_sprite.scale = GEM_INDICATOR_TOP_SCALE
 			top_sprite.z_index = FRONT_GEM_Z_INDEX
 			top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if is_instance_valid(front_sprite):
-			front_sprite.texture = GEM_INDICATOR_TEXTURE
+			front_sprite.texture = gem_front_texture
 			front_sprite.region_enabled = false
-			front_sprite.offset = Vector2(0.0, -16.0)
+			front_sprite.offset = Vector2.ZERO
 			front_sprite.scale = GEM_INDICATOR_FRONT_SCALE
 			front_sprite.z_index = FRONT_GEM_Z_INDEX
 			front_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1087,19 +1188,18 @@ func _refresh_gem_indicator(cell: Vector2i) -> void:
 	var bottom_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) == -1
 	var left_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
 	var show_front: bool = bottom_open
-	var show_top: bool = solid and not show_front and (top_open or right_open or left_open)
+	var show_edge: bool = solid and not show_front and (top_open or right_open or left_open)
 
 	if is_instance_valid(top_sprite):
-		top_sprite.visible = show_top
-		if show_top:
-			var indicator_offset := Vector2.ZERO
+		top_sprite.visible = show_edge
+		if show_edge:
+			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell))
 			if top_open:
-				indicator_offset = Vector2(0.0, -18.0)
+				top_sprite.rotation_degrees = 0.0
 			elif left_open and not right_open:
-				indicator_offset = Vector2(-18.0, 0.0)
-			elif right_open and not left_open:
-				indicator_offset = Vector2(18.0, 0.0)
-			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell)) + indicator_offset
+				top_sprite.rotation_degrees = -90.0
+			else:
+				top_sprite.rotation_degrees = 90.0
 
 	if is_instance_valid(front_sprite):
 		_position_front_gem_sprite(front_sprite, cell)

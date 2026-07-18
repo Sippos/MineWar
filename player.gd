@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const COMBAT_FEEDBACK := preload("res://combat_feedback.gd")
+
 var player_id: int = 1 :
 	set(val):
 		player_id = val
@@ -11,6 +13,9 @@ var intelligence = 1
 
 var base_speed = 200.0
 var base_dig_time = 0.4
+var mining_power_level := 0
+var warned_dense_stone := false
+var warned_ancient_stone := false
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 const AUTO_DEFEND_DISTANCE := 140.0
@@ -172,7 +177,7 @@ var cave_reward_carry_bonus := 0
 # points above the starting value adds another slot without changing pickup or
 # deposit rules.
 const BASE_FREE_CARRY_ALLOWANCE := 1
-const STRENGTH_CARRY_STEP := 3
+const STRENGTH_CARRY_STEP := 2
 
 @onready var tile_map: TileMapLayer = $"../BlockLayer"
 @onready var damage_layer: TileMapLayer = $"../DamageLayer"
@@ -282,7 +287,8 @@ func get_free_carry_allowance() -> int:
 		var global_state := get_node_or_null("/root/Global")
 		if global_state and global_state.has_method("get_permanent_carry_bonus"):
 			permanent_carry_bonus = int(global_state.get_permanent_carry_bonus())
-	return BASE_FREE_CARRY_ALLOWANCE + strength_bonus + cave_reward_carry_bonus + permanent_carry_bonus
+	var base_carry_bonus := int(get_meta("base_carry_bonus", 0))
+	return BASE_FREE_CARRY_ALLOWANCE + strength_bonus + cave_reward_carry_bonus + permanent_carry_bonus + base_carry_bonus
 
 func apply_cave_reward(reward_id: String) -> bool:
 	if cave_reward_ids.has(reward_id):
@@ -305,7 +311,11 @@ func apply_cave_reward(reward_id: String) -> bool:
 func get_carry_load() -> int:
 	var carry_load := 0
 	for gem in carried_gems:
-		if is_instance_valid(gem):
+		if not is_instance_valid(gem):
+			continue
+		if gem.has_method("get_carry_weight"):
+			carry_load += maxi(1, int(gem.call("get_carry_weight")))
+		else:
 			carry_load += 1
 	return carry_load
 
@@ -373,14 +383,16 @@ func take_damage(amount: int) -> void:
 		return
 	invulnerability_timer = 1.0
 	health -= applied_amount
+	var feedback: Node = COMBAT_FEEDBACK.ensure(get_parent())
+	feedback.play_player_hit(global_position + Vector2(0, -20), applied_amount, health <= 0)
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):
 		hud.update_player_health(health, max_health)
 	if has_node("Sprite2D"):
 		var sprite = $Sprite2D
 		var tween = create_tween()
-		sprite.modulate = Color(1, 0, 0, 1)
-		tween.tween_property(sprite, "modulate", Color(1, 1, 1, 1), 0.2)
+		sprite.modulate = Color(2.2, 0.35, 0.25, 1.0)
+		tween.tween_property(sprite, "modulate", Color.WHITE, 0.16)
 	if health <= 0:
 		die()
 
@@ -672,6 +684,32 @@ func _reset_action_animation() -> void:
 			$Sprite2D.flip_h = false
 			$Sprite2D.frame = current_anim_row * walk_frames
 
+func get_block_hardness_multiplier(block_id: int) -> float:
+	var tier := clampi(mining_power_level, 0, 3)
+	if block_id == 2:
+		return [4.0, 2.5, 1.55, 1.0][tier]
+	if block_id == 3:
+		return [14.0, 7.0, 3.4, 1.6][tier]
+	return 1.0
+
+func get_mining_power_level() -> int:
+	return mining_power_level
+
+func upgrade_mining_power() -> void:
+	mining_power_level = mini(mining_power_level + 1, 3)
+
+func _show_mining_tier_feedback(block_id: int) -> void:
+	var world := get_parent()
+	var hud_node := world.get_node_or_null("HUD") if world else null
+	if hud_node == null or not hud_node.has_method("show_notice"):
+		return
+	if block_id == 2 and not warned_dense_stone:
+		warned_dense_stone = true
+		hud_node.show_notice("DENSE STONE — breakable, but slow. Pick Power makes this layer practical.", 4.0)
+	elif block_id == 3 and not warned_ancient_stone:
+		warned_ancient_stone = true
+		hud_node.show_notice("ANCIENT WALL — your current pick barely bites. Upgrade Pick Power before committing here.", 4.6)
+
 func handle_digging(delta: float) -> void:
 	if current_hero_name == "Nerubian":
 		_stop_digging()
@@ -729,10 +767,11 @@ func handle_digging(delta: float) -> void:
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					if current_hero_name == "Druid" and druid_mole_active:
 						calculated_dig_time *= 0.55
-					var current_target_dig_time = calculated_dig_time
-					var block_id = tile_map.get_cell_source_id(cell)
-					if block_id == 2: current_target_dig_time = calculated_dig_time * 2.0
-					elif block_id == 3: current_target_dig_time = calculated_dig_time * 4.0
+					var block_id := tile_map.get_cell_source_id(cell)
+					var hardness_multiplier := get_block_hardness_multiplier(block_id)
+					if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
+						hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
+					var current_target_dig_time: float = calculated_dig_time * hardness_multiplier
 					var damage_progress = dig_timer / current_target_dig_time
 					var source_id = 7 if damage_progress < 0.66 else 8
 					damage_layer.set_cell(cell, source_id, Vector2i(0, 0))
@@ -745,6 +784,8 @@ func handle_digging(delta: float) -> void:
 						damage_layer.erase_cell(cell)
 						front_damage_layer.erase_cell(below_cell)
 						var cell_had_gem = get_parent().has_gem(cell)
+						if cell_had_gem and get_parent().has_method("notify_minewars_gem_dug"):
+							get_parent().notify_minewars_gem_dug(cell)
 						if get_parent().has_method("notify_tutorial_cell_dug"):
 							get_parent().notify_tutorial_cell_dug(cell, cell_had_gem)
 						if get_parent().has_method("try_spawn_cave_reward"):
@@ -765,6 +806,7 @@ func handle_digging(delta: float) -> void:
 				else:
 					_stop_digging()
 					currently_digging_cell = cell
+					_show_mining_tier_feedback(tile_map.get_cell_source_id(cell))
 					dig_timer = 0.0
 					action_anim_timer = 0.0
 					action_anim_active = true

@@ -1,0 +1,68 @@
+[
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "const RADAR_COST := 1\n",
+    "to": "const RADAR_GOLD_COST := 10\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "const VS_SEND_BASE_WARNING := 4.0\nconst VS_SEND_RADAR_WARNING := 0.75\n",
+    "to": "",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "var vs_incoming_queue: Array[Dictionary] = []\nvar vs_active_payload: Dictionary = {}\nvar vs_incoming_warning_timer := 0.0\n",
+    "to": "",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\t_process_layer_transfers()\n\t_process_vs_incoming(delta)\n",
+    "to": "\t_process_layer_transfers()\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\tif _available_gems() < RADAR_COST:\n\t\tcommand_message = \"Mine and bank one gem before commissioning another radar.\"\n\t\t_update_interface()\n\t\treturn\n\tif bool(peon.call(\"issue_build_order\", target_cell, \"RADAR\")):\n\t\t_spend_gems(RADAR_COST)\n",
+    "to": "\tif _available_gold() < RADAR_GOLD_COST:\n\t\tcommand_message = \"Bank %d gold at the base before commissioning another radar.\" % RADAR_GOLD_COST\n\t\t_update_interface()\n\t\treturn\n\tif bool(peon.call(\"issue_build_order\", target_cell, \"RADAR\")):\n\t\t_spend_gold(RADAR_GOLD_COST)\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "func receive_vs_send(payload: Dictionary, sender_label: String) -> void:\n\tif run_finished:\n\t\treturn\n\tvar incoming := payload.duplicate(true)\n\tincoming[\"sender\"] = sender_label\n\tvs_incoming_queue.append(incoming)\n\tcommand_message = \"Opponent pressure queued: %s.\" % str(incoming.get(\"label\", \"ENEMY SEND\"))\n\t_update_interface()\n\nfunc get_vs_state() -> Dictionary:\n\treturn {\n\t\t\"side\": vs_side_label,\n\t\t\"ready\": not opening_build_active,\n\t\t\"started\": vs_match_started,\n\t\t\"finished\": run_finished,\n\t\t\"base_health\": int(base.get(\"health\")) if base else 0,\n\t\t\"incoming_queue\": vs_incoming_queue.size() + (0 if vs_active_payload.is_empty() else 1),\n\t\t\"wave\": current_wave\n\t}\n\nfunc _process_vs_incoming(delta: float) -> void:\n\tif not vs_match_gate_enabled or not vs_match_started or opening_build_active or run_finished:\n\t\treturn\n\tif vs_active_payload.is_empty():\n\t\tif vs_incoming_queue.is_empty():\n\t\t\treturn\n\t\tvs_active_payload = vs_incoming_queue.pop_front()\n\t\tvs_incoming_warning_timer = VS_SEND_BASE_WARNING + float(radar_cells.size()) * VS_SEND_RADAR_WARNING\n\t\tvar sender := str(vs_active_payload.get(\"sender\", \"OPPONENT\"))\n\t\tvar label := str(vs_active_payload.get(\"label\", \"ENEMY SEND\"))\n\t\t_show_alert(\"INCOMING FROM %s\\n%s IN %.1fs\" % [sender, label, vs_incoming_warning_timer], 2.2)\n\t\t_play_sound(\"play_error\")\n\t\tcommand_message = \"%s sent %s. Radar extends the warning before the enemy portal opens.\" % [sender, label]\n\t\t_update_interface()\n\t\treturn\n\tvs_incoming_warning_timer = maxf(vs_incoming_warning_timer - delta, 0.0)\n\tif vs_incoming_warning_timer > 0.0:\n\t\treturn\n\t_spawn_vs_payload(vs_active_payload)\n\tvs_active_payload = {}\n\t_update_interface()\n",
+    "to": "func receive_vs_send(send_data: Dictionary, sender_label: String) -> void:\n\tif run_finished or not vs_match_started or opening_build_active:\n\t\treturn\n\tvar incoming := send_data.duplicate(true)\n\tincoming[\"sender\"] = sender_label\n\tvar label := str(incoming.get(\"label\", \"ENEMY SEND\"))\n\t_show_alert(\"%s SENT %s\\nENEMIES ENTERED YOUR TUNNEL\" % [sender_label, label], 2.0)\n\t_play_sound(\"play_error\")\n\t_spawn_vs_payload(incoming)\n\t_update_interface()\n\nfunc get_vs_state() -> Dictionary:\n\treturn {\n\t\t\"side\": vs_side_label,\n\t\t\"ready\": not opening_build_active,\n\t\t\"started\": vs_match_started,\n\t\t\"finished\": run_finished,\n\t\t\"base_health\": int(base.get(\"health\")) if base else 0,\n\t\t\"enemy_pressure\": _count_world_enemies(),\n\t\t\"wave\": current_wave\n\t}\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\tcommand_message = \"%s arrived at the farthest tunnel endpoint. Intercept survivors after the transfer gate.\" % str(payload.get(\"label\", \"Enemy pressure\"))\n\t_show_alert(\"OPPONENT SEND ARRIVED\\n%s\" % str(payload.get(\"label\", \"ENEMY PRESSURE\")), 1.8)\n",
+    "to": "\tvar sender := str(payload.get(\"sender\", \"OPPONENT\"))\n\tvar label := str(payload.get(\"label\", \"Enemy pressure\"))\n\tcommand_message = \"%s sent %s directly to your farthest tunnel endpoint.\" % [sender, label]\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\tif _available_gems() < RADAR_COST:\n\t\tcommand_message = \"Bank %d gem to install a radar.\" % RADAR_COST\n",
+    "to": "\tif _available_gold() < RADAR_GOLD_COST:\n\t\tcommand_message = \"Bank %d gold at the base to install a radar.\" % RADAR_GOLD_COST\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\tradar_button.text = \"RADAR %d/%d • %d GEM\" % [radar_cells.size(), MAX_RADARS, RADAR_COST]\n\tradar_button.disabled = command_view_active or bool(peon.call(\"is_order_active\")) or radar_cells.size() >= MAX_RADARS or _available_gems() < RADAR_COST\n",
+    "to": "\tradar_button.text = \"RADAR %d/%d • %d GOLD\" % [radar_cells.size(), MAX_RADARS, RADAR_GOLD_COST]\n\tradar_button.disabled = command_view_active or bool(peon.call(\"is_order_active\")) or radar_cells.size() >= MAX_RADARS or _available_gold() < RADAR_GOLD_COST\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "\tif vs_match_gate_enabled and not vs_match_started:\n\t\tthreat_label.text = \"READY • WAITING FOR OPPONENT\"\n\telif not vs_active_payload.is_empty():\n\t\tthreat_label.text = \"INCOMING %s • %.1fs • QUEUE %d\" % [str(vs_active_payload.get(\"label\", \"SEND\")), vs_incoming_warning_timer, vs_incoming_queue.size()]\n\telif spawning:\n",
+    "to": "\tif vs_match_gate_enabled and not vs_match_started:\n\t\tthreat_label.text = \"READY • WAITING FOR OPPONENT\"\n\telif spawning:\n",
+    "count": 1
+  },
+  {
+    "path": "res://scripts/systems/continuous_line_wars_controller.gd",
+    "from": "func _available_gems() -> int:\n\tif world_hud == null:\n\t\treturn 0\n\tvar value: Variant = world_hud.get(\"total_gems\")\n\treturn int(value) if value != null else 0\n\nfunc _spend_gems(amount: int) -> void:\n\tif world_hud and world_hud.has_method(\"add_gems\"):\n\t\tworld_hud.call(\"add_gems\", -amount)\n",
+    "to": "func _available_gems() -> int:\n\tif world_hud == null:\n\t\treturn 0\n\tvar value: Variant = world_hud.get(\"total_gems\")\n\treturn int(value) if value != null else 0\n\nfunc _available_gold() -> int:\n\tif world_hud == null:\n\t\treturn 0\n\tvar value: Variant = world_hud.get(\"total_gold\")\n\treturn int(value) if value != null else 0\n\nfunc _spend_gems(amount: int) -> void:\n\tif world_hud and world_hud.has_method(\"add_gems\"):\n\t\tworld_hud.call(\"add_gems\", -amount)\n\nfunc _spend_gold(amount: int) -> void:\n\tif world_hud and world_hud.has_method(\"add_gold\"):\n\t\tworld_hud.call(\"add_gold\", -amount)\n",
+    "count": 1
+  }
+]

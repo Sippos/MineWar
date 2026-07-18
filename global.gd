@@ -4,12 +4,65 @@ var rtc_peer: WebRTCMultiplayerPeer
 var rtc_conn: WebRTCPeerConnection
 
 const DEFAULT_UNLOCKED_HEROES = ["Dwarf"]
-const SINGLE_PLAYER_PLAYTEST_HEROES = ["Shaman"]
-const FIRST_LEVEL_REWARD_HEROES = ["Nerubian", "Druid", "Undead King"]
+const DEFAULT_UNLOCKED_BASES = ["default_base"]
+const FIRST_RUN_REWARD := {
+	"type": "workshop",
+	"title": "LEGACY FORGE AWAKENED",
+	"description": "The bastion can now spend Legacy Ore on permanent improvements."
+}
+const MINEWARS_VICTORY_REWARDS := {
+	2: {
+		"type": "hero_base",
+		"hero": "Shaman",
+		"base": "shaman_base",
+		"title": "THE SHAMAN ANSWERS",
+		"description": "A second victory brings Shaman and the Shaman Lodge into the stronghold."
+	},
+	3: {
+		"type": "hero_base",
+		"hero": "Druid",
+		"base": "druid_base",
+		"title": "ROOTS BREAK THE STONE",
+		"description": "Druid and the Druid Grove have awakened."
+	},
+	4: {
+		"type": "hero_base",
+		"hero": "Nerubian",
+		"base": "nerubian_base",
+		"title": "THE BROOD EMERGES",
+		"description": "Nerubian and the Nerubian Nest have joined the war."
+	},
+	5: {
+		"type": "hero_base",
+		"hero": "Undead King",
+		"base": "undead_king_base",
+		"title": "THE CITADEL RISES",
+		"description": "The Undead King and his Soul Citadel have awakened."
+	}
+}
+const STRONGHOLD_AMBIENCE_IDS := ["dwarf_minecart"]
+const STRONGHOLD_AMBIENCE_MILESTONES := {
+	"Dwarf": {
+		2: {
+			"type": "stronghold_ambience",
+			"ambience": "dwarf_minecart",
+			"title": "DWARVEN RAILWAY ONLINE",
+			"description": "Two victories with the Dwarf have brought the Bastion's minecart loop to life."
+		}
+	}
+}
 const GAME_UI_THEME_PATH = "res://assets/themes/global/global_theme.tres"
 const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
 const DEFAULT_HERO_ID := "Dwarf"
 const DEFAULT_BASE_ID := "default_base"
+const DEFAULT_SAVE_PATH := "user://savegame.save"
+var save_path_override := ""
+
+func get_save_path() -> String:
+	return save_path_override if not save_path_override.is_empty() else DEFAULT_SAVE_PATH
+
+func set_save_path_override(path: String) -> void:
+	save_path_override = path
 const PERMANENT_UPGRADE_IDS := ["reinforced_core", "starter_cache", "miners_harness"]
 const PERMANENT_UPGRADE_MAX_LEVELS := {
 	"reinforced_core": 5,
@@ -71,10 +124,10 @@ func _on_node_added(node: Node) -> void:
 		return
 	call_deferred("_apply_game_theme_to_added_control", node)
 
-func _apply_game_theme_to_added_control(control: Control) -> void:
-	if not _game_ui_theme_enabled or not is_instance_valid(control):
+func _apply_game_theme_to_added_control(control_value: Variant) -> void:
+	if not _game_ui_theme_enabled or not is_instance_valid(control_value) or not (control_value is Control):
 		return
-	
+	var control := control_value as Control
 	var parent = control.get_parent()
 	while parent != null:
 		if parent is Control:
@@ -103,7 +156,12 @@ func _get_game_ui_theme() -> Theme:
 	return _game_ui_theme
 
 var unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
+var unlocked_bases = DEFAULT_UNLOCKED_BASES.duplicate()
 var first_level_beaten = false
+var minewars_runs_completed := 0
+var minewars_victories := 0
+var hero_victories: Dictionary = {}
+var unlocked_stronghold_ambience: Array = []
 var current_hero = DEFAULT_HERO_ID
 var hero_p1 = DEFAULT_HERO_ID
 var hero_p2 = DEFAULT_HERO_ID
@@ -112,6 +170,8 @@ var selected_base_id := DEFAULT_BASE_ID
 var prototype_onboarding_completed := false
 var legacy_ore := 0
 var last_run_legacy_ore_earned := 0
+var pending_unlock_rewards: Array = []
+var last_unlock_rewards: Array = []
 var permanent_upgrade_levels := {
 	"reinforced_core": 0,
 	"starter_cache": 0,
@@ -167,6 +227,10 @@ var base_data = {
 	"undead_king_base": {
 		"name": "Undead Citadel",
 		"texture": preload("res://UndeadKingBase.png")
+	},
+	"mech_base": {
+		"name": "Goblin Mech Workshop",
+		"texture": preload("res://DwarfBase.png")
 	}
 }
 
@@ -250,7 +314,19 @@ func is_hero_unlocked(hero_name: String) -> bool:
 	return unlocked_heroes.has(hero_name)
 
 func is_hero_playable_in_single_player(hero_name: String) -> bool:
-	return is_hero_unlocked(hero_name) or SINGLE_PLAYER_PLAYTEST_HEROES.has(hero_name)
+	return is_hero_unlocked(hero_name)
+
+func is_base_unlocked(base_id: String) -> bool:
+	return unlocked_bases.has(base_id)
+
+func get_hero_victories(hero_name: String) -> int:
+	return maxi(0, int(hero_victories.get(hero_name, 0)))
+
+func is_stronghold_ambience_unlocked(ambience_id: String) -> bool:
+	return unlocked_stronghold_ambience.has(ambience_id)
+
+func is_legacy_workshop_unlocked() -> bool:
+	return minewars_runs_completed > 0
 
 func unlock_hero(hero_name: String) -> void:
 	if not hero_data.has(hero_name):
@@ -260,15 +336,90 @@ func unlock_hero(hero_name: String) -> void:
 		print("Unlocked Hero: ", hero_name)
 		save_game()
 
+func unlock_base(base_id: String) -> void:
+	if not base_data.has(base_id):
+		return
+	if not unlocked_bases.has(base_id):
+		unlocked_bases.append(base_id)
+		print("Unlocked Base: ", base_id)
+		save_game()
+
+func record_minewars_result(victory: bool) -> Array:
+	minewars_runs_completed += 1
+	last_unlock_rewards = []
+	if minewars_runs_completed == 1:
+		_queue_progression_reward(FIRST_RUN_REWARD)
+	if victory:
+		minewars_victories += 1
+		var victory_hero: String = str(current_hero)
+		if not hero_data.has(victory_hero):
+			victory_hero = selected_hero_id
+		hero_victories[victory_hero] = get_hero_victories(victory_hero) + 1
+		_apply_hero_ambience_milestone(victory_hero, get_hero_victories(victory_hero), true)
+		first_level_beaten = true
+		var milestone: Dictionary = MINEWARS_VICTORY_REWARDS.get(minewars_victories, {})
+		if not milestone.is_empty():
+			var hero_name := str(milestone.get("hero", ""))
+			var base_id := str(milestone.get("base", ""))
+			if not hero_name.is_empty() and hero_data.has(hero_name) and not unlocked_heroes.has(hero_name):
+				unlocked_heroes.append(hero_name)
+			if not base_id.is_empty() and base_data.has(base_id) and not unlocked_bases.has(base_id):
+				unlocked_bases.append(base_id)
+			_queue_progression_reward(milestone)
+	save_game()
+	return last_unlock_rewards.duplicate(true)
+
+func _queue_progression_reward(reward: Dictionary) -> void:
+	var reward_copy := reward.duplicate(true)
+	last_unlock_rewards.append(reward_copy)
+	pending_unlock_rewards.append(reward_copy.duplicate(true))
+
+func _apply_hero_ambience_milestone(hero_name: String, victory_count: int, queue_reward: bool) -> void:
+	var hero_milestones_value = STRONGHOLD_AMBIENCE_MILESTONES.get(hero_name, {})
+	if typeof(hero_milestones_value) != TYPE_DICTIONARY:
+		return
+	var hero_milestones: Dictionary = hero_milestones_value
+	var milestone_value = hero_milestones.get(victory_count, {})
+	if typeof(milestone_value) != TYPE_DICTIONARY:
+		return
+	var milestone: Dictionary = milestone_value
+	if milestone.is_empty():
+		return
+	var ambience_id := str(milestone.get("ambience", ""))
+	if ambience_id.is_empty() or not STRONGHOLD_AMBIENCE_IDS.has(ambience_id):
+		return
+	if unlocked_stronghold_ambience.has(ambience_id):
+		return
+	unlocked_stronghold_ambience.append(ambience_id)
+	if queue_reward:
+		_queue_progression_reward(milestone)
+
+func _apply_all_hero_ambience_milestones() -> void:
+	for hero_name_value in hero_victories.keys():
+		var hero_name := str(hero_name_value)
+		var victory_count := get_hero_victories(hero_name)
+		var hero_milestones_value = STRONGHOLD_AMBIENCE_MILESTONES.get(hero_name, {})
+		if typeof(hero_milestones_value) != TYPE_DICTIONARY:
+			continue
+		var hero_milestones: Dictionary = hero_milestones_value
+		var thresholds: Array = hero_milestones.keys()
+		thresholds.sort()
+		for threshold_value in thresholds:
+			var threshold := int(threshold_value)
+			if threshold <= victory_count:
+				_apply_hero_ambience_milestone(hero_name, threshold, false)
+
+func consume_pending_unlock_rewards() -> Array:
+	var rewards := pending_unlock_rewards.duplicate(true)
+	pending_unlock_rewards.clear()
+	if not rewards.is_empty():
+		save_game()
+	return rewards
+
 func mark_first_level_beaten() -> void:
 	first_level_beaten = true
-	var changed = false
-	for hero_name in FIRST_LEVEL_REWARD_HEROES:
-		if hero_data.has(hero_name) and not unlocked_heroes.has(hero_name):
-			unlocked_heroes.append(hero_name)
-			changed = true
-	if changed:
-		print("First level beaten: unlocked extra heroes")
+	minewars_victories = maxi(minewars_victories, 1)
+	_apply_milestone_unlocks()
 	save_game()
 
 func get_next_hero() -> String:
@@ -279,22 +430,28 @@ func get_next_hero() -> String:
 	return unlocked_heroes[next_index]
 
 func save_game() -> void:
-	var file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+	var file = FileAccess.open(get_save_path(), FileAccess.WRITE)
 	if file:
 		file.store_var({
 			"unlocked_heroes": unlocked_heroes,
+			"unlocked_bases": unlocked_bases,
 			"first_level_beaten": first_level_beaten,
+			"minewars_runs_completed": minewars_runs_completed,
+			"minewars_victories": minewars_victories,
+			"hero_victories": hero_victories,
+			"unlocked_stronghold_ambience": unlocked_stronghold_ambience,
 			"selected_hero_id": selected_hero_id,
 			"selected_base_id": selected_base_id,
 			"prototype_onboarding_completed": prototype_onboarding_completed,
 			"legacy_ore": legacy_ore,
-			"permanent_upgrade_levels": permanent_upgrade_levels
+			"permanent_upgrade_levels": permanent_upgrade_levels,
+			"pending_unlock_rewards": pending_unlock_rewards
 		})
 		file.close()
 
 func load_game() -> void:
-	if FileAccess.file_exists("user://savegame.save"):
-		var file = FileAccess.open("user://savegame.save", FileAccess.READ)
+	if FileAccess.file_exists(get_save_path()):
+		var file = FileAccess.open(get_save_path(), FileAccess.READ)
 		if file:
 			var loaded = file.get_var()
 			if typeof(loaded) == TYPE_ARRAY:
@@ -302,8 +459,18 @@ func load_game() -> void:
 			elif typeof(loaded) == TYPE_DICTIONARY:
 				if loaded.has("unlocked_heroes") and typeof(loaded["unlocked_heroes"]) == TYPE_ARRAY:
 					unlocked_heroes = loaded["unlocked_heroes"]
+				if loaded.has("unlocked_bases") and typeof(loaded["unlocked_bases"]) == TYPE_ARRAY:
+					unlocked_bases = loaded["unlocked_bases"]
 				if loaded.has("first_level_beaten"):
 					first_level_beaten = bool(loaded["first_level_beaten"])
+				if loaded.has("minewars_runs_completed"):
+					minewars_runs_completed = maxi(0, int(loaded["minewars_runs_completed"]))
+				if loaded.has("minewars_victories"):
+					minewars_victories = maxi(0, int(loaded["minewars_victories"]))
+				if loaded.has("hero_victories") and typeof(loaded["hero_victories"]) == TYPE_DICTIONARY:
+					hero_victories = loaded["hero_victories"]
+				if loaded.has("unlocked_stronghold_ambience") and typeof(loaded["unlocked_stronghold_ambience"]) == TYPE_ARRAY:
+					unlocked_stronghold_ambience = loaded["unlocked_stronghold_ambience"]
 				if loaded.has("selected_hero_id"):
 					selected_hero_id = str(loaded["selected_hero_id"])
 				if loaded.has("selected_base_id"):
@@ -317,33 +484,63 @@ func load_game() -> void:
 					for upgrade_id in PERMANENT_UPGRADE_IDS:
 						var max_level := int(PERMANENT_UPGRADE_MAX_LEVELS[upgrade_id])
 						permanent_upgrade_levels[upgrade_id] = clampi(int(loaded_upgrades.get(upgrade_id, 0)), 0, max_level)
+				if loaded.has("pending_unlock_rewards") and typeof(loaded["pending_unlock_rewards"]) == TYPE_ARRAY:
+					pending_unlock_rewards = loaded["pending_unlock_rewards"]
 			file.close()
+	if first_level_beaten and minewars_victories == 0:
+		minewars_victories = 1
+	if minewars_victories > 0 and minewars_runs_completed == 0:
+		minewars_runs_completed = minewars_victories
+	_apply_all_hero_ambience_milestones()
 	apply_selected_loadout()
 
 func _sanitize_unlock_progress() -> void:
-	var valid_unlocked = []
-	var changed = false
-	
-	for hero_name in DEFAULT_UNLOCKED_HEROES:
-		if hero_data.has(hero_name) and not valid_unlocked.has(hero_name):
-			valid_unlocked.append(hero_name)
-	
-	if first_level_beaten:
-		for hero_name in FIRST_LEVEL_REWARD_HEROES:
-			if hero_data.has(hero_name) and not valid_unlocked.has(hero_name):
-				valid_unlocked.append(hero_name)
-	
-	for hero_name in unlocked_heroes:
-		if not valid_unlocked.has(hero_name):
-			changed = true
-	
-	for hero_name in valid_unlocked:
-		if not unlocked_heroes.has(hero_name):
-			changed = true
-	
-	if changed or unlocked_heroes.size() != valid_unlocked.size():
-		unlocked_heroes = valid_unlocked
+	var previous_heroes: Array = unlocked_heroes.duplicate()
+	var previous_bases: Array = unlocked_bases.duplicate()
+	var previous_hero_victories: Dictionary = hero_victories.duplicate(true)
+	var previous_ambience: Array = unlocked_stronghold_ambience.duplicate()
+	if first_level_beaten and minewars_victories == 0:
+		minewars_victories = 1
+	if minewars_victories > 0:
+		first_level_beaten = true
+	if minewars_runs_completed < minewars_victories:
+		minewars_runs_completed = minewars_victories
+	var sanitized_hero_victories: Dictionary = {}
+	for hero_name_value in hero_victories.keys():
+		var hero_name := str(hero_name_value)
+		if hero_data.has(hero_name):
+			var victories := maxi(0, int(hero_victories[hero_name_value]))
+			if victories > 0:
+				sanitized_hero_victories[hero_name] = victories
+	hero_victories = sanitized_hero_victories
+	var sanitized_ambience: Array = []
+	for ambience_value in unlocked_stronghold_ambience:
+		var ambience_id := str(ambience_value)
+		if STRONGHOLD_AMBIENCE_IDS.has(ambience_id) and not sanitized_ambience.has(ambience_id):
+			sanitized_ambience.append(ambience_id)
+	unlocked_stronghold_ambience = sanitized_ambience
+	unlocked_heroes = DEFAULT_UNLOCKED_HEROES.duplicate()
+	unlocked_bases = DEFAULT_UNLOCKED_BASES.duplicate()
+	_apply_milestone_unlocks()
+	_apply_all_hero_ambience_milestones()
+	if not unlocked_heroes.has(selected_hero_id):
+		selected_hero_id = DEFAULT_HERO_ID
+	if not unlocked_bases.has(selected_base_id):
+		selected_base_id = DEFAULT_BASE_ID
+	if previous_heroes != unlocked_heroes or previous_bases != unlocked_bases or previous_hero_victories != hero_victories or previous_ambience != unlocked_stronghold_ambience:
 		save_game()
+
+func _apply_milestone_unlocks() -> void:
+	for victory_number in range(1, minewars_victories + 1):
+		var milestone: Dictionary = MINEWARS_VICTORY_REWARDS.get(victory_number, {})
+		if milestone.is_empty():
+			continue
+		var hero_name := str(milestone.get("hero", ""))
+		var base_id := str(milestone.get("base", ""))
+		if hero_data.has(hero_name) and not unlocked_heroes.has(hero_name):
+			unlocked_heroes.append(hero_name)
+		if base_data.has(base_id) and not unlocked_bases.has(base_id):
+			unlocked_bases.append(base_id)
 
 func mark_monster_seen(monster_name: String) -> void:
 	if not seen_monsters.has(monster_name):

@@ -1,0 +1,296 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/linewars_vs_mirror_controller.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StylePanel"]
+bg_color = Color(0.018, 0.023, 0.035, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.86, 0.48, 0.12, 0.92)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleSideA"]
+bg_color = Color(0.025, 0.035, 0.06, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.22, 0.66, 1, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleSideB"]
+bg_color = Color(0.055, 0.028, 0.025, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.34, 0.2, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleResult"]
+bg_color = Color(0.01, 0.012, 0.02, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.72, 0.18, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="LineWarsVsMirror" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.006, 0.008, 0.014, 1)
+mouse_filter = 2
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TopBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="Margin" type="MarginContainer" parent="Layout/TopBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Row" type="HBoxContainer" parent="Layout/TopBar/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.22, 1)
+theme_override_font_sizes/font_size = 20
+text = "LINEWARS VS MIRROR"
+vertical_alignment = 1
+
+[node name="Status" type="Label" parent="Layout/TopBar/Margin/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "INITIALIZING..."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="BuildA" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(92, 48)
+layout_mode = 2
+text = "BUILD A"
+
+[node name="BuildB" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(92, 48)
+layout_mode = 2
+text = "BUILD B"
+
+[node name="BuildBoth" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(124, 48)
+layout_mode = 2
+text = "BUILD BOTH"
+
+[node name="Start" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(112, 48)
+layout_mode = 2
+text = "START VS"
+
+[node name="Gems" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(110, 48)
+layout_mode = 2
+text = "+5 GEMS"
+
+[node name="Sides" type="HBoxContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="SideA" type="PanelContainer" parent="Layout/Sides"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleSideA")
+
+[node name="Header" type="VBoxContainer" parent="Layout/Sides/SideA"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Layout/Sides/SideA/Header"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.34, 0.76, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "PLAYER A • BLUE STRONGHOLD"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Status" type="Label" parent="Layout/Sides/SideA/Header"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "PLAYER A • LOADING"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="Layout/Sides/SideA/Header"]
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Layout/Sides/SideA/Header/ViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1152, 648)
+render_target_update_mode = 4
+
+[node name="SideB" type="PanelContainer" parent="Layout/Sides"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleSideB")
+
+[node name="Header" type="VBoxContainer" parent="Layout/Sides/SideB"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Layout/Sides/SideB/Header"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.46, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+text = "PLAYER B • RED STRONGHOLD"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Status" type="Label" parent="Layout/Sides/SideB/Header"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "PLAYER B • LOADING"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="Layout/Sides/SideB/Header"]
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Layout/Sides/SideB/Header/ViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1152, 648)
+render_target_update_mode = 4
+
+[node name="SendBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="Margin" type="MarginContainer" parent="Layout/SendBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Row" type="HBoxContainer" parent="Layout/SendBar/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SendARat" type="Button" parent="Layout/SendBar/Margin/Row"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "A → B  RAT RAID\n1 GEM • 5 FAST RATS"
+
+[node name="SendATrogg" type="Button" parent="Layout/SendBar/Margin/Row"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "A → B  TROGG PUSH\n2 GEMS • 2 DURABLE TROGGS"
+
+[node name="SendBRat" type="Button" parent="Layout/SendBar/Margin/Row"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "B → A  RAT RAID\n1 GEM • 5 FAST RATS"
+
+[node name="SendBTrogg" type="Button" parent="Layout/SendBar/Margin/Row"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "B → A  TROGG PUSH\n2 GEMS • 2 DURABLE TROGGS"
+
+[node name="ResultPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -130.0
+offset_right = 270.0
+offset_bottom = 130.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleResult")
+
+[node name="Margin" type="MarginContainer" parent="ResultPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Column" type="VBoxContainer" parent="ResultPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Result" type="Label" parent="ResultPanel/Margin/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.28, 1)
+theme_override_font_sizes/font_size = 28
+text = "PLAYER A WINS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Restart" type="Button" parent="ResultPanel/Margin/Column"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "RESTART MIRRORED MATCH"

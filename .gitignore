@@ -48,3 +48,10 @@ build/
 /character_sprites/UndeadKing_*.png*
 /character_sprites/UndeadMinion_*.png*
 .godot-mcp/
+
+# MineWars generated/local release files
+/.godot/
+/.godot-mcp/
+/build/
+/_quarantine/
+/shaman_hand_review_temp/

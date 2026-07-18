@@ -1,17 +1,17 @@
 extends "res://scripts/systems/preparation/preparation_fast_world.gd"
 
-# The shared Single Player world keeps the LineWars layer solid. The inherited
-# fast world creates the base and lower mine; this script seals the old prototype
-# chamber back into rock and leaves only a tiny entry pocket above the cap.
+# The shared Single Player world keeps the LineWars layer solid above the Hero
+# Hall. Only the three-cell doorway pocket is open; the peon must excavate the
+# actual defence field after the player enters the top route.
 
 const CONTINUOUS_PLAYABLE_RECT := Rect2i(-20, -40, 40, 70)
 const UPPER_ZONE_X_MIN := -10
 const UPPER_ZONE_X_MAX := 10
 const OLD_CHAMBER_Y_MIN := -14
 const OLD_CHAMBER_Y_MAX := -7
-const ENTRY_X_MIN := 2
-const ENTRY_X_MAX := 4
-const ENTRY_Y_MIN := -8
+const ENTRY_X_MIN := -1
+const ENTRY_X_MAX := 1
+const ENTRY_Y_MIN := -7
 const ENTRY_Y_MAX := -7
 
 func _ready() -> void:
@@ -25,8 +25,8 @@ func get_playable_map_rect() -> Rect2i:
 	return CONTINUOUS_PLAYABLE_RECT
 
 func _seal_old_line_wars_chamber() -> void:
-	# Keep only a narrow pocket directly above the breakthrough. The peon begins
-	# here with solid rock immediately overhead and must create the maze by digging.
+	# Keep only the narrow doorway pocket directly above the hub. Everything else
+	# remains rock so LineWars begins with an empty canvas the peon must carve.
 	for x in range(UPPER_ZONE_X_MIN, UPPER_ZONE_X_MAX + 1):
 		for y in range(OLD_CHAMBER_Y_MIN, OLD_CHAMBER_Y_MAX + 1):
 			var cell := Vector2i(x, y)

@@ -1,26 +1,29 @@
 extends Node
 
-const HERO_ORDER: Array[String] = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King"]
+const HERO_ORDER: Array[String] = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King", "Mech"]
 const HERO_TEXTURES := {
 	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
 	"Shaman": preload("res://character_sprites/hero_idle/shaman_idle_front.png"),
 	"Nerubian": preload("res://character_sprites/hero_idle/nerubian_idle_front.png"),
 	"Druid": preload("res://character_sprites/hero_idle/druid_idle_front.png"),
 	"Undead King": preload("res://character_sprites/hero_idle/undead_king_idle_front.png"),
+	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
 }
 const HERO_POSITIONS := {
-	"Undead King": Vector2(-285, -165),
-	"Dwarf": Vector2(-110, -190),
-	"Shaman": Vector2(95, -170),
-	"Nerubian": Vector2(-275, 45),
-	"Druid": Vector2(-80, 105),
+	"Dwarf": Vector2(-265, -120),
+	"Shaman": Vector2(0, -175),
+	"Nerubian": Vector2(265, -120),
+	"Druid": Vector2(-225, 145),
+	"Undead King": Vector2(225, 145),
+	"Mech": Vector2(350, 65),
 }
 const HERO_CARD_SIDE := {
-	"Undead King": 1.0,
 	"Dwarf": 1.0,
-	"Shaman": -1.0,
-	"Nerubian": 1.0,
+	"Shaman": 1.0,
+	"Nerubian": -1.0,
 	"Druid": 1.0,
+	"Undead King": -1.0,
+	"Mech": -1.0,
 }
 const HERO_CARD_DATA := {
 	"Dwarf": {
@@ -78,10 +81,21 @@ const HERO_CARD_DATA := {
 			{"icon": preload("res://ability_icons/generated/UndeadKing_DeathMarch.png"), "title": "Death March", "description": "Level 6 army transformation"},
 		],
 	},
+	"Mech": {
+		"role": "CAPTURED SIEGE WALKER",
+		"description": "The defeated war machine returns as a heavy miner whose pilot can eject and rebuild the frame at the bastion.",
+		"accent": Color(1.0, 0.46, 0.16, 1.0),
+		"abilities": [
+			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Armored Chassis", "description": "High health and frontline durability"},
+			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Mining Servos", "description": "Heavy frame with fast base digging"},
+			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Emergency Ejection", "description": "Pilot escapes when the frame is destroyed"},
+			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Field Rebuild", "description": "Reach the bastion to restore the Mech"},
+		],
+	},
 }
 
-const CARD_REVEAL_DISTANCE := 155.0
-const INTERACT_DISTANCE := 90.0
+const CARD_REVEAL_DISTANCE := 132.0
+const INTERACT_DISTANCE := 46.0
 const CARD_SIZE := Vector2(310, 330)
 const CARD_TOP_SAFE := 86.0
 const CARD_BOTTOM_SAFE := 78.0
@@ -95,6 +109,7 @@ var hero_nodes: Dictionary = {}
 var nearby_hero := ""
 var nearby_distance := 99999.0
 var nearby_can_interact := false
+var last_auto_zone := ""
 
 var card_layer: CanvasLayer
 var card: PanelContainer
@@ -121,6 +136,7 @@ func _ready() -> void:
 	_build_hero_shrines()
 	_build_proximity_card()
 	_refresh_shrines()
+	call_deferred("_animate_newly_unlocked_shrines")
 	get_tree().root.size_changed.connect(_update_card_position)
 
 func _process(_delta: float) -> void:
@@ -129,6 +145,8 @@ func _process(_delta: float) -> void:
 	var closest := ""
 	var closest_distance := CARD_REVEAL_DISTANCE
 	for hero_name in HERO_ORDER:
+		if not hero_nodes.has(hero_name):
+			continue
 		var shrine: Node2D = hero_nodes[hero_name]["root"]
 		var distance: float = player.global_position.distance_to(shrine.global_position)
 		if distance <= closest_distance:
@@ -145,6 +163,14 @@ func _process(_delta: float) -> void:
 		nearby_distance = closest_distance
 	if not nearby_hero.is_empty():
 		_update_card_position()
+	if can_interact and closest != last_auto_zone:
+		last_auto_zone = closest
+		if _hero_unlocked(closest):
+			_select_hero(closest)
+		else:
+			_show_locked_feedback(closest)
+	elif not can_interact:
+		last_auto_zone = ""
 
 func _unhandled_input(event: InputEvent) -> void:
 	if nearby_hero.is_empty() or not nearby_can_interact or not event.is_action_pressed("p1_interact"):
@@ -161,6 +187,8 @@ func _build_hero_shrines() -> void:
 	shrine_root.z_index = 12
 	world.add_child(shrine_root)
 	for hero_name in HERO_ORDER:
+		if not _hero_unlocked(hero_name):
+			continue
 		var root := Node2D.new()
 		root.name = hero_name.replace(" ", "") + "Shrine"
 		root.position = HERO_POSITIONS[hero_name]
@@ -168,26 +196,31 @@ func _build_hero_shrines() -> void:
 
 		var glow := Polygon2D.new()
 		glow.name = "Glow"
-		glow.position = Vector2(0, 13)
+		glow.position = Vector2(0, 20)
 		glow.polygon = PackedVector2Array([
-			Vector2(-42, 0), Vector2(-29, -15), Vector2(0, -22), Vector2(29, -15),
-			Vector2(42, 0), Vector2(29, 15), Vector2(0, 22), Vector2(-29, 15),
+			Vector2(-28, 0), Vector2(-24, -14), Vector2(-14, -24), Vector2(0, -28),
+			Vector2(14, -24), Vector2(24, -14), Vector2(28, 0), Vector2(24, 14),
+			Vector2(14, 24), Vector2(0, 28), Vector2(-14, 24), Vector2(-24, 14),
 		])
 		root.add_child(glow)
 
 		var pedestal := Polygon2D.new()
 		pedestal.name = "Pedestal"
+		pedestal.position = Vector2(0, 20)
 		pedestal.polygon = PackedVector2Array([
-			Vector2(-49, 20), Vector2(-37, 3), Vector2(37, 3), Vector2(49, 20),
-			Vector2(36, 37), Vector2(-36, 37),
+			Vector2(-25, 0), Vector2(-21, -12), Vector2(-12, -21), Vector2(0, -25),
+			Vector2(12, -21), Vector2(21, -12), Vector2(25, 0), Vector2(21, 12),
+			Vector2(12, 21), Vector2(0, 25), Vector2(-12, 21), Vector2(-21, 12),
 		])
 		root.add_child(pedestal)
 
 		var pedestal_edge := Line2D.new()
 		pedestal_edge.name = "PedestalEdge"
+		pedestal_edge.position = Vector2(0, 20)
 		pedestal_edge.points = PackedVector2Array([
-			Vector2(-49, 20), Vector2(-37, 3), Vector2(37, 3), Vector2(49, 20),
-			Vector2(36, 37), Vector2(-36, 37), Vector2(-49, 20),
+			Vector2(-25, 0), Vector2(-21, -12), Vector2(-12, -21), Vector2(0, -25),
+			Vector2(12, -21), Vector2(21, -12), Vector2(25, 0), Vector2(21, 12),
+			Vector2(12, 21), Vector2(0, 25), Vector2(-12, 21), Vector2(-21, 12), Vector2(-25, 0),
 		])
 		pedestal_edge.width = 2.0
 		root.add_child(pedestal_edge)
@@ -195,19 +228,19 @@ func _build_hero_shrines() -> void:
 		var sprite := Sprite2D.new()
 		sprite.name = "Hero"
 		sprite.texture = HERO_TEXTURES[hero_name]
-		sprite.position = Vector2(0, -34)
+		sprite.position = Vector2(0, -22)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var texture_size: Vector2 = sprite.texture.get_size()
-		var scale_factor := 92.0 / maxf(texture_size.y, 1.0)
+		var scale_factor := 62.0 / maxf(texture_size.y, 1.0)
 		sprite.scale = Vector2(scale_factor, scale_factor)
 		root.add_child(sprite)
 
 		var name_label := Label.new()
 		name_label.name = "Name"
-		name_label.position = Vector2(-82, 40)
-		name_label.size = Vector2(164, 23)
+		name_label.position = Vector2(-72, 48)
+		name_label.size = Vector2(144, 20)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.add_theme_font_size_override("font_size", 11)
+		name_label.add_theme_font_size_override("font_size", 9)
 		name_label.add_theme_color_override("font_outline_color", Color.BLACK)
 		name_label.add_theme_constant_override("outline_size", 4)
 		root.add_child(name_label)
@@ -337,6 +370,8 @@ func _build_proximity_card() -> void:
 
 func _refresh_shrines() -> void:
 	for hero_name in HERO_ORDER:
+		if not hero_nodes.has(hero_name):
+			continue
 		var data: Dictionary = hero_nodes[hero_name]
 		var unlocked: bool = _hero_unlocked(hero_name)
 		var selected: bool = Global.selected_hero_id == hero_name
@@ -367,10 +402,10 @@ func _set_card_hero(hero_name: String) -> void:
 	card.visible = true
 	card.pivot_offset = CARD_SIZE * 0.5
 	card.modulate = Color(1, 1, 1, 0)
-	card.scale = Vector2(0.79, 0.79)
+	card.scale = Vector2(0.66, 0.66)
 	card_tween = create_tween().set_parallel(true)
 	card_tween.tween_property(card, "modulate", Color.WHITE, 0.14)
-	card_tween.tween_property(card, "scale", Vector2(0.84, 0.84), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	card_tween.tween_property(card, "scale", Vector2(0.72, 0.72), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _hide_card() -> void:
 	card_visible_for = ""
@@ -380,7 +415,7 @@ func _hide_card() -> void:
 		card_tween.kill()
 	card_tween = create_tween().set_parallel(true)
 	card_tween.tween_property(card, "modulate:a", 0.0, 0.1)
-	card_tween.tween_property(card, "scale", Vector2(0.81, 0.81), 0.1)
+	card_tween.tween_property(card, "scale", Vector2(0.68, 0.68), 0.1)
 	card_tween.chain().tween_callback(func():
 		if card_visible_for.is_empty() and is_instance_valid(card):
 			card.visible = false
@@ -421,7 +456,7 @@ func _refresh_card(hero_name: String) -> void:
 		card_ability_list.add_child(_make_ability_row(ability, unlocked, accent))
 
 	if not unlocked:
-		card_action.text = "LOCKED  •  WIN MINEWARS ONCE"
+		card_action.text = "DORMANT  •  COMPLETE MORE MINEWARS VICTORIES"
 		card_action.add_theme_color_override("font_color", Color(1.0, 0.5, 0.42, 1.0))
 		card_action_panel.add_theme_stylebox_override("panel", _flat_style(Color(0.16, 0.035, 0.028, 0.96), Color(0.82, 0.24, 0.18, 0.94), 2, 7))
 	elif selected:
@@ -429,11 +464,11 @@ func _refresh_card(hero_name: String) -> void:
 		card_action.add_theme_color_override("font_color", Color(1.0, 0.85, 0.42, 1.0))
 		card_action_panel.add_theme_stylebox_override("panel", _flat_style(Color(0.14, 0.085, 0.02, 0.96), Color(1.0, 0.62, 0.15, 0.94), 2, 7))
 	elif nearby_can_interact:
-		card_action.text = "E / Y  •  CHOOSE %s" % hero_name.to_upper()
+		card_action.text = "STEP ON THE RUNE TO CHOOSE"
 		card_action.add_theme_color_override("font_color", Color(0.72, 0.96, 1.0, 1.0))
 		card_action_panel.add_theme_stylebox_override("panel", _flat_style(Color(0.02, 0.105, 0.15, 0.96), Color(0.24, 0.76, 1.0, 0.94), 2, 7))
 	else:
-		card_action.text = "APPROACH THE ALTAR TO CHOOSE"
+		card_action.text = "APPROACH THE HERO RUNE"
 		card_action.add_theme_color_override("font_color", Color(0.7, 0.78, 0.86, 1.0))
 		card_action_panel.add_theme_stylebox_override("panel", _flat_style(Color(0.035, 0.055, 0.075, 0.96), Color(0.28, 0.4, 0.52, 0.9), 2, 7))
 
@@ -483,6 +518,8 @@ func _make_ability_row(ability: Dictionary, unlocked: bool, accent: Color) -> Co
 	return row
 
 func _update_card_position() -> void:
+	if card != null:
+		card.size = CARD_SIZE
 	if card == null or card_visible_for.is_empty() or not hero_nodes.has(card_visible_for):
 		return
 	var shrine: Node2D = hero_nodes[card_visible_for]["root"]
@@ -511,8 +548,8 @@ func _select_hero(hero_name: String) -> void:
 	tween.tween_property(player, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _show_locked_feedback(hero_name: String) -> void:
-	_set_hub_status("%s is dormant. Win MineWars once to awaken every remaining hero." % hero_name)
-	card_action.text = "%s IS DORMANT  •  WIN MINEWARS ONCE" % hero_name.to_upper()
+	_set_hub_status("%s is dormant. Each MineWars victory awakens one new hero and fortress." % hero_name)
+	card_action.text = "%s IS DORMANT  •  EARN ANOTHER VICTORY" % hero_name.to_upper()
 	if card_tween and card_tween.is_running():
 		card_tween.kill()
 	card_action_panel.modulate = Color.WHITE
@@ -528,7 +565,24 @@ func _set_hub_status(message: String) -> void:
 		status.text = message
 
 func _hero_unlocked(hero_name: String) -> bool:
-	return hero_name == "Dwarf" or bool(Global.first_level_beaten)
+	return Global.is_hero_unlocked(hero_name)
+
+func _animate_newly_unlocked_shrines() -> void:
+	if world == null:
+		return
+	var newly_unlocked: Array = world.get_meta("newly_unlocked_heroes", [])
+	for hero_value in newly_unlocked:
+		var hero_name := str(hero_value)
+		if not hero_nodes.has(hero_name):
+			continue
+		var root: Node2D = hero_nodes[hero_name]["root"]
+		root.modulate = Color(1, 1, 1, 0)
+		root.scale = Vector2(0.18, 0.18)
+		var tween := create_tween().set_parallel(true)
+		tween.tween_property(root, "modulate", Color.WHITE, 0.5)
+		tween.tween_property(root, "scale", Vector2.ONE, 0.72).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		await tween.finished
+	world.remove_meta("newly_unlocked_heroes")
 
 func _card_style(accent: Color, unlocked: bool, selected: bool) -> StyleBoxFlat:
 	var border := accent if unlocked else Color(0.26, 0.29, 0.34, 0.95)

@@ -28,6 +28,11 @@ func _build_streams() -> void:
 	_streams["deposit"] = _make_chime_stream([650.0, 880.0, 1120.0], 0.20, 0.055)
 	_streams["upgrade"] = _make_upgrade_stream(0.42)
 	_streams["error"] = _make_error_stream(0.18)
+	_streams["mine_awaken"] = _make_chime_stream([240.0, 360.0, 520.0], 0.48, 0.11)
+	_streams["warning_drum"] = _make_impact_stream(0.26, 62.0, 0.24, 404)
+	_streams["warning_horn"] = _make_chime_stream([218.0, 178.0], 0.58, 0.20)
+	_streams["breach"] = _make_break_stream(0.52, 505)
+	_streams["objective_tick"] = _make_chime_stream([620.0, 820.0], 0.16, 0.055)
 
 func play_dig_hit(block_id: int = 0) -> void:
 	var stream_name := "dig_hard" if block_id == 2 or block_id == 3 else "dig_soft"
@@ -53,6 +58,21 @@ func play_deposit(amount: int = 1) -> void:
 
 func play_level_up() -> void:
 	_play("upgrade", 0.0, 0.0, 0.08)
+
+func play_mine_awaken() -> void:
+	_play("mine_awaken", -7.0, 0.015)
+
+func play_warning_drum(stage: int = 1) -> void:
+	_play("warning_drum", -5.0, 0.02, clampf(float(stage - 1) * 0.055, 0.0, 0.16))
+
+func play_warning_horn() -> void:
+	_play("warning_horn", -3.0, 0.01)
+
+func play_breach() -> void:
+	_play("breach", -1.5, 0.015)
+
+func play_objective_tick(progress: int = 1) -> void:
+	_play("objective_tick", -8.0, 0.015, clampf(float(progress - 1) * 0.035, 0.0, 0.18))
 
 func _play(stream_name: String, volume_db: float, pitch_variation: float, pitch_offset: float = 0.0) -> void:
 	if not _streams.has(stream_name) or _players.is_empty():

@@ -90,7 +90,9 @@ func _apply_upgrade_icons() -> void:
 
 
 func get_upgrade_cost(stat_level: int) -> int:
-	return (stat_level * 2) - 1
+	# MineWars rewards frequent, readable build choices. Competitive modes keep
+	# the escalating economy so this single-player tuning does not affect LineWars.
+	return (stat_level * 2) - 1 if _is_vs_mode() else 1
 
 func update_button_texts():
 	var str_cost = get_upgrade_cost(player.strength)
@@ -491,9 +493,10 @@ func _build_upgrade_tree_stat_bar() -> void:
 	heading.add_theme_font_size_override("font_size", 13)
 	heading.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35, 1.0))
 	upgrade_tree_stat_bar.add_child(heading)
-	_create_upgrade_tree_node("UpgradeStrength", "Strength +1", "More damage and free carrying thresholds.", 1, "gems", "res://assets/sprites/ui/common/stats/Strenght.png", Vector2.ZERO, Callable(self, "_on_upgrade_strength_pressed"), upgrade_tree_stat_bar)
-	_create_upgrade_tree_node("UpgradeAgility", "Agility +1", "Attack speed, movement, armor, and a smaller mining bonus.", 1, "gems", "res://assets/sprites/ui/common/stats/Agility.png", Vector2.ZERO, Callable(self, "_on_upgrade_agility_pressed"), upgrade_tree_stat_bar)
-	_create_upgrade_tree_node("UpgradeIntelligence", "Intelligence +1", "Improve abilities and hero-specific summons.", 1, "gems", "res://assets/sprites/ui/common/stats/Int.png", Vector2.ZERO, Callable(self, "_on_upgrade_intelligence_pressed"), upgrade_tree_stat_bar)
+	_create_upgrade_tree_node("UpgradeStrength", "STR +1", "Always 1 gem in MineWars. More damage, hard-rock force, and free carrying thresholds.", 1, "gems", "res://assets/sprites/ui/common/stats/Strenght.png", Vector2.ZERO, Callable(self, "_on_upgrade_strength_pressed"), upgrade_tree_stat_bar)
+	_create_upgrade_tree_node("UpgradeAgility", "AGI +1", "Always 1 gem in MineWars. Faster attacks, movement, and mining cadence.", 1, "gems", "res://assets/sprites/ui/common/stats/Agility.png", Vector2.ZERO, Callable(self, "_on_upgrade_agility_pressed"), upgrade_tree_stat_bar)
+	_create_upgrade_tree_node("UpgradeIntelligence", "INT +1", "Always 1 gem in MineWars. Stronger abilities, summons, and magical mining utility.", 1, "gems", "res://assets/sprites/ui/common/stats/Int.png", Vector2.ZERO, Callable(self, "_on_upgrade_intelligence_pressed"), upgrade_tree_stat_bar)
+	_create_upgrade_tree_node("UpgradePickPower", "Pick Power", "Each rank sharply reduces dense-stone and ancient-wall resistance.", 2, "gems", "res://assets/sprites/world/terrain/bricks/Hard_Brick.png", Vector2.ZERO, Callable(self, "_on_upgrade_pick_power_pressed"), upgrade_tree_stat_bar)
 
 func _create_horizontal_upgrade_row(row_title: String, row_y: float, entries: Array) -> void:
 	_create_tree_branch_label(row_title, Vector2(12, row_y + 26.0), 132)
@@ -662,6 +665,20 @@ func _refresh_upgrade_tree_cards() -> void:
 			cost = get_upgrade_cost(player.agility)
 		elif id == "UpgradeIntelligence" and player:
 			cost = get_upgrade_cost(player.intelligence)
+		elif id == "UpgradePickPower" and player:
+			cost = get_pick_power_cost()
+		var title_label := button.get_node_or_null("Title") as Label
+		if title_label and player:
+			match id:
+				"UpgradeStrength":
+					title_label.text = "STR %d → %d" % [int(player.strength), int(player.strength) + 1]
+				"UpgradeAgility":
+					title_label.text = "AGI %d → %d" % [int(player.agility), int(player.agility) + 1]
+				"UpgradeIntelligence":
+					title_label.text = "INT %d → %d" % [int(player.intelligence), int(player.intelligence) + 1]
+				"UpgradePickPower":
+					var pick_level := int(player.get("mining_power_level"))
+					title_label.text = "Pick MAX" if pick_level >= 3 else "Pick Lv %d" % pick_level
 		var currency := str(upgrade_tree_currency.get(id, "gold"))
 		var available_amount: int = 0
 		if hud:
@@ -736,6 +753,7 @@ func _is_upgrade_tree_node_owned(id: String) -> bool:
 		"UnlockXP": return xp_unlocked
 		"UnlockMinimap": return minimap_unlocked
 		"UpgradeMinimap": return minimap_upgraded
+		"UpgradePickPower": return player != null and int(player.get("mining_power_level")) >= 3
 	return false
 
 func _focus_first_upgrade_tree_node() -> void:
@@ -748,6 +766,8 @@ func _focus_first_upgrade_tree_node() -> void:
 			preferred_ids.append("UpgradeAgility")
 		if available_gems >= get_upgrade_cost(int(player.intelligence)):
 			preferred_ids.append("UpgradeIntelligence")
+		if int(player.get("mining_power_level")) < 3 and available_gems >= get_pick_power_cost():
+			preferred_ids.append("UpgradePickPower")
 	preferred_ids.append_array([
 		"RepairBase", "HealPlayer", "UpgradeBaseHealth", "UpgradeMaxHealth",
 		"UnlockMinimap", "BuyRail", "BuyMinecart", "BuyPeon"
@@ -773,6 +793,11 @@ func _apply_enemy_button_style(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", _make_texture_style(ENEMY_BUTTON_TEXTURE))
 	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
+func get_pick_power_cost() -> int:
+	if player == null:
+		return 999999
+	return 2 + int(player.get("mining_power_level")) * 3
+
 func _get_stat_upgrade_color(stat_name: String) -> Color:
 	match stat_name:
 		"Strength":
@@ -781,6 +806,8 @@ func _get_stat_upgrade_color(stat_name: String) -> Color:
 			return Color(0.25, 1.0, 0.35, 1.0)
 		"Intelligence":
 			return Color(0.25, 0.65, 1.0, 1.0)
+		"Pick Power":
+			return Color(1.0, 0.66, 0.22, 1.0)
 	return Color(1.0, 0.9, 0.25, 1.0)
 
 func _play_stat_upgrade_effect(stat_name: String, source_button: Control = null) -> void:
@@ -1203,6 +1230,17 @@ func _on_upgrade_intelligence_pressed():
 		_play_stat_upgrade_effect("Intelligence", $Panel/UpgradeIntelligence)
 		update_button_texts()
 		_notify_tutorial_upgrade_purchased()
+
+func _on_upgrade_pick_power_pressed() -> void:
+	if player == null or int(player.get("mining_power_level")) >= 3:
+		return
+	var cost := get_pick_power_cost()
+	if hud.total_gems < cost:
+		return
+	hud.add_gems(-cost)
+	player.upgrade_mining_power()
+	_play_stat_upgrade_effect("Pick Power", upgrade_tree_buttons.get("UpgradePickPower") as Control)
+	_notify_tutorial_upgrade_purchased()
 
 func _on_upgrade_spikes_pressed():
 	if hud.total_gold >= 20:

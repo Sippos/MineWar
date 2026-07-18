@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/apply_minewars_hub_polish.gd" id="1"]
+
+[node name="ApplyMineWarsHubPolish" type="Node"]
+script = ExtResource("1")

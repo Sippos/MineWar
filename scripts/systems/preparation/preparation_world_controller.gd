@@ -35,13 +35,14 @@ const HERO_POSITIONS := [
 # Base models live on the back wall, entirely inside the carved surface room.
 # Their old lower arc crossed the solid first underground row, which made
 # several choices impossible to reach with the player's collision shape.
-const BASE_ORDER := ["shaman_base", "nerubian_base", "default_base", "druid_base", "undead_king_base"]
+const BASE_ORDER := ["shaman_base", "nerubian_base", "default_base", "mech_base", "druid_base", "undead_king_base"]
 const BASE_POSITIONS := [
-	Vector2(-188, -222),
-	Vector2(-94, -222),
-	Vector2(0, -222),
-	Vector2(94, -222),
-	Vector2(188, -222)
+	Vector2(-235, -222),
+	Vector2(-141, -222),
+	Vector2(-47, -222),
+	Vector2(47, -222),
+	Vector2(141, -222),
+	Vector2(235, -222)
 ]
 
 const HERO_DETAILS := {
@@ -72,36 +73,41 @@ const HERO_DETAILS := {
 	},
 	"Mech": {
 		"role": "HEAVY FRAME",
-		"summary": "An armored mining platform reserved for a later unlock.",
-		"kit": "Weapon modules  •  Utility modules  •  Future unlock"
+		"summary": "An armored mining platform with an emergency goblin pilot.",
+		"kit": "Heavy frame  •  Pilot ejection  •  Rebuild beside the bastion"
 	}
 }
 
 const BASE_DETAILS := {
 	"default_base": {
 		"archetype": "DWARF ENGINEERING",
-		"summary": "The dependable all-round bastion.",
-		"upgrades": "MINECART  •  Build a cart for the dwarf rail network."
+		"summary": "Carry one extra gem without slowdown. Repairs 8 bastion HP after every assault.",
+		"upgrades": "PASSIVE +1 carry  •  DEFENCE post-assault repairs  •  WORLD railway and minecart"
 	},
 	"shaman_base": {
 		"archetype": "TOTEM SANCTUARY",
-		"summary": "A support-focused lodge for utility-heavy runs.",
-		"upgrades": "PEON  •  Recruit a worker to support the mine."
+		"summary": "Ancestral pulses reveal nearby crystal seams. A healing totem supports the defence area.",
+		"upgrades": "PASSIVE crystal prospect pulse  •  DEFENCE healing totem  •  WORLD peon patrol"
 	},
 	"nerubian_base": {
 		"archetype": "BROOD NEST",
-		"summary": "A living fortress designed around summoned defenders.",
-		"upgrades": "BROOD WORKER  •  Planned faction helper for tunnel control."
+		"summary": "Detects assaults three seconds earlier and webs the first three attackers.",
+		"upgrades": "PASSIVE +3s warning  •  DEFENCE breach webs  •  WORLD crawling brood"
+	},
+	"mech_base": {
+		"archetype": "GOBLIN WORKSHOP",
+		"summary": "Reinforces the bastion, fires an automatic turret, and rebuilds the Mech faster.",
+		"upgrades": "PASSIVE +15 base HP and rapid rebuild  •  DEFENCE auto-turret  •  WORLD crane and repair bay"
 	},
 	"druid_base": {
 		"archetype": "LIVING GROVE",
-		"summary": "A regenerative base with nature-driven utility.",
-		"upgrades": "GROVE WISP  •  Planned faction support for regeneration."
+		"summary": "Regenerates the hero while safe. Periodic roots entangle enemies near the bastion.",
+		"upgrades": "PASSIVE safe regeneration  •  DEFENCE root pulse  •  WORLD wisps and living roots"
 	},
 	"undead_king_base": {
 		"archetype": "SOUL CITADEL",
-		"summary": "A dark stronghold built for attrition and summoned pressure.",
-		"upgrades": "SOUL THRALL  •  Planned faction servant for base defense."
+		"summary": "Enemy deaths charge souls. Four souls release a nova or repair the bastion.",
+		"upgrades": "PASSIVE soul collection  •  DEFENCE nova or soul mend  •  WORLD orbiting spirits"
 	}
 }
 
@@ -231,9 +237,10 @@ func _build_world_choices() -> void:
 		var base_id: String = BASE_ORDER[index]
 		if not Global.base_data.has(base_id):
 			continue
-		var pad := _create_base_pad(base_id, BASE_POSITIONS[index])
+		var unlocked := Global.is_base_unlocked(base_id)
+		var pad := _create_base_pad(base_id, BASE_POSITIONS[index], unlocked)
 		choices_root.add_child(pad)
-		base_pads.append({"id": base_id, "node": pad, "phase": float(index) * 0.85})
+		base_pads.append({"id": base_id, "node": pad, "phase": float(index) * 0.85, "unlocked": unlocked})
 
 	var tunnel_marker := Node2D.new()
 	tunnel_marker.name = "MineWarsGateMarker"
@@ -369,7 +376,7 @@ func _create_hero_pad(hero_id: String, pad_position: Vector2, unlocked: bool) ->
 		pad.add_child(locked_label)
 	return pad
 
-func _create_base_pad(base_id: String, pad_position: Vector2) -> Node2D:
+func _create_base_pad(base_id: String, pad_position: Vector2, unlocked: bool) -> Node2D:
 	var pad := Node2D.new()
 	pad.name = "Base_%s" % base_id
 	pad.position = pad_position
@@ -378,7 +385,7 @@ func _create_base_pad(base_id: String, pad_position: Vector2) -> Node2D:
 	disk.name = "Disk"
 	disk.position = Vector2(0, 13)
 	disk.polygon = _ellipse_points(Vector2(31, 12))
-	disk.color = Color(0.18, 0.105, 0.025, 0.58)
+	disk.color = Color(0.18, 0.105, 0.025, 0.58) if unlocked else Color(0.035, 0.045, 0.055, 0.7)
 	pad.add_child(disk)
 
 	var ring := Line2D.new()
@@ -387,7 +394,7 @@ func _create_base_pad(base_id: String, pad_position: Vector2) -> Node2D:
 	ring.closed = true
 	ring.points = _ellipse_points(Vector2(35, 15))
 	ring.width = 2.0
-	ring.default_color = Color(0.95, 0.62, 0.2, 0.7)
+	ring.default_color = Color(0.95, 0.62, 0.2, 0.7) if unlocked else Color(0.28, 0.33, 0.38, 0.52)
 	pad.add_child(ring)
 
 	var hover := Node2D.new()
@@ -403,6 +410,7 @@ func _create_base_pad(base_id: String, pad_position: Vector2) -> Node2D:
 	var fitted_scale := minf(78.0 / texture_width, 64.0 / texture_height)
 	sprite.scale = Vector2(fitted_scale, fitted_scale)
 	sprite.position = Vector2(0, -18)
+	sprite.modulate = (Color(1.16, 0.82, 0.46, 1.0) if base_id == "mech_base" else Color.WHITE) if unlocked else Color(0.32, 0.36, 0.4, 0.62)
 	hover.add_child(sprite)
 
 	var label := Label.new()
@@ -412,10 +420,22 @@ func _create_base_pad(base_id: String, pad_position: Vector2) -> Node2D:
 	label.text = str(Global.base_data[base_id]["name"])
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 9)
-	label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.52, 1.0))
+	label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.52, 1.0) if unlocked else Color(0.45, 0.5, 0.54, 1.0))
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.96))
 	label.add_theme_constant_override("outline_size", 3)
 	hover.add_child(label)
+	if not unlocked:
+		var lock_label := Label.new()
+		lock_label.name = "LockedLabel"
+		lock_label.position = Vector2(-42, -67)
+		lock_label.size = Vector2(84, 18)
+		lock_label.text = "LOCKED"
+		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lock_label.add_theme_font_size_override("font_size", 8)
+		lock_label.add_theme_color_override("font_color", Color(0.5, 0.56, 0.6, 0.96))
+		lock_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		lock_label.add_theme_constant_override("outline_size", 2)
+		hover.add_child(lock_label)
 	return pad
 
 func _build_interface() -> void:
@@ -601,6 +621,8 @@ func _select_hero(entry: Dictionary) -> void:
 	_update_loadout_text()
 
 func _select_base(entry: Dictionary) -> void:
+	if not bool(entry.get("unlocked", false)):
+		return
 	var base_id := str(entry["id"])
 	if Global.selected_base_id == base_id:
 		return
@@ -623,7 +645,7 @@ func _show_choice_details(kind: String, entry: Dictionary, distance: float) -> v
 		detail_subtitle.add_theme_color_override("font_color", Color(0.4, 0.8, 0.94, 1.0) if unlocked else Color(0.48, 0.52, 0.56, 1.0))
 		detail_body.text = "%s\nKIT PREVIEW  •  %s" % [str(data.get("summary", "")), str(data.get("kit", ""))]
 		if not unlocked:
-			var unlock_text := "Complete the first level to unlock." if Global.FIRST_LEVEL_REWARD_HEROES.has(choice_id) else "Reserved for a future unlock."
+			var unlock_text := "Defeat the Goblin War Mech and its pilot." if choice_id == "Mech" else "Earn more MineWars victories to unlock."
 			detail_hint.text = "LOCKED  •  %s" % unlock_text
 			detail_hint.add_theme_color_override("font_color", Color(0.66, 0.68, 0.7, 1.0))
 			status_label.text = "%s is locked, but its kit can still be inspected." % choice_id
@@ -638,15 +660,21 @@ func _show_choice_details(kind: String, entry: Dictionary, distance: float) -> v
 	else:
 		var data: Dictionary = BASE_DETAILS.get(choice_id, {})
 		var base_name := str(Global.base_data[choice_id]["name"])
-		var selected := Global.selected_base_id == choice_id
-		detail_style.border_color = Color(1.0, 0.7, 0.24, 0.95)
+		var unlocked := bool(entry.get("unlocked", false))
+		var selected := unlocked and Global.selected_base_id == choice_id
+		detail_style.border_color = Color(1.0, 0.7, 0.24, 0.95) if unlocked else Color(0.38, 0.43, 0.48, 0.9)
 		detail_title.text = base_name.to_upper()
 		detail_title.add_theme_color_override("font_color", Color(1.0, 0.86, 0.5, 1.0))
 		detail_subtitle.text = str(data.get("archetype", "BASE"))
 		detail_subtitle.add_theme_color_override("font_color", Color(1.0, 0.66, 0.25, 1.0))
-		detail_body.text = "%s\nUPGRADE PREVIEW  •  %s" % [str(data.get("summary", "")), str(data.get("upgrades", ""))]
-		if selected:
-			detail_hint.text = "SELECTED  •  This base will anchor the run."
+		detail_body.text = "%s\nBASE EFFECTS  •  %s" % [str(data.get("summary", "")), str(data.get("upgrades", ""))]
+		if not unlocked:
+			var requirement := "Defeat the Goblin War Mech and its pilot." if choice_id == "mech_base" else "Earn more MineWars victories to recruit this faction."
+			detail_hint.text = "LOCKED  •  %s" % requirement
+			detail_hint.add_theme_color_override("font_color", Color(0.66, 0.68, 0.7, 1.0))
+			status_label.text = "%s has not joined the stronghold yet." % base_name
+		elif selected:
+			detail_hint.text = "SELECTED  •  Mix this base freely with any unlocked hero."
 			detail_hint.add_theme_color_override("font_color", Color(1.0, 0.86, 0.38, 1.0))
 			status_label.text = "%s selected. Its upgrade path is previewed below." % base_name
 		else:
@@ -681,7 +709,8 @@ func _refresh_selection_visuals() -> void:
 
 	for entry in base_pads:
 		var base_id := str(entry["id"])
-		var selected := base_id == Global.selected_base_id
+		var unlocked := bool(entry.get("unlocked", false))
+		var selected := unlocked and base_id == Global.selected_base_id
 		var hovered := _nearby_kind == "base" and base_id == _nearby_id
 		var pad := entry["node"] as Node2D
 		var ring := pad.get_node("Ring") as Line2D
@@ -691,15 +720,20 @@ func _refresh_selection_visuals() -> void:
 			ring.width = 5.0
 			disk.color = Color(0.34, 0.18, 0.035, 0.94)
 			pad.scale = Vector2(1.08, 1.08)
-		elif hovered:
+		elif hovered and unlocked:
 			ring.default_color = Color(1.0, 0.72, 0.28, 1.0)
 			ring.width = 4.0
 			disk.color = Color(0.24, 0.13, 0.03, 0.92)
 			pad.scale = Vector2(1.04, 1.04)
+		elif hovered:
+			ring.default_color = Color(0.48, 0.52, 0.56, 0.9)
+			ring.width = 3.0
+			disk.color = Color(0.04, 0.055, 0.065, 0.9)
+			pad.scale = Vector2(1.02, 1.02)
 		else:
-			ring.default_color = Color(0.92, 0.58, 0.18, 0.72)
+			ring.default_color = Color(0.92, 0.58, 0.18, 0.72) if unlocked else Color(0.25, 0.3, 0.34, 0.55)
 			ring.width = 2.0
-			disk.color = Color(0.12, 0.075, 0.025, 0.84)
+			disk.color = Color(0.12, 0.075, 0.025, 0.84) if unlocked else Color(0.025, 0.04, 0.055, 0.88)
 			pad.scale = Vector2.ONE
 
 func _update_loadout_text() -> void:

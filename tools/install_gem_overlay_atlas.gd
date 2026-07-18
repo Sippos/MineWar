@@ -1,0 +1,4 @@
+extends SceneTree
+
+const OUTPUT_PATH := "res://assets/sprites/world/terrain/gem_overlays/minewars_buried_gem_overlays_256x128.png"
+const PNG_BASE64 := "iVBORw0KGgoAAAANSUhEUgAAAQAAAACACAYAAADktbcKAAATzUlEQVR4nO2dX2hcV37HvxP8YmO8QpWXG8LSFQw12CwaC7/ERllZYFLFtMG4KZWgsSnB7JvXMUSVHww1NKqgbvBbEHnIpouykArjmmwIAUWN1s6LkUcYB2wGJpAGXxLt4Ihg90F4+jD5XZ175px7z7n33D8z+n1gsHX/nn+/P+d3/lyAYRiGYZidR8X0Qm9opJ1lQrLA31g3zp+OXsy3jItyYPqT54pOAMMwxbEr6Y3eYNVlOpzgtxrb/8/I6hWRb7/VsHqvWA4ME4VzD8Cm8WV1bS9gmh+6rt/yz5SD1ApgtHYk+ImNNa7B+q0Grhy+bXxt3HOzEhCdJyHme7R2

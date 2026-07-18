@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Transparent decal for the projected front-wall face. Artwork stays within its upper half. -->
+  <g>
+    <path fill="#211e37" d="M15 4h34v5h5v8h-6v6h-8v5H23v-4h-8v-6h-5V9h5z"/>
+    <path fill="#373250" d="M14 7h9v4h-6v6h-5V10h2zm33 1h5v7h-6v-5h1z"/>
+    <path fill="#151326" d="M21 23h7v6h-7zm12 1h5v7h-5zm10-3h5v6h-5z"/>
+    <path fill="#4055d8" d="M28 4h8l4 7-6 14h-9V12z"/>
+    <path fill="#8fa3ff" d="M30 6h4l2 5-4 10h-4v-9z"/>
+    <path fill="#24bfc2" d="M38 8h7l4 6-6 11h-8v-8z"/>
+    <path fill="#79f0dc" d="M40 10h3l2 4-4 7h-4v-5z"/>
+    <path fill="#65c84a" d="M18 9h7l4 6-6 10h-7v-8z"/>
+    <path fill="#c9f86b" d="M20 11h3l2 4-4 6h-3v-5z"/>
+    <path fill="#e6a63c" d="M46 17h5l3 4-4 7h-6v-5z"/>
+    <path fill="#ffe184" d="M47 19h2l1 2-2 4h-2z"/>
+    <path fill="#504970" d="M14 21h9v5h-9zm12 1h5v4h-5zm12 2h6v5h-6z"/>
+  </g>
+</svg>

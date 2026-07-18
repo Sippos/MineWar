@@ -1,6 +1,6 @@
 extends Node
 
-const FINAL_WAVE := 10
+const FINAL_WAVE := 4
 const RESULT_OVERLAY_NAME := "MatchResultOverlay"
 const PREPARATION_HUB_SCENE := "res://scenes/world/preparation/preparation_hub.tscn"
 const MAIN_MENU_SCENE := "res://scenes/menus/main/menu.tscn"
@@ -104,7 +104,7 @@ func _show_match_intro() -> void:
 	intro_shown = true
 	var hud := active_world.get_node_or_null("HUD")
 	if hud and hud.has_method("show_notice"):
-		hud.show_notice("Survive 10 waves. Defeat the boss to win.", 3.2)
+		hud.show_notice("Complete three expeditions, then defeat the final boss assault.", 3.8)
 
 func _count_world_enemies(world: Node) -> int:
 	var count := 0
@@ -124,8 +124,7 @@ func _finish_match(victory: bool) -> void:
 		return
 	var wave_reached := FINAL_WAVE if victory else maxi(1, int(hud.get("last_wave_reached")))
 	Global.award_run_legacy_ore(wave_reached, victory)
-	if victory:
-		Global.mark_first_level_beaten()
+	Global.record_minewars_result(victory)
 
 	var old_game_over := hud.get_node_or_null("GameOverOverlay")
 	if old_game_over:
@@ -200,7 +199,7 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	content.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "The wave boss has fallen." if victory else "The base has fallen. Your legacy remains."
+	subtitle.text = "The final assault has been broken." if victory else "The bastion fell, but your legacy remains."
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 18 if compact else 21)
 	subtitle.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72, 1.0))
@@ -222,6 +221,9 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 
 	var reward_banner := _build_legacy_reward_banner(compact)
 	content.add_child(reward_banner)
+	var unlock_banner := _build_unlock_reward_banner(compact)
+	if unlock_banner != null:
+		content.add_child(unlock_banner)
 
 	var buttons := GridContainer.new()
 	buttons.name = "Actions"
@@ -238,7 +240,8 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	var loadout := _make_result_button("Change Loadout", Callable(self, "_open_retry_loadout"), button_width)
 	loadout.name = "ChangeLoadoutButton"
 	buttons.add_child(loadout)
-	var workshop := _make_result_button("Workshop", Callable(self, "_return_to_preparation"), button_width)
+	var workshop_label := "Stronghold" if Global.is_legacy_workshop_unlocked() else "Return Home"
+	var workshop := _make_result_button(workshop_label, Callable(self, "_return_to_preparation"), button_width)
 	workshop.name = "WorkshopButton"
 	buttons.add_child(workshop)
 	var menu := _make_result_button("Main Menu", Callable(self, "_return_to_main_menu"), button_width)
@@ -265,7 +268,7 @@ func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
 	card.add_child(box)
 
 	var status := Label.new()
-	status.text = "BOSS DEFEATED" if victory else "HERO FALLEN"
+	status.text = "EXPEDITION COMPLETE" if victory else "EXPEDITION LOST"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status.add_theme_font_size_override("font_size", 11)
 	status.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28) if victory else Color(1.0, 0.32, 0.24))
@@ -348,6 +351,23 @@ func _build_run_summary_card(victory: bool, hud: Node, compact: bool) -> PanelCo
 	_add_result_stats(stats, victory, hud)
 	return card
 
+func _build_unlock_reward_banner(compact: bool) -> PanelContainer:
+	if Global.last_unlock_rewards.is_empty():
+		return null
+	var reward: Dictionary = Global.last_unlock_rewards.back()
+	var banner := PanelContainer.new()
+	banner.name = "MilestoneReward"
+	banner.custom_minimum_size = Vector2(0, 48 if compact else 52)
+	banner.add_theme_stylebox_override("panel", _make_flat_panel_style(Color(0.035, 0.09, 0.12, 0.96), Color(0.28, 0.82, 1.0, 0.98)))
+	var label := Label.new()
+	label.text = "STRONGHOLD REWARD  •  %s" % str(reward.get("title", "NEW POWER AWAKENED"))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 14 if compact else 16)
+	label.add_theme_color_override("font_color", Color(0.72, 0.94, 1.0, 1.0))
+	banner.add_child(label)
+	return banner
+
 func _build_legacy_reward_banner(compact: bool) -> PanelContainer:
 	var banner := PanelContainer.new()
 	banner.name = "LegacyReward"
@@ -376,7 +396,7 @@ func _add_result_stats(stats: GridContainer, victory: bool, hud: Node) -> void:
 	var base_icon := HERO_BASE_TEXTURES.get(hero_name, HERO_BASE_TEXTURES["Dwarf"]) as Texture2D
 
 	_add_result_row(stats, null, "TIME", "Run time", _format_elapsed_time(hud))
-	_add_result_row(stats, null, "WAVE", "Wave reached", "%d / %d" % [wave_reached, FINAL_WAVE])
+	_add_result_row(stats, null, "STAGE", "Stage reached", "%d / %d" % [wave_reached, FINAL_WAVE])
 	_add_result_row(stats, base_icon, "", "Base integrity", "%d%%" % base_integrity)
 	_add_result_row(stats, GEM_TEXTURE, "", "Gems banked", str(int(hud.get("total_gems"))))
 	_add_result_row(stats, GOLD_TEXTURE, "", "Gold banked", str(int(hud.get("total_gold"))))

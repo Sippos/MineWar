@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cads35kywyo0i"]
 
-[ext_resource type="Script" uid="uid://bmhoamkntdku5" path="res://scripts/systems/world_generation/world.gd" id="1_world"]
+[ext_resource type="Script" uid="uid://bmhoamkntdku5" path="res://scripts/systems/world_generation/world_gem_visuals.gd" id="1_world"]
 [ext_resource type="Script" uid="uid://bwa3xg44g5nig" path="res://player.gd" id="2_h2yge"]
 [ext_resource type="PackedScene" uid="uid://baseuid" path="res://base.tscn" id="5_base"]
 [ext_resource type="PackedScene" uid="uid://huduid" path="res://hud.tscn" id="6_hud"]
@@ -287,7 +287,7 @@ visible = false
 z_index = 10
 tile_set = SubResource("TileSet_main")
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=885445882]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=885445882 groups=["players"]]
 position = Vector2(0, -32)
 script = ExtResource("2_h2yge")
 

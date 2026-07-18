@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/make_linewars_gate_eruption_immediate.gd" id="1"]
+
+[node name="MakeLineWarsGateEruptionImmediate" type="Node"]
+script = ExtResource("1")

@@ -1,5 +1,8 @@
 extends CharacterBody2D
 
+const COMBAT_FEEDBACK := preload("res://combat_feedback.gd")
+const ENEMY_COMBAT_BEHAVIOR := preload("res://enemy_combat_behavior.gd")
+
 enum EnemyType { RAT, SPIDER, BAT, TROGG, ORC }
 
 const ENEMY_TEXTURES = {
@@ -42,6 +45,7 @@ var lane_phase := 0.0
 var last_topology_revision := -1
 var stuck_check_timer := 0.0
 var last_stuck_check_position := Vector2.ZERO
+var combat_behavior: Node
 
 @onready var world = get_parent()
 @onready var tile_map = world.get_node("BlockLayer")
@@ -70,6 +74,9 @@ func _ready():
 	last_stuck_check_position = global_position
 	_set_health_bar_values(true)
 	health_bar_container.visible = false
+	combat_behavior = ENEMY_COMBAT_BEHAVIOR.new()
+	combat_behavior.name = "CombatBehavior"
+	add_child(combat_behavior)
 	recalculate_path()
 
 func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) -> void:
@@ -142,8 +149,13 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 			Global.mark_monster_seen(monster_name)
 		sprite_rest_scale = sprite.scale
 		sprite_rest_position = sprite.position
+	var collision_shape := $CollisionShape2D.shape as RectangleShape2D
+	if collision_shape:
+		collision_shape.size = Vector2(72, 72) if is_boss else Vector2(40, 40)
 	_set_health_bar_values(true)
 	health_bar_hold_timer = HEALTH_BAR_HOLD_TIME if is_boss_enemy else 0.0
+	if combat_behavior and combat_behavior.has_method("configure"):
+		combat_behavior.configure()
 
 func recalculate_path():
 	var start_cell = tile_map.local_to_map(tile_map.to_local(global_position))
@@ -173,6 +185,10 @@ func _physics_process(delta: float):
 	if attack_cooldown_timer > 0.0:
 		attack_cooldown_timer -= delta
 
+	if combat_behavior and combat_behavior.has_method("process_combat") and bool(combat_behavior.process_combat(delta)):
+		_update_stuck_tracking(delta, true)
+		return
+	
 	var is_attacking_base = false
 	for i in get_slide_collision_count():
 		var col = get_slide_collision(i)
@@ -182,7 +198,7 @@ func _physics_process(delta: float):
 	
 	if base and global_position.distance_to(base.global_position) < 70.0:
 		is_attacking_base = true
-
+	
 	if is_attacking_base:
 		velocity = Vector2.ZERO
 		_update_stuck_tracking(delta, true)
@@ -191,7 +207,11 @@ func _physics_process(delta: float):
 			sprite.frame = current_anim_row * 8
 		if attack_cooldown_timer <= 0.0:
 			if base.has_method("take_damage"):
-				base.take_damage(damage)
+				var base_hit_damage := int(get_meta("linewars_leak_damage", damage))
+				base.take_damage(base_hit_damage)
+				if bool(get_meta("linewars_single_leak", false)):
+					queue_free()
+					return
 			if "spikes_level" in base and base.spikes_level > 0:
 				take_damage(15 * base.spikes_level)
 			attack_cooldown_timer = 1.0
@@ -296,11 +316,9 @@ func _update_walk_animation(direction: Vector2, delta: float) -> void:
 		sprite.frame = current_anim_row * 8 + (int(walk_timer) % 8)
 
 func _damage_colliding_players() -> void:
-	for i in get_slide_collision_count():
-		var collision := get_slide_collision(i)
-		var collider := collision.get_collider()
-		if collider and str(collider.name).begins_with("Player") and collider.has_method("take_damage"):
-			collider.take_damage(damage)
+	# Damage now comes from readable attack states in EnemyCombatBehavior rather
+	# than from invisible body contact while an enemy is merely walking.
+	return
 
 func take_damage(amount: int) -> void:
 	if amount <= 0 or health <= 0:
@@ -311,6 +329,8 @@ func take_damage(amount: int) -> void:
 	health_bar_container.visible = true
 	health_bar_container.modulate.a = 1.0
 	_play_hit_reaction()
+	var feedback: Node = COMBAT_FEEDBACK.ensure(world)
+	feedback.play_enemy_hit(global_position + Vector2(0, 4), _feedback_hit_direction(), amount, health <= 0)
 	if health <= 0:
 		die()
 
@@ -373,7 +393,18 @@ func _play_hit_reaction() -> void:
 	hit_reaction_tween.tween_property(sprite, "scale", sprite_rest_scale, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	hit_reaction_tween.tween_property(sprite, "position", sprite_rest_position, 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	hit_reaction_tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
-	_spawn_hit_burst()
+
+func _feedback_hit_direction() -> Vector2:
+	var nearest_direction := Vector2.RIGHT
+	var nearest_distance := INF
+	for candidate in get_tree().get_nodes_in_group("players"):
+		if not candidate is Node2D or not is_instance_valid(candidate):
+			continue
+		var delta := global_position - (candidate as Node2D).global_position
+		if delta.length_squared() < nearest_distance:
+			nearest_distance = delta.length_squared()
+			nearest_direction = delta.normalized() if delta.length_squared() > 0.001 else Vector2.RIGHT
+	return nearest_direction
 
 func _spawn_hit_burst() -> void:
 	if not is_instance_valid(world):
@@ -400,6 +431,11 @@ func _spawn_hit_burst() -> void:
 	get_tree().create_timer(0.55).timeout.connect(burst.queue_free)
 
 func die() -> void:
+	if is_boss_enemy and combat_behavior and combat_behavior.has_method("handle_boss_destroyed"):
+		if bool(combat_behavior.handle_boss_destroyed()):
+			queue_free()
+			return
+
 	var coin_scene = preload("res://scenes/entities/collectibles/drops/coin_drop.tscn")
 	var coin = coin_scene.instantiate()
 	coin.gold_value = gold_drop

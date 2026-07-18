@@ -1,19 +1,21 @@
 extends CanvasLayer
 
-const BASE_ORDER: Array[String] = ["default_base", "shaman_base", "nerubian_base", "druid_base", "undead_king_base"]
+const BASE_ORDER: Array[String] = ["default_base", "shaman_base", "nerubian_base", "mech_base", "druid_base", "undead_king_base"]
 const BASE_TO_HERO := {
 	"default_base": "Dwarf",
 	"shaman_base": "Shaman",
 	"nerubian_base": "Nerubian",
 	"druid_base": "Druid",
 	"undead_king_base": "Undead King",
+	"mech_base": "Mech",
 }
 const BASE_DESCRIPTIONS := {
-	"default_base": "A rugged dwarven stronghold built around forge and stone.",
-	"shaman_base": "A spirit lodge shaped by totems, ritual fire, and clan craft.",
-	"nerubian_base": "A living brood nest reinforced with web and chitin.",
-	"druid_base": "A natural refuge grown from roots, earth, and ancient timber.",
-	"undead_king_base": "A frozen citadel raised to shelter an undying army.",
+	"default_base": "DWARF ENGINEERING  •  +1 free gem carry and 8 bastion HP repaired after every assault.",
+	"shaman_base": "TOTEM SANCTUARY  •  Reveals nearby crystal seams and heals heroes fighting near the lodge.",
+	"nerubian_base": "BROOD NEST  •  Warns three seconds earlier and webs the first three attackers.",
+	"mech_base": "GOBLIN WORKSHOP  •  +15 bastion HP, faster Mech rebuilding, and an automatic defence turret.",
+	"druid_base": "LIVING GROVE  •  Safe regeneration and periodic roots around the bastion.",
+	"undead_king_base": "SOUL CITADEL  •  Enemy deaths charge a defensive nova or soul-powered repair.",
 }
 
 var world: Node
@@ -87,7 +89,7 @@ func _build_interface() -> void:
 	shell.add_child(body)
 
 	var title := Label.new()
-	title.text = "CHOOSE YOUR BASE"
+	title.text = "CHOOSE YOUR FORTRESS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.62, 0.92, 1.0, 1.0))
@@ -141,7 +143,7 @@ func _build_interface() -> void:
 	base_description_label = Label.new()
 	base_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	base_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	base_description_label.custom_minimum_size = Vector2(480, 38)
+	base_description_label.custom_minimum_size = Vector2(520, 64)
 	base_description_label.add_theme_font_size_override("font_size", 13)
 	base_description_label.add_theme_color_override("font_color", Color(0.76, 0.82, 0.88, 1.0))
 	showcase_box.add_child(base_description_label)
@@ -161,7 +163,7 @@ func _build_interface() -> void:
 	for base_id in BASE_ORDER:
 		var button := Button.new()
 		button.name = base_id.capitalize().replace(" ", "")
-		button.custom_minimum_size = Vector2(104, 66)
+		button.custom_minimum_size = Vector2(92, 66)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(_select_base.bind(base_id))
 		selector_row.add_child(button)
@@ -210,18 +212,19 @@ func _refresh_interface() -> void:
 	var hero_name := Global.selected_hero_id
 	hero_label.text = "CURRENT HERO  •  %s  •  Heroes are chosen physically in the hub" % hero_name
 	progression_label.text = (
-		"Choose any unlocked fortress. The hero remains unchanged until you walk to another hero pedestal."
-		if Global.first_level_beaten
-		else "FIRST EXPEDITION  •  Dwarf Bastion is your only awakened fortress. Win MineWars once to unlock the others."
+		"Choose one of the fortresses that has joined your stronghold."
+		if Global.unlocked_bases.size() > 1
+		else "The Dwarf Bastion is prepared for the expedition."
 	)
 
 	var selected_data: Dictionary = Global.base_data.get(selected_base, Global.base_data["default_base"])
 	base_texture.texture = selected_data.get("texture") as Texture2D
+	base_texture.modulate = Color(1.16, 0.82, 0.46, 1.0) if selected_base == "mech_base" else Color.WHITE
 	base_name_label.text = str(selected_data.get("name", selected_base.capitalize()))
 	base_description_label.text = str(BASE_DESCRIPTIONS.get(selected_base, "A fortress for the next expedition."))
 	var matching_hero := str(BASE_TO_HERO.get(selected_base, "Dwarf"))
 	var matches_current := matching_hero == hero_name
-	match_label.text = "MATCHING FORTRESS FOR %s" % matching_hero
+	match_label.text = "ORIGIN  •  %s  •  Mix freely with %s" % [matching_hero, hero_name]
 	match_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.32, 1.0) if matches_current else Color(0.58, 0.78, 0.9, 1.0))
 	confirm_button.text = "Use %s" % base_name_label.text
 
@@ -231,9 +234,10 @@ func _refresh_interface() -> void:
 		var is_selected := base_id == selected_base
 		var data: Dictionary = Global.base_data.get(base_id, {})
 		var short_name := str(data.get("name", base_id.capitalize()))
-		button.text = short_name if unlocked else "%s\nLOCKED" % short_name
+		button.visible = unlocked
+		button.text = short_name
 		button.disabled = not unlocked
-		button.modulate = Color.WHITE if unlocked else Color(0.42, 0.44, 0.48, 0.75)
+		button.modulate = Color.WHITE
 		button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48, 1.0) if is_selected else Color(0.86, 0.9, 0.95, 1.0))
 
 func _select_base(base_id: String) -> void:
@@ -260,7 +264,7 @@ func _available_bases() -> Array[String]:
 	return result
 
 func _base_unlocked(base_id: String) -> bool:
-	return base_id == "default_base" or bool(Global.first_level_beaten)
+	return Global.is_base_unlocked(base_id)
 
 func _confirm_base() -> void:
 	Global.set_run_loadout(Global.selected_hero_id, selected_base)

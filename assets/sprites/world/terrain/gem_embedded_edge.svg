@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Tile-sized transparent decal for an exposed rock edge. Rotate for left/right exposure. -->
+  <g>
+    <!-- chipped pocket cut into the edge -->
+    <path fill="#24213d" d="M17 0h31v6h5v8h-5v6h-7v5H24v-4h-8v-7h-5V6h6z"/>
+    <path fill="#393456" d="M15 3h9v4h-5v5h-6V7h2zm31 2h5v7h-6V8h1z"/>
+    <path fill="#17152b" d="M22 20h6v6h-6zm11 1h5v8h-5zm9-4h5v6h-5z"/>
+    <!-- embedded crystal vein, compact and edge-anchored -->
+    <path fill="#4055d8" d="M28 0h8l4 7-6 14h-9V8z"/>
+    <path fill="#8fa3ff" d="M30 2h4l2 5-4 10h-4V8z"/>
+    <path fill="#24bfc2" d="M38 4h7l4 6-6 11h-8v-8z"/>
+    <path fill="#79f0dc" d="M40 6h3l2 4-4 7h-4v-5z"/>
+    <path fill="#65c84a" d="M18 5h7l4 6-6 10h-7v-8z"/>
+    <path fill="#c9f86b" d="M20 7h3l2 4-4 6h-3v-5z"/>
+    <path fill="#e6a63c" d="M46 13h5l3 4-4 7h-6v-5z"/>
+    <path fill="#ffe184" d="M47 15h2l1 2-2 4h-2z"/>
+    <!-- tiny rock overlaps make the crystals feel buried, not pasted on -->
+    <path fill="#504970" d="M15 17h8v5h-8zm11 1h5v4h-5zm12 2h6v5h-6z"/>
+  </g>
+</svg>

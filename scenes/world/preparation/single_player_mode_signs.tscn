@@ -3,64 +3,47 @@
 [node name="SinglePlayerModeSigns" type="Node2D"]
 z_index = 18
 
-[node name="HubTitle" type="Label" parent="."]
-visible = false
-position = Vector2(-190, -250)
-size = Vector2(380, 44)
-text = "HERO HALL"
+[node name="TopDoorGlow" type="Polygon2D" parent="."]
+position = Vector2(0, -352)
+polygon = PackedVector2Array(-96, -32, 96, -32, 96, 32, -96, 32)
+color = Color(0.12, 0.5, 0.82, 0.24)
+
+[node name="LineWars" type="Label" parent="."]
+position = Vector2(-110, -290)
+size = Vector2(220, 54)
+text = "LINEWARS\nTOP TUNNEL"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.82, 0.94, 1, 1)
+theme_override_colors/font_color = Color(0.38, 0.86, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 
-[node name="SharedShaftGlow" type="Polygon2D" parent="."]
-position = Vector2(192, -2)
-polygon = PackedVector2Array(-54, -20, 54, -20, 42, 22, 0, 46, -42, 22)
-color = Color(0.08, 0.72, 1, 0.3)
+[node name="RightDoorGlow" type="Polygon2D" parent="."]
+position = Vector2(544, 0)
+polygon = PackedVector2Array(-32, -96, 32, -96, 32, 96, -32, 96)
+color = Color(0.22, 0.72, 0.32, 0.22)
 
-[node name="SharedShaftOutline" type="Line2D" parent="."]
-position = Vector2(192, -2)
-points = PackedVector2Array(-54, -20, 54, -20, 42, 22, 0, 46, -42, 22, -54, -20)
-width = 4.0
-default_color = Color(0.35, 0.92, 1, 0.92)
-
-[node name="DigHere" type="Label" parent="."]
-position = Vector2(92, -52)
-size = Vector2(200, 48)
-text = "SHARED SHAFT\nHOLD ↓ TO ENTER"
+[node name="Adventure" type="Label" parent="."]
+position = Vector2(390, -28)
+size = Vector2(190, 58)
+text = "ADVENTURE\nRIGHT TUNNEL"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.58, 0.95, 1, 1)
+theme_override_colors/font_color = Color(0.46, 1, 0.52, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 15
 
-[node name="LineWars" type="Label" parent="."]
-position = Vector2(78, -270)
-size = Vector2(230, 50)
-text = "↑  LINEWARS\nDIG ABOVE THE SHAFT"
-horizontal_alignment = 1
-theme_override_colors/font_color = Color(1, 0.55, 0.22, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 14
+[node name="BottomDoorGlow" type="Polygon2D" parent="."]
+position = Vector2(0, 416)
+polygon = PackedVector2Array(-96, -32, 96, -32, 96, 32, -96, 32)
+color = Color(0.08, 0.72, 1, 0.24)
 
 [node name="MineWars" type="Label" parent="."]
-position = Vector2(82, 78)
-size = Vector2(220, 50)
-text = "↓  MINEWARS\nWAVES • FIRST ROUTE"
+position = Vector2(-110, 286)
+size = Vector2(220, 58)
+text = "MINEWARS\nBOTTOM TUNNEL"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.38, 0.88, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 14
-
-[node name="Adventure" type="Label" parent="."]
-position = Vector2(310, -122)
-size = Vector2(220, 50)
-text = "ADVENTURE  →\nDIG EAST • EXPLORE"
-horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.46, 1, 0.52, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 14
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 16

@@ -452,39 +452,39 @@ func _setup_objective_ui() -> void:
 	objective_panel.visible = false
 	objective_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	objective_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_panel.offset_left = -300
-	objective_panel.offset_top = 76
-	objective_panel.offset_right = 300
-	objective_panel.offset_bottom = 172
-	objective_panel.pivot_offset = Vector2(300, 48)
+	objective_panel.offset_left = -190
+	objective_panel.offset_top = 74
+	objective_panel.offset_right = 190
+	objective_panel.offset_bottom = 132
+	objective_panel.pivot_offset = Vector2(190, 29)
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.018, 0.035, 0.055, 0.95)
-	panel_style.border_color = Color(0.18, 0.78, 1.0, 0.95)
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(10)
-	panel_style.content_margin_left = 18
-	panel_style.content_margin_right = 18
-	panel_style.content_margin_top = 9
-	panel_style.content_margin_bottom = 9
-	panel_style.shadow_color = Color(0, 0, 0, 0.58)
-	panel_style.shadow_size = 6
+	panel_style.bg_color = Color(0.018, 0.035, 0.055, 0.82)
+	panel_style.border_color = Color(0.18, 0.78, 1.0, 0.8)
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(8)
+	panel_style.content_margin_left = 14
+	panel_style.content_margin_right = 14
+	panel_style.content_margin_top = 7
+	panel_style.content_margin_bottom = 7
 	objective_panel.add_theme_stylebox_override("panel", panel_style)
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 1)
+	box.add_theme_constant_override("separation", 0)
 	objective_panel.add_child(box)
 	objective_step_label = Label.new()
-	objective_step_label.text = "FIRST RUN"
-	objective_step_label.add_theme_font_size_override("font_size", 10)
-	objective_step_label.add_theme_color_override("font_color", Color(0.38, 0.82, 1.0, 1.0))
+	objective_step_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	objective_step_label.add_theme_font_size_override("font_size", 9)
+	objective_step_label.add_theme_color_override("font_color", Color(0.38, 0.82, 1.0, 0.9))
 	box.add_child(objective_step_label)
 	objective_title_label = Label.new()
-	objective_title_label.add_theme_font_size_override("font_size", 20)
+	objective_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	objective_title_label.add_theme_font_size_override("font_size", 17)
 	objective_title_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.68, 1.0))
 	box.add_child(objective_title_label)
 	objective_body_label = Label.new()
+	objective_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	objective_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	objective_body_label.add_theme_font_size_override("font_size", 13)
+	objective_body_label.add_theme_font_size_override("font_size", 11)
 	objective_body_label.add_theme_color_override("font_color", Color(0.86, 0.92, 0.98, 1.0))
 	box.add_child(objective_body_label)
 	add_child(objective_panel)
@@ -519,15 +519,15 @@ func _setup_return_cue_ui() -> void:
 	return_cue.name = "GemReturnCue"
 	return_cue.visible = false
 	return_cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return_cue.size = Vector2(154, 44)
+	return_cue.size = Vector2(76, 46)
 	var background := ColorRect.new()
-	background.color = Color(0.015, 0.07, 0.085, 0.92)
+	background.color = Color(0.015, 0.07, 0.085, 0.78)
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return_cue.add_child(background)
 	return_cue_arrow = Label.new()
 	return_cue_arrow.text = "▶"
-	return_cue_arrow.position = Vector2(7, 7)
+	return_cue_arrow.position = Vector2(4, 7)
 	return_cue_arrow.size = Vector2(30, 30)
 	return_cue_arrow.pivot_offset = Vector2(15, 15)
 	return_cue_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -536,11 +536,12 @@ func _setup_return_cue_ui() -> void:
 	return_cue_arrow.add_theme_color_override("font_color", Color(0.2, 0.95, 1.0, 1.0))
 	return_cue.add_child(return_cue_arrow)
 	return_cue_label = Label.new()
-	return_cue_label.text = "BANK GEMS"
-	return_cue_label.position = Vector2(40, 7)
-	return_cue_label.size = Vector2(106, 30)
+	return_cue_label.text = "◇"
+	return_cue_label.position = Vector2(36, 7)
+	return_cue_label.size = Vector2(36, 30)
+	return_cue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return_cue_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	return_cue_label.add_theme_font_size_override("font_size", 14)
+	return_cue_label.add_theme_font_size_override("font_size", 16)
 	return_cue_label.add_theme_color_override("font_color", Color(0.45, 1.0, 1.0, 1.0))
 	return_cue_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
 	return_cue_label.add_theme_constant_override("outline_size", 3)
@@ -553,14 +554,15 @@ func show_objective(step_text: String, title_text: String, body_text: String) ->
 	objective_step_label.text = step_text
 	objective_title_label.text = title_text
 	objective_body_label.text = body_text
+	objective_body_label.visible = not body_text.strip_edges().is_empty()
 	objective_panel.visible = true
 	if objective_tween and objective_tween.is_running():
 		objective_tween.kill()
 	objective_panel.scale = Vector2(0.96, 0.96)
-	objective_panel.modulate = Color(1.25, 1.25, 1.25, 1.0)
+	objective_panel.modulate = Color(1.18, 1.18, 1.18, 1.0)
 	objective_tween = create_tween().set_parallel(true)
-	objective_tween.tween_property(objective_panel, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	objective_tween.tween_property(objective_panel, "modulate", Color.WHITE, 0.28)
+	objective_tween.tween_property(objective_panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	objective_tween.tween_property(objective_panel, "modulate", Color.WHITE, 0.22)
 
 func hide_objective() -> void:
 	if objective_panel:
@@ -580,10 +582,7 @@ func _update_carry_status() -> void:
 	var allowance := int(player.get_free_carry_allowance()) if player.has_method("get_free_carry_allowance") else 0
 	var overload: int = maxi(carry_load - allowance, 0)
 	var penalty_percent: int = int(round(float(player.get_weight_penalty()) * 100.0)) if player.has_method("get_weight_penalty") else 0
-	if overload > 0:
-		carry_status_label.text = "CARRYING %d GEMS  •  SLOWED %d%%  •  RETURN TO BASE" % [carry_load, penalty_percent]
-	else:
-		carry_status_label.text = "CARRYING %d GEM%s  •  RETURN TO BASE" % [carry_load, "" if carry_load == 1 else "S"]
+	carry_status_label.text = "◇ %d   -%d%%" % [carry_load, penalty_percent] if overload > 0 else "◇ %d" % carry_load
 	carry_status_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.3, 1.0) if overload > 0 else Color(0.55, 1.0, 1.0, 1.0))
 
 func _update_return_cue() -> void:
@@ -593,17 +592,19 @@ func _update_return_cue() -> void:
 	var player := world.get_node_or_null("Player") if world else null
 	var base := world.get_node_or_null("Base") if world else null
 	var carry_load := int(player.get_carry_load()) if player and player.has_method("get_carry_load") else 0
-	if not player or not base or carry_load <= 0:
+	var force_return := bool(world.get_meta("minewars_force_return_cue", false)) if world else false
+	if not player or not base or (carry_load <= 0 and not force_return):
 		return_cue.visible = false
 		return
 	var to_base: Vector2 = base.global_position - player.global_position
-	if to_base.length() < 330.0:
+	var hide_distance := 190.0 if force_return else 330.0
+	if to_base.length() < hide_distance:
 		return_cue.visible = false
 		return
 	var direction := to_base.normalized()
 	var viewport_size := get_viewport().get_visible_rect().size
 	var center := viewport_size * 0.5
-	var half_extent := Vector2(max(viewport_size.x * 0.5 - 90.0, 20.0), max(viewport_size.y * 0.5 - 52.0, 20.0))
+	var half_extent := Vector2(max(viewport_size.x * 0.5 - 52.0, 20.0), max(viewport_size.y * 0.5 - 46.0, 20.0))
 	var edge_scale := 1000000.0
 	if abs(direction.x) > 0.001:
 		edge_scale = min(edge_scale, half_extent.x / abs(direction.x))
@@ -614,6 +615,17 @@ func _update_return_cue() -> void:
 	cue_position.y = clamp(cue_position.y, 8.0, max(viewport_size.y - return_cue.size.y - 8.0, 8.0))
 	return_cue.position = cue_position
 	return_cue_arrow.rotation = direction.angle()
+	if force_return:
+		return_cue_label.text = "!"
+		return_cue_arrow.add_theme_color_override("font_color", Color(1.0, 0.36, 0.16, 1.0))
+		return_cue_label.add_theme_color_override("font_color", Color(1.0, 0.62, 0.2, 1.0))
+		var pulse := 1.0 + sin(float(Time.get_ticks_msec()) / 120.0) * 0.055
+		return_cue.scale = Vector2.ONE * pulse
+	else:
+		return_cue_label.text = str(carry_load)
+		return_cue_arrow.add_theme_color_override("font_color", Color(0.2, 0.95, 1.0, 1.0))
+		return_cue_label.add_theme_color_override("font_color", Color(0.45, 1.0, 1.0, 1.0))
+		return_cue.scale = Vector2.ONE
 	return_cue.visible = true
 
 func _setup_base_warning_ui() -> void:
@@ -1454,15 +1466,15 @@ func update_wave_info(wave: int, time_left: float, max_time: float, is_boss: boo
 	if is_boss:
 		wave_label.add_theme_color_override("font_color", Color(1, 0, 0)) # Red text for Boss
 		if time_left < 0:
-			wave_label.text = "BOSS WAVE %d - COMBAT!" % wave
+			wave_label.text = "FINAL ASSAULT - COMBAT!"
 		else:
-			wave_label.text = "BOSS WAVE %d!" % wave
+			wave_label.text = "FINAL ASSAULT"
 	else:
 		wave_label.add_theme_color_override("font_color", Color(1, 1, 1))
 		if time_left < 0:
-			wave_label.text = "Wave %d - Combat Phase" % wave
+			wave_label.text = "STAGE %d - DEFEND" % wave
 		else:
-			wave_label.text = "Wave %d" % wave
+			wave_label.text = "STAGE %d - EXPLORE" % wave
 	
 	var wave_bar = get_node_or_null("WaveBar")
 	if wave_bar:

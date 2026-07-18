@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://mech_player_pilot.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://character_sprites/zarathustra_sheet_32x32.png" id="2_texture"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player_pilot"]
+radius = 10.0
+height = 26.0
+
+[node name="MechPilotPlayer" type="CharacterBody2D" groups=["players"]]
+collision_layer = 1
+collision_mask = 5
+script = ExtResource("1_script")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+position = Vector2(0, 9)
+polygon = PackedVector2Array(-14, 0, -9, -4, 9, -4, 14, 0, 9, 4, -9, 4)
+color = Color(0, 0, 0, 0.4)
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -7)
+texture = ExtResource("2_texture")
+hframes = 4
+scale = Vector2(1.7, 1.7)
+modulate = Color(0.72, 1, 0.58, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 2)
+shape = SubResource("CapsuleShape2D_player_pilot")

@@ -11,6 +11,16 @@ const HERO_PROFILES: Dictionary = {
 		"base_armor": 1.20,
 		"base_regen": 0.18
 	},
+	"Mech": {
+		"primary": "strength",
+		"base_stats": {"strength": 5, "agility": 1, "intelligence": 1},
+		"growth": {"strength": 0.90, "agility": 0.20, "intelligence": 0.15},
+		"base_health": 52,
+		"base_attack_damage": 7.0,
+		"base_attack_interval": 0.86,
+		"base_armor": 2.00,
+		"base_regen": 0.16
+	},
 	"Shaman": {
 		"primary": "intelligence",
 		"base_stats": {"strength": 1, "agility": 2, "intelligence": 4},
@@ -232,22 +242,61 @@ func get_basic_attack_damage() -> int:
 
 func get_attack_interval() -> float:
 	var profile: Dictionary = _profile()
+	var base: Dictionary = _base_stats()
 	var agility_value: int = int(player.get("agility"))
-	var attack_speed_multiplier: float = 1.0 + float(maxi(0, agility_value - 1)) * 0.035
-	return maxf(0.32, float(profile["base_attack_interval"]) / attack_speed_multiplier)
+	var extra_agility := maxi(0, agility_value - int(base["agility"]))
+	var attack_speed_multiplier: float = 1.0 + float(extra_agility) * 0.055
+	return maxf(0.26, float(profile["base_attack_interval"]) / attack_speed_multiplier)
 
 func get_attacks_per_second() -> float:
 	return 1.0 / maxf(0.01, get_attack_interval())
 
 func get_move_speed() -> float:
+	var base: Dictionary = _base_stats()
 	var agility_value: int = int(player.get("agility"))
-	return float(player.get("base_speed")) + float(maxi(0, agility_value - 1)) * 3.0
+	var extra_agility := maxi(0, agility_value - int(base["agility"]))
+	return float(player.get("base_speed")) + float(extra_agility) * 5.5
 
 func get_dig_time_multiplier() -> float:
+	var base: Dictionary = _base_stats()
 	var agility_value: int = int(player.get("agility"))
 	var strength_value: int = int(player.get("strength"))
-	var mining_speed: float = float(maxi(0, agility_value - 1)) * 0.025 + float(maxi(0, strength_value - 1)) * 0.015
-	return maxf(0.62, 1.0 / (1.0 + mining_speed))
+	var extra_agility := maxi(0, agility_value - int(base["agility"]))
+	var extra_strength := maxi(0, strength_value - int(base["strength"]))
+	var mining_speed: float = float(extra_agility) * 0.050 + float(extra_strength) * 0.012
+	return maxf(0.48, 1.0 / (1.0 + mining_speed))
+
+func get_mining_force_multiplier(block_id: int) -> float:
+	if block_id != 2 and block_id != 3:
+		return 1.0
+	var base: Dictionary = _base_stats()
+	var strength_value: int = int(player.get("strength"))
+	var extra_strength := maxi(0, strength_value - int(base["strength"]))
+	var reduction_per_point := 0.075 if block_id == 2 else 0.095
+	return maxf(0.42, 1.0 - float(extra_strength) * reduction_per_point)
+
+func get_build_identity() -> Dictionary:
+	var base: Dictionary = _base_stats()
+	var strength_extra := maxi(0, int(player.get("strength")) - int(base["strength"]))
+	var agility_extra := maxi(0, int(player.get("agility")) - int(base["agility"]))
+	var intelligence_extra := maxi(0, int(player.get("intelligence")) - int(base["intelligence"]))
+	var highest := maxi(strength_extra, maxi(agility_extra, intelligence_extra))
+	if highest < 2:
+		return {"title": "UNSHAPED", "description": "The next few gems will define this run.", "color": Color(0.78, 0.82, 0.88)}
+	var leaders := 0
+	leaders += 1 if strength_extra == highest else 0
+	leaders += 1 if agility_extra == highest else 0
+	leaders += 1 if intelligence_extra == highest else 0
+	if leaders > 1:
+		return {"title": "HYBRID DELVER", "description": "Balanced mining, combat, and utility.", "color": Color(0.78, 0.72, 1.0)}
+	if strength_extra == highest:
+		var title := "LOADBEARER" if highest < 5 else ("EARTHBREAKER" if highest < 8 else "MOUNTAIN KING")
+		return {"title": title, "description": "Heavy loads, brutal melee, and hard-rock force.", "color": Color(1.0, 0.48, 0.24)}
+	if agility_extra == highest:
+		var title := "SCOUT MINER" if highest < 5 else ("VEIN RUNNER" if highest < 8 else "CAVE BLUR")
+		return {"title": title, "description": "Fast digging, rapid attacks, and safer returns.", "color": Color(0.35, 1.0, 0.58)}
+	var title := "PROSPECTOR" if highest < 5 else ("RUNECASTER" if highest < 8 else "ARCANE ENGINE")
+	return {"title": title, "description": "Stronger utility, shorter cooldowns, and empowered summons.", "color": Color(0.35, 0.72, 1.0)}
 
 func get_armor() -> float:
 	var profile: Dictionary = _profile()
@@ -276,21 +325,29 @@ func get_health_regeneration() -> float:
 	return float(profile["base_regen"]) + float(strength_above_base) * 0.08
 
 func get_spell_power_multiplier() -> float:
+	var base: Dictionary = _base_stats()
 	var intelligence_value: int = int(player.get("intelligence"))
-	return 1.0 + float(maxi(0, intelligence_value - 1)) * 0.035
+	var extra_intelligence := maxi(0, intelligence_value - int(base["intelligence"]))
+	return 1.0 + float(extra_intelligence) * 0.065
 
 func get_summon_power_multiplier() -> float:
+	var base: Dictionary = _base_stats()
 	var intelligence_value: int = int(player.get("intelligence"))
-	return 1.0 + float(maxi(0, intelligence_value - 1)) * 0.030
+	var extra_intelligence := maxi(0, intelligence_value - int(base["intelligence"]))
+	return 1.0 + float(extra_intelligence) * 0.055
 
 func get_cooldown_multiplier() -> float:
+	var base: Dictionary = _base_stats()
 	var intelligence_value: int = int(player.get("intelligence"))
-	var reduction: float = minf(0.25, float(maxi(0, intelligence_value - 1)) * 0.0125)
+	var extra_intelligence := maxi(0, intelligence_value - int(base["intelligence"]))
+	var reduction: float = minf(0.42, float(extra_intelligence) * 0.028)
 	return 1.0 - reduction
 
 func get_duration_multiplier() -> float:
+	var base: Dictionary = _base_stats()
 	var intelligence_value: int = int(player.get("intelligence"))
-	return 1.0 + float(maxi(0, intelligence_value - 1)) * 0.015
+	var extra_intelligence := maxi(0, intelligence_value - int(base["intelligence"]))
+	return 1.0 + float(extra_intelligence) * 0.030
 
 func scale_spell_damage(base_damage: int) -> int:
 	return maxi(1, int(round(float(base_damage) * get_spell_power_multiplier())))
@@ -302,9 +359,9 @@ func scale_physical_ability_damage(base_damage: int) -> int:
 	var base: Dictionary = _base_stats()
 	var strength_value: int = int(player.get("strength"))
 	var extra_strength: int = maxi(0, strength_value - int(base["strength"]))
-	var multiplier: float = 1.0 + float(extra_strength) * 0.025
+	var multiplier: float = 1.0 + float(extra_strength) * 0.045
 	if get_primary_attribute() == "strength":
-		multiplier += float(extra_strength) * 0.015
+		multiplier += float(extra_strength) * 0.020
 	return maxi(1, int(round(float(base_damage) * multiplier)))
 
 func adjust_cooldown(base_cooldown: float) -> float:

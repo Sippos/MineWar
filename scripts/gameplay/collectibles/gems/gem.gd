@@ -37,11 +37,11 @@ func _ready() -> void:
 func _setup_pickup_prompt() -> void:
 	var pickup_prompt := Label.new()
 	pickup_prompt.name = "PickupPrompt"
-	pickup_prompt.text = "SPACE / A  •  PICK UP"
+	pickup_prompt.text = "SPACE / A"
 	pickup_prompt.visible = bool(get_meta("tutorial_emphasis", false))
 	pickup_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pickup_prompt.position = Vector2(-82, -58)
-	pickup_prompt.size = Vector2(164, 28)
+	pickup_prompt.position = Vector2(-52, -58)
+	pickup_prompt.size = Vector2(104, 28)
 	pickup_prompt.z_index = 28
 	pickup_prompt.add_theme_font_size_override("font_size", 13)
 	pickup_prompt.add_theme_color_override("font_color", Color(0.4, 1.0, 1.0, 1.0))
@@ -51,6 +51,12 @@ func _setup_pickup_prompt() -> void:
 	var prompt_tween := create_tween().set_loops()
 	prompt_tween.tween_property(pickup_prompt, "modulate", Color(1.3, 1.3, 1.3, 1.0), 0.5).set_trans(Tween.TRANS_SINE)
 	prompt_tween.tween_property(pickup_prompt, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE)
+
+func should_deposit_as_gem() -> bool:
+	return not bool(get_meta("stronghold_practice_gem", false))
+
+func get_carry_weight() -> int:
+	return maxi(1, int(get_meta("practice_carry_weight", 1)))
 
 func set_tutorial_emphasis(enabled: bool) -> void:
 	set_meta("tutorial_emphasis", enabled)
