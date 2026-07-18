@@ -14,14 +14,18 @@ var joystick_current_pos = Vector2()
 
 var button_radius = 40.0
 var base_tap_radius = 96.0
-var menu_button_pos = Vector2(64, 64)
+var menu_button_pos = Vector2(0, 0)
 var menu_button_radius = 34.0
 var menu_button_active = false
 var menu_button_touch_id = -1
 var buttons = [
-	{ "action": "p%d_grab", "role": "grab", "pos": Vector2(), "color": Color(0.2, 0.8, 0.2), "active": false, "touch_id": -1, "label": "Grab" },
-	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(0.8, 0.2, 0.2), "active": false, "touch_id": -1, "label": "Release" },
+	{ "action": "p%d_grab", "role": "grab", "pos": Vector2(), "color": Color(0.25, 0.86, 0.78), "active": false, "touch_id": -1, "label": "PICK" },
+	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(1.0, 0.52, 0.25), "active": false, "touch_id": -1, "label": "DROP" },
 ]
+
+const UI_GOLD := Color(0.95, 0.72, 0.28, 0.96)
+const UI_PANEL := Color(0.035, 0.045, 0.06, 0.92)
+const UI_PANEL_ACTIVE := Color(0.12, 0.14, 0.18, 0.98)
 
 func _ready() -> void:
 	set_process(true)
@@ -52,15 +56,17 @@ func _on_size_changed() -> void:
 	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
 	joystick_current_pos = joystick_center
 
-	var gap: float = button_radius * 2.18
-	# Keep Grab/Drop in a dedicated row above Stomp and the hero ability bar.
-	# Their touch circles must never intercept ability or Stomp taps.
-	var controls_row_offset: float = 186.0 + button_radius
+	var gap: float = button_radius * 2.15
+	# Keep the context actions in a compact, matching row above the ability bar.
+	# Their hit targets never intercept the ability or Stomp taps below them.
+	var controls_row_offset: float = 192.0 + button_radius
 	var bottom_y: float = viewport_size.y - controls_row_offset
 	var right_x: float = viewport_size.x - margin - button_radius
 	buttons[1].pos = Vector2(right_x, bottom_y) # Drop
 	buttons[0].pos = Vector2(right_x - gap, bottom_y) # Grab
-	menu_button_pos = Vector2(viewport_size.x - margin - menu_button_radius, margin + menu_button_radius)
+	# The old top-right menu button was drawn over the bastion status icon. Keep
+	# it in the empty top-center safe area instead.
+	menu_button_pos = Vector2(viewport_size.x * 0.5, margin + menu_button_radius)
 	queue_redraw()
 
 func _input(event: InputEvent) -> void:
@@ -173,37 +179,52 @@ func _find_node_named(node: Node, node_name: String) -> Node:
 func _draw() -> void:
 	_draw_menu_button()
 	if joystick_active:
-		draw_circle(joystick_center, joystick_radius, Color(0.5, 0.5, 0.5, 0.3))
-		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.8, 0.8, 0.8, 0.6))
+		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.72))
+		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.78, 0.9, 0.82), 2.0)
+		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.32, 0.62, 0.72, 0.72))
+		draw_arc(joystick_current_pos, joystick_knob_radius, 0.0, TAU, 32, Color(0.85, 0.9, 0.92, 0.78), 2.0)
 	else:
-		draw_circle(joystick_center, joystick_radius, Color(0.5, 0.5, 0.5, 0.1))
-		draw_circle(joystick_center, joystick_knob_radius, Color(0.8, 0.8, 0.8, 0.2))
+		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.42))
+		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.52), 2.0)
+		draw_circle(joystick_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.42))
+		draw_arc(joystick_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.45), 2.0)
 	for btn in buttons:
 		_draw_action_button(btn)
 
 func _draw_action_button(btn: Dictionary) -> void:
 	var c: Color = btn.color
-	c.a = 0.82 if btn.active else 0.48
-	draw_circle(btn.pos, button_radius * (0.92 if btn.active else 1.0), c)
-	draw_arc(btn.pos, button_radius, 0.0, TAU, 32, Color(0.95, 0.78, 0.38, 0.9), 2.0)
+	var size := button_radius * 2.0
+	var rect := Rect2(btn.pos - Vector2.ONE * button_radius, Vector2.ONE * size)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UI_PANEL_ACTIVE if btn.active else UI_PANEL
+	style.border_color = c if btn.active else UI_GOLD
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 4
+	draw_style_box(style, rect)
 	var icon_texture: Texture2D = GRAB_ICON if btn.role == "grab" else DROP_ICON
-	var icon_size: float = button_radius * 1.22
+	var icon_size: float = button_radius * 1.08
 	var icon_rect := Rect2(
-		btn.pos + Vector2(-icon_size * 0.5, -icon_size * 0.66),
+		btn.pos + Vector2(-icon_size * 0.5, -icon_size * 0.56),
 		Vector2(icon_size, icon_size)
 	)
-	draw_texture_rect(icon_texture, icon_rect, false, Color(1.0, 1.0, 1.0, 0.95 if btn.active else 0.82))
+	draw_texture_rect(icon_texture, icon_rect, false, Color(1.0, 1.0, 1.0, 1.0 if btn.active else 0.9))
 	var font = ThemeDB.fallback_font
 	if font:
-		var font_size := 12 if btn.label.length() > 8 else 14
+		var font_size := 11
 		var str_size = font.get_string_size(btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
+		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color(0.96, 0.96, 0.98, 1.0))
 
 func _draw_menu_button() -> void:
-	var bg = Color(0.08, 0.08, 0.08, 0.55)
-	if menu_button_active:
-		bg.a = 0.85
-	draw_circle(menu_button_pos, menu_button_radius, bg)
+	var diameter := menu_button_radius * 2.0
+	var rect := Rect2(menu_button_pos - Vector2.ONE * menu_button_radius, Vector2.ONE * diameter)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UI_PANEL_ACTIVE if menu_button_active else UI_PANEL
+	style.border_color = UI_GOLD
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	draw_style_box(style, rect)
 	var roof_y = menu_button_pos.y - menu_button_radius * 0.25
 	var wall_top = menu_button_pos.y - menu_button_radius * 0.05
 	var wall_bottom = menu_button_pos.y + menu_button_radius * 0.42
@@ -214,5 +235,5 @@ func _draw_menu_button() -> void:
 		Vector2(right, roof_y),
 		Vector2(left, roof_y)
 	])
-	draw_colored_polygon(roof, Color(1, 1, 1, 0.95))
-	draw_rect(Rect2(Vector2(left * 0.96 + menu_button_pos.x * 0.04, wall_top), Vector2((right - left) * 0.92, wall_bottom - wall_top)), Color(1, 1, 1, 0.95))
+	draw_colored_polygon(roof, Color(0.96, 0.96, 0.98, 0.95))
+	draw_rect(Rect2(Vector2(left * 0.96 + menu_button_pos.x * 0.04, wall_top), Vector2((right - left) * 0.92, wall_bottom - wall_top)), Color(0.96, 0.96, 0.98, 0.95))
