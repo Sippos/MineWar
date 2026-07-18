@@ -90,16 +90,16 @@ func _run_smoke_test() -> void:
 	await _wait_frames(2)
 	_expect(hero.process_mode == Node.PROCESS_MODE_INHERIT, "Leaving command view should immediately restore the hero")
 
-	# Radar remains infrastructure: it costs one banked gem and grants warning
+	# Radar remains infrastructure: it costs predictable war gold and grants warning
 	# information instead of passive combat damage.
 	var world_hud := world.get_node("HUD")
-	world_hud.set("total_gems", 2)
+	world_hud.set("total_gold", 10)
 	line_wars.call("_issue_radar_order", target_remote_dirt)
 	await _wait_for_order(peon, 180)
 	await _wait_frames(3)
 	var radar_cells: Array = line_wars.get("radar_cells")
 	_expect(radar_cells.has(target_remote_dirt), "The completed infrastructure order should install a radar marker")
-	_expect(int(world_hud.get("total_gems")) == 1, "Radar infrastructure should spend exactly one banked gem")
+	_expect(int(world_hud.get("total_gold")) == 0, "Radar infrastructure should spend exactly ten war gold")
 
 	# Enemies still travel in two readable layers: delay tunnel first, hero mine
 	# second, and only survivors that cross the mine can damage the base.
