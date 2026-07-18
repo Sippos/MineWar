@@ -129,6 +129,17 @@ const BASE_WARNING_COLORS = {
 	"critical": Color(1.0, 0.2, 0.16, 1.0)
 }
 
+func _is_mobile_hud() -> bool:
+	# Canvas-item stretching expands the logical canvas on narrow windows. Use the
+	# physical viewport for the decision so portrait web playtests and native phones
+	# receive the same compact HUD without changing the desktop layout.
+	var physical_size: Vector2 = get_viewport().size
+	if physical_size.x <= 0.0 or physical_size.y <= 0.0:
+		return false
+	if OS.has_feature("mobile"):
+		return true
+	return physical_size.x < 760.0 and physical_size.y > physical_size.x * 1.05
+
 func _ready():
 	run_started_msec = Time.get_ticks_msec()
 	_setup_hero_portrait_ui()
@@ -158,6 +169,8 @@ func _ready():
 	_setup_nerubian_status_ui()
 	get_tree().root.size_changed.connect(_relayout_unlocked_hud)
 	_relayout_unlocked_hud()
+	if _is_mobile_hud():
+		call_deferred("_hide_mobile_expedition_cards")
 
 func _setup_hero_portrait_ui() -> void:
 	hero_portrait_container = PanelContainer.new()
@@ -550,6 +563,15 @@ func _setup_return_cue_ui() -> void:
 
 func show_objective(step_text: String, title_text: String, body_text: String) -> void:
 	if not objective_panel:
+		return
+	if _is_mobile_hud():
+		# Portrait play keeps objectives as a short diegetic cue; the full tutorial
+		# card would cover the health strip and compete with the touch controls.
+		objective_panel.visible = false
+		var compact_text := title_text.strip_edges()
+		if compact_text.is_empty():
+			compact_text = step_text.strip_edges()
+		show_notice(compact_text, 2.6)
 		return
 	objective_step_label.text = step_text
 	objective_title_label.text = title_text
@@ -976,6 +998,8 @@ func _update_base_direction_cue() -> void:
 
 func _process(delta):
 	base_hit_notice_cooldown = max(base_hit_notice_cooldown - delta, 0.0)
+	if _is_mobile_hud():
+		_hide_mobile_expedition_cards()
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
 	_refresh_hero_portrait()
@@ -988,6 +1012,11 @@ func _process(delta):
 func _relayout_unlocked_hud() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var physical_size: Vector2 = get_viewport().size
+	var mobile := _is_mobile_hud()
+	if mobile:
+		_relayout_mobile_hud(viewport_size, physical_size)
 		return
 	var compact := viewport_size.x < 760.0
 	var edge := 12.0 if compact else 16.0
@@ -1061,6 +1090,124 @@ func _relayout_unlocked_hud() -> void:
 	if minimap and minimap.visible:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		minimap.position = Vector2(viewport_size.x - edge - minimap.size.x, 148.0)
+
+func _relayout_mobile_hud(canvas_size: Vector2, physical_size: Vector2) -> void:
+	var scale_factor: float = canvas_size.x / maxf(physical_size.x, 1.0)
+	var logical: Callable = func(value: float) -> float:
+		return value * scale_factor
+	var edge: float = logical.call(10.0)
+
+	# The portrait resource row is the only persistent player readout on mobile.
+	# Keep it large enough to read at arm's length and leave the playfield clear.
+	if hero_portrait_container:
+		hero_portrait_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		hero_portrait_container.offset_left = edge
+		hero_portrait_container.offset_top = logical.call(8.0)
+		hero_portrait_container.offset_right = logical.call(62.0)
+		hero_portrait_container.offset_bottom = logical.call(62.0)
+	var resource_panel := get_node_or_null("ResourcePanel") as PanelContainer
+	if resource_panel:
+		resource_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		resource_panel.offset_left = logical.call(68.0)
+		resource_panel.offset_top = logical.call(10.0)
+		resource_panel.offset_right = logical.call(210.0)
+		resource_panel.offset_bottom = logical.call(54.0)
+	var gem_icon := get_node_or_null("GemIcon") as TextureRect
+	var gem_value := get_node_or_null("Label") as Label
+	var gold_icon := get_node_or_null("GoldIcon") as TextureRect
+	var gold_value := get_node_or_null("GoldLabel") as Label
+	if gem_icon:
+		gem_icon.position = Vector2(logical.call(76.0), logical.call(15.0))
+		gem_icon.size = Vector2.ONE * logical.call(28.0)
+	if gem_value:
+		gem_value.position = Vector2(logical.call(106.0), logical.call(13.0))
+		gem_value.size = Vector2(logical.call(30.0), logical.call(32.0))
+		gem_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
+	if gold_icon:
+		gold_icon.position = Vector2(logical.call(140.0), logical.call(15.0))
+		gold_icon.size = Vector2.ONE * logical.call(28.0)
+	if gold_value:
+		gold_value.position = Vector2(logical.call(170.0), logical.call(13.0))
+		gold_value.size = Vector2(logical.call(34.0), logical.call(32.0))
+		gold_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
+
+	# Stats, tutorial cards, minimap and XP are secondary on a phone. They are
+	# intentionally removed from the combat surface instead of shrinking to noise.
+	var stats_container := get_node_or_null("StatsContainer") as Control
+	if stats_container:
+		stats_container.visible = false
+	if stats_backdrop:
+		stats_backdrop.visible = false
+	if objective_panel:
+		objective_panel.visible = false
+	if xp_label:
+		xp_label.visible = false
+	if xp_bar:
+		xp_bar.visible = false
+	if minimap:
+		minimap.visible = false
+	if cave_reward_container:
+		cave_reward_container.visible = false
+
+	# Keep health as a thin, readable edge-to-edge strip, below the resource row.
+	_layout_health_hud_module("PlayerLabel", player_health_bar, logical.call(66.0), false, edge, logical.call(142.0))
+	if base_status_panel:
+		base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		base_status_panel.offset_left = -logical.call(78.0)
+		base_status_panel.offset_top = logical.call(8.0)
+		base_status_panel.offset_right = -edge
+		base_status_panel.offset_bottom = logical.call(62.0)
+	_layout_health_hud_module("BaseLabel", base_health_bar, logical.call(66.0), true, edge, logical.call(78.0))
+
+	# The stage label sits below the menu button, never under the bastion icon.
+	if wave_label:
+		wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		wave_label.offset_left = -logical.call(78.0)
+		wave_label.offset_top = logical.call(62.0)
+		wave_label.offset_right = logical.call(78.0)
+		wave_label.offset_bottom = logical.call(82.0)
+		wave_label.add_theme_font_size_override("font_size", int(logical.call(13.0)))
+	if get_node_or_null("WaveBar"):
+		var wave_bar := get_node("WaveBar") as TextureProgressBar
+		wave_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		wave_bar.offset_left = -logical.call(78.0)
+		wave_bar.offset_top = logical.call(83.0)
+		wave_bar.offset_right = logical.call(78.0)
+		wave_bar.offset_bottom = logical.call(89.0)
+		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
+
+	if carry_status_panel:
+		carry_status_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		carry_status_panel.offset_left = logical.call(68.0)
+		carry_status_panel.offset_top = logical.call(58.0)
+		carry_status_panel.offset_right = logical.call(160.0)
+		carry_status_panel.offset_bottom = logical.call(82.0)
+		if carry_status_label:
+			carry_status_label.add_theme_font_size_override("font_size", int(logical.call(11.0)))
+	if notice_label:
+		notice_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		notice_label.offset_left = logical.call(72.0)
+		notice_label.offset_top = logical.call(94.0)
+		notice_label.offset_right = -logical.call(72.0)
+		notice_label.offset_bottom = logical.call(116.0)
+		notice_label.add_theme_font_size_override("font_size", int(logical.call(13.0)))
+	_hide_mobile_expedition_cards()
+
+func _hide_mobile_expedition_cards() -> void:
+	if not _is_mobile_hud():
+		return
+	var root: Node = get_tree().current_scene
+	if root:
+		_hide_mobile_cards_recursive(root)
+
+func _hide_mobile_cards_recursive(node: Node) -> void:
+	for child in node.get_children():
+		if child is CanvasLayer and child != self and child.layer == 25:
+			child.visible = false
+			for overlay in child.get_children():
+				if overlay is Control:
+					overlay.visible = false
+		_hide_mobile_cards_recursive(child)
 
 func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: float, align_right: bool, edge: float, module_width: float) -> float:
 	var value_label := get_node_or_null(label_name) as Label
@@ -1338,6 +1485,16 @@ func update_stomp_cooldown(stomp_level: int, current_cooldown: float, max_cooldo
 func show_notice(text: String, duration: float = 1.8) -> void:
 	if not notice_label:
 		return
+	if _is_mobile_hud():
+		var compact_text := text.strip_edges()
+		for separator in ["\n", " — ", " - ", " • "]:
+			var separator_index := compact_text.find(separator)
+			if separator_index > 0:
+				compact_text = compact_text.substr(0, separator_index).strip_edges()
+				break
+		if compact_text.length() > 26:
+			compact_text = compact_text.substr(0, 25).strip_edges() + "…"
+		text = compact_text
 	if notice_tween and notice_tween.is_running():
 		notice_tween.kill()
 	notice_label.text = text

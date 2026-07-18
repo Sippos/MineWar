@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#090d14">
+    <title>$GODOT_PROJECT_NAME</title>
+    <style>
+        :root { color-scheme: dark; }
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #090d14;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        #canvas { display: block; width: 100%; height: 100%; outline: none; }
+        #compatibility {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: none;
+            place-items: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: radial-gradient(circle at 50% 28%, #26364a 0%, #090d14 68%);
+            color: #eaf2ff;
+            text-align: center;
+        }
+        #compatibility-card {
+            width: min(440px, 100%);
+            padding: 28px 24px 24px;
+            border: 1px solid rgba(116, 190, 232, 0.45);
+            border-radius: 16px;
+            background: rgba(11, 20, 32, 0.94);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        }
+        #compatibility h1 { margin: 0 0 12px; font-size: 24px; color: #ffd878; }
+        #compatibility p { margin: 9px 0; line-height: 1.45; color: #c9d8e8; }
+        #compatibility small { display: block; margin-top: 18px; color: #8fa5ba; line-height: 1.4; }
+        #retry {
+            margin-top: 16px;
+            padding: 12px 20px;
+            border: 1px solid #d8a83c;
+            border-radius: 10px;
+            background: #342915;
+            color: #ffe4a0;
+            font: inherit;
+            font-weight: 700;
+        }
+    </style>
+    $GODOT_HEAD_INCLUDE
+</head>
+<body>
+    <canvas id="canvas" tabindex="0"></canvas>
+    <section id="compatibility" role="alert" aria-live="polite">
+        <div id="compatibility-card">
+            <h1>MineWars needs WebGL 2</h1>
+            <p id="compatibility-message">This browser could not create a WebGL 2 graphics context.</p>
+            <p>Try opening the game directly in Safari, updating iOS, or using a desktop browser.</p>
+            <button id="retry" type="button">Try again</button>
+            <small id="compatibility-detail">No game data was lost.</small>
+        </div>
+    </section>
+    <script src="$GODOT_URL"></script>
+    <script>
+        (function () {
+            const panel = document.getElementById("compatibility");
+            const message = document.getElementById("compatibility-message");
+            const detail = document.getElementById("compatibility-detail");
+            const retry = document.getElementById("retry");
+
+            function showFallback(title, body, extra) {
+                panel.style.display = "grid";
+                document.querySelector("#compatibility h1").textContent = title;
+                message.textContent = body;
+                if (extra) detail.textContent = extra;
+            }
+
+            retry.addEventListener("click", function () { window.location.reload(); });
+
+            if (!window.WebAssembly) {
+                showFallback("MineWars cannot start here", "This browser does not provide WebAssembly, which the game engine requires.", "Please use a recent Safari, Chrome, Firefox, or a native build.");
+                return;
+            }
+
+            let webgl2 = false;
+            try { webgl2 = Engine.isWebGLAvailable(2); } catch (error) {
+                showFallback("MineWars could not check WebGL 2", "The browser blocked the graphics check before the game could start.", String(error));
+                return;
+            }
+            if (!webgl2) {
+                showFallback("MineWars needs WebGL 2", "Safari could not create a WebGL 2 graphics context for this page.", "Open the game directly, update iOS, or use the native/desktop build.");
+                return;
+            }
+
+            const engine = new Engine($GODOT_CONFIG);
+            engine.startGame().catch(function (error) {
+                showFallback("MineWars failed to load", "The graphics context was available, but the game engine stopped during startup.", String(error));
+                console.error(error);
+            });
+        }());
+    </script>
+</body>
+</html>
