@@ -17,12 +17,18 @@ const WORLD_WIDTH := 40
 const WORLD_TOP := -33
 const WORLD_DEPTH := 30
 
-# The room is 15 × 9 tiles. At the hub camera zoom this fits as one readable
-# overview while still leaving enough space for the five hero statues.
+# The expanded room is 15 × 9 tiles. A fresh save deliberately starts with a
+# smaller 9 × 7 room so the first decision is only "take this hero into this
+# bastion" and "descend into MineWars". The wider stronghold appears after the
+# first completed MineWars run.
 const HUB_ROOM_X_MIN := -7
 const HUB_ROOM_X_MAX := 7
 const HUB_ROOM_Y_MIN := -4
 const HUB_ROOM_Y_MAX := 4
+const COMPACT_HUB_ROOM_X_MIN := -4
+const COMPACT_HUB_ROOM_X_MAX := 4
+const COMPACT_HUB_ROOM_Y_MIN := -3
+const COMPACT_HUB_ROOM_Y_MAX := 3
 
 # Three-cell-wide doorways with short tunnels make every mode legible without
 # relying on floating instructional text.
@@ -112,16 +118,25 @@ func generate_initial_world() -> void:
 		for y in range(WORLD_TOP, WORLD_DEPTH):
 			update_astar_weight(Vector2i(x, y))
 
-	# Main hero hall.
-	_carve_rect(HUB_ROOM_X_MIN, HUB_ROOM_X_MAX, HUB_ROOM_Y_MIN, HUB_ROOM_Y_MAX)
+	var expanded_stronghold := bool(Global.first_level_beaten)
+	var room_x_min := HUB_ROOM_X_MIN if expanded_stronghold else COMPACT_HUB_ROOM_X_MIN
+	var room_x_max := HUB_ROOM_X_MAX if expanded_stronghold else COMPACT_HUB_ROOM_X_MAX
+	var room_y_min := HUB_ROOM_Y_MIN if expanded_stronghold else COMPACT_HUB_ROOM_Y_MIN
+	var room_y_max := HUB_ROOM_Y_MAX if expanded_stronghold else COMPACT_HUB_ROOM_Y_MAX
 
-	# Short, centered entrances through the room walls.
-	_carve_rect(LINE_WARS_ROUTE_X_MIN, LINE_WARS_ROUTE_X_MAX, LINE_WARS_ROUTE_Y_MIN, LINE_WARS_ROUTE_Y_MAX)
-	_carve_rect(MINE_WARS_ROUTE_X_MIN, MINE_WARS_ROUTE_X_MAX, MINE_WARS_ROUTE_Y_MIN, MINE_WARS_ROUTE_Y_MAX)
-	_carve_rect(ADVENTURE_ROUTE_X_MIN, ADVENTURE_ROUTE_X_MAX, ADVENTURE_ROUTE_Y_MIN, ADVENTURE_ROUTE_Y_MAX)
+	# Main hero hall. Fresh saves get only the base-sized starter room.
+	_carve_rect(room_x_min, room_x_max, room_y_min, room_y_max)
 
-	# The Adventure chamber remains available after committing to the route.
-	_carve_rect(ADVENTURE_ROOM_X_MIN, ADVENTURE_ROOM_X_MAX, ADVENTURE_ROOM_Y_MIN, ADVENTURE_ROOM_Y_MAX)
+	# MineWars is the only doorway available on the first visit. Its lower route
+	# starts directly at the compact room floor; expanded saves retain the older
+	# three-cell doorway layout and the extra mode routes.
+	if expanded_stronghold:
+		_carve_rect(LINE_WARS_ROUTE_X_MIN, LINE_WARS_ROUTE_X_MAX, LINE_WARS_ROUTE_Y_MIN, LINE_WARS_ROUTE_Y_MAX)
+		_carve_rect(MINE_WARS_ROUTE_X_MIN, MINE_WARS_ROUTE_X_MAX, MINE_WARS_ROUTE_Y_MIN, MINE_WARS_ROUTE_Y_MAX)
+		_carve_rect(ADVENTURE_ROUTE_X_MIN, ADVENTURE_ROUTE_X_MAX, ADVENTURE_ROUTE_Y_MIN, ADVENTURE_ROUTE_Y_MAX)
+		_carve_rect(ADVENTURE_ROOM_X_MIN, ADVENTURE_ROOM_X_MAX, ADVENTURE_ROOM_Y_MIN, ADVENTURE_ROOM_Y_MAX)
+	else:
+		_carve_rect(MINE_WARS_ROUTE_X_MIN, MINE_WARS_ROUTE_X_MAX, COMPACT_HUB_ROOM_Y_MAX, MINE_WARS_ROUTE_Y_MAX)
 
 func _carve_rect(x_min: int, x_max: int, y_min: int, y_max: int) -> void:
 	for x in range(x_min, x_max + 1):
