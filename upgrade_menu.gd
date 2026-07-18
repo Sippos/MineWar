@@ -132,7 +132,7 @@ var vs_send_panel: Panel
 
 func _is_vs_mode() -> bool:
 	var level = get_parent()
-	return level != null and bool(level.get("is_vs_mode"))
+	return level != null and (bool(level.get("is_vs_mode")) or bool(level.get_meta("linewars_vs_mirror_active", false)))
 
 func _get_menu_hero() -> String:
 	if player:
@@ -667,6 +667,11 @@ func _refresh_upgrade_tree_cards() -> void:
 			cost = get_upgrade_cost(player.intelligence)
 		elif id == "UpgradePickPower" and player:
 			cost = get_pick_power_cost()
+		var competitive_hero_upgrade := id == "HealPlayer" or id == "UpgradeMaxHealth"
+		if _is_vs_mode() and id == "HealPlayer":
+			cost = 1
+		elif _is_vs_mode() and id == "UpgradeMaxHealth":
+			cost = 2
 		var title_label := button.get_node_or_null("Title") as Label
 		if title_label and player:
 			match id:
@@ -680,6 +685,8 @@ func _refresh_upgrade_tree_cards() -> void:
 					var pick_level := int(player.get("mining_power_level"))
 					title_label.text = "Pick MAX" if pick_level >= 3 else "Pick Lv %d" % pick_level
 		var currency := str(upgrade_tree_currency.get(id, "gold"))
+		if _is_vs_mode() and competitive_hero_upgrade:
+			currency = "gems"
 		var available_amount: int = 0
 		if hud:
 			available_amount = int(hud.total_gems) if currency == "gems" else int(hud.total_gold)
@@ -692,7 +699,12 @@ func _refresh_upgrade_tree_cards() -> void:
 			dependency_locked = not healthbar_unlocked
 		elif id == "RepairBase" or id == "UpgradeBaseHealth":
 			dependency_locked = not base_health_unlocked
+		if _is_vs_mode() and competitive_hero_upgrade:
+			dependency_locked = false
 		var mode_hidden := id == "UnlockWaveTimer" and _is_vs_mode()
+		if _is_vs_mode():
+			var allowed_vs_upgrade := id == "UpgradeStrength" or id == "UpgradeAgility" or id == "UpgradeIntelligence" or id == "UpgradePickPower" or competitive_hero_upgrade
+			mode_hidden = not allowed_vs_upgrade
 		var faction_hidden := (id == "BuyRail" or id == "BuyMinecart") and hero_name != "Dwarf"
 		faction_hidden = faction_hidden or (id == "BuyPeon" and hero_name != "Shaman")
 		button.visible = not mode_hidden and not faction_hidden
@@ -1127,6 +1139,10 @@ func _on_close_pressed():
 	hide_menu()
 
 func _on_unlock_healthbar_pressed():
+	if _is_vs_mode():
+		healthbar_unlocked = true
+		hud.unlock_healthbar()
+		return
 	if not healthbar_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		healthbar_unlocked = true
@@ -1134,6 +1150,10 @@ func _on_unlock_healthbar_pressed():
 		$Panel/UnlockHealthbar.disabled = true
 
 func _on_unlock_base_health_pressed():
+	if _is_vs_mode():
+		base_health_unlocked = true
+		hud.unlock_base_healthbar()
+		return
 	if not base_health_unlocked and hud.total_gold >= 10:
 		hud.add_gold(-10)
 		base_health_unlocked = true
@@ -1178,8 +1198,13 @@ func _on_upgrade_minimap_pressed():
 		$Panel/UpgradeMinimap.disabled = true
 
 func _on_upgrade_max_health_pressed():
-	if hud.total_gold >= 15:
-		hud.add_gold(-15)
+	var cost := 2 if _is_vs_mode() else 15
+	var can_afford := hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
+	if can_afford:
+		if _is_vs_mode():
+			hud.add_gems(-cost)
+		else:
+			hud.add_gold(-cost)
 		player.max_health += 20
 		player.health += 20
 		hud.update_player_health(player.health, player.max_health)
@@ -1257,34 +1282,39 @@ func _on_swap_hero_pressed():
 		update_button_texts()
 
 func _on_heal_player_pressed():
-	if hud.total_gold >= 10 and player.health < player.max_health:
-		hud.add_gold(-10)
+	var cost := 1 if _is_vs_mode() else 10
+	var can_afford := hud.total_gems >= cost if _is_vs_mode() else hud.total_gold >= cost
+	if can_afford and player.health < player.max_health:
+		if _is_vs_mode():
+			hud.add_gems(-cost)
+		else:
+			hud.add_gold(-cost)
 		player.health = min(player.health + 20, player.max_health)
 		hud.update_player_health(player.health, player.max_health)
 
 func _on_send_rat():
-	if hud.total_gold >= 5:
-		hud.add_gold(-5)
+	if hud.total_gold >= 50:
+		hud.add_gold(-50)
 		emit_signal("send_enemy", 0) # 0 = Rat
 
 func _on_send_spider():
-	if hud.total_gold >= 10:
-		hud.add_gold(-10)
+	if hud.total_gold >= 80:
+		hud.add_gold(-80)
 		emit_signal("send_enemy", 1) # 1 = Spider
 
 func _on_send_bat():
-	if hud.total_gold >= 15:
-		hud.add_gold(-15)
+	if hud.total_gold >= 120:
+		hud.add_gold(-120)
 		emit_signal("send_enemy", 2) # 2 = Bat
 
 func _on_send_trogg():
-	if hud.total_gold >= 20:
-		hud.add_gold(-20)
+	if hud.total_gold >= 120:
+		hud.add_gold(-120)
 		emit_signal("send_enemy", 3) # 3 = Trogg
 
 func _on_send_orc():
-	if hud.total_gold >= 25:
-		hud.add_gold(-25)
+	if hud.total_gold >= 250:
+		hud.add_gold(-250)
 		emit_signal("send_enemy", 4) # 4 = Orc
 
 func _on_buy_rail_pressed():

@@ -119,13 +119,15 @@ func _rebuild_buttons() -> void:
 	_add("STR +1", "_on_upgrade_strength_pressed", "res://assets/sprites/ui/common/stats/Strenght.png", _gem_cost("strength"))
 	_add("AGI +1", "_on_upgrade_agility_pressed", "res://assets/sprites/ui/common/stats/Agility.png", _gem_cost("agility"))
 	_add("INT +1", "_on_upgrade_intelligence_pressed", "res://assets/sprites/ui/common/stats/Int.png", _gem_cost("intelligence"))
-	_add("+20 Max HP", "_on_upgrade_max_health_pressed", "res://assets/sprites/ui/upgrades/max_health.png", "15 gold")
-	_add("Heal +20", "_on_heal_player_pressed", "res://assets/sprites/ui/upgrades/heal.png", "10 gold")
+	_add("+20 Max HP", "_on_upgrade_max_health_pressed", "res://assets/sprites/ui/upgrades/max_health.png", "2 gems")
+	_add("Heal +20", "_on_heal_player_pressed", "res://assets/sprites/ui/upgrades/heal.png", "1 gem")
+	if upgrade_menu._is_vs_mode():
+		grid.queue_sort()
+		return
 	_add("Player HP", "_on_unlock_healthbar_pressed", "res://assets/sprites/ui/upgrades/hud_health.png", "10 gold", bool(upgrade_menu.get("healthbar_unlocked")))
 	_add("Base HP", "_on_unlock_base_health_pressed", "res://assets/sprites/ui/upgrades/base_health.png", "10 gold", bool(upgrade_menu.get("base_health_unlocked")))
 	_add("XP Bar", "_on_unlock_xp_pressed", "res://assets/sprites/ui/upgrades/xp_bar.png", "10 gold", bool(upgrade_menu.get("xp_unlocked")))
-	if not upgrade_menu._is_vs_mode():
-		_add("Wave Timer", "_on_unlock_wave_timer_pressed", "res://assets/sprites/ui/upgrades/wave_timer.png", "10 gold", bool(upgrade_menu.get("wave_timer_unlocked")))
+	_add("Wave Timer", "_on_unlock_wave_timer_pressed", "res://assets/sprites/ui/upgrades/wave_timer.png", "10 gold", bool(upgrade_menu.get("wave_timer_unlocked")))
 	_add("Minimap", "_on_unlock_minimap_pressed", "res://assets/sprites/ui/upgrades/minimap.png", "20 gold", bool(upgrade_menu.get("minimap_unlocked")))
 	_add("See Enemies", "_on_upgrade_minimap_pressed", "res://assets/sprites/ui/upgrades/enemy_sight.png", "50 gold", not bool(upgrade_menu.get("minimap_unlocked")) or bool(upgrade_menu.get("minimap_upgraded")))
 	if hero == "Dwarf":

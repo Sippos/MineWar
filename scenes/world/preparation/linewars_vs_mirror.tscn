@@ -138,7 +138,7 @@ text = "START VS"
 [node name="Gems" type="Button" parent="Layout/TopBar/Margin/Row"]
 custom_minimum_size = Vector2(110, 48)
 layout_mode = 2
-text = "+5 GEMS"
+text = "TEST BOOST"
 
 [node name="Sides" type="HBoxContainer" parent="Layout"]
 layout_mode = 2
@@ -235,25 +235,25 @@ theme_override_constants/separation = 10
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "A → B  RAT RAID\n1 GEM • 5 FAST RATS"
+text = "A → B  RAT RAID\n50 GOLD • 5 FAST RATS"
 
 [node name="SendATrogg" type="Button" parent="Layout/SendBar/Margin/Row"]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "A → B  TROGG PUSH\n2 GEMS • 2 DURABLE TROGGS"
+text = "A → B  TROGG PUSH\n120 GOLD • 2 DURABLE TROGGS"
 
 [node name="SendBRat" type="Button" parent="Layout/SendBar/Margin/Row"]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "B → A  RAT RAID\n1 GEM • 5 FAST RATS"
+text = "B → A  RAT RAID\n50 GOLD • 5 FAST RATS"
 
 [node name="SendBTrogg" type="Button" parent="Layout/SendBar/Margin/Row"]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "B → A  TROGG PUSH\n2 GEMS • 2 DURABLE TROGGS"
+text = "B → A  TROGG PUSH\n120 GOLD • 2 DURABLE TROGGS"
 
 [node name="ResultPanel" type="PanelContainer" parent="."]
 visible = false

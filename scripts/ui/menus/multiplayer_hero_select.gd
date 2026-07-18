@@ -54,7 +54,7 @@ func _on_start_pressed() -> void:
 	get_tree().paused = false
 	if target_mode == "maze_vs":
 		GameMode.set_mode(GameMode.Mode.LINE_WARS)
-		get_tree().change_scene_to_file("res://maze_vs_prototype.tscn")
+		get_tree().change_scene_to_file("res://scenes/world/preparation/linewars_vs_mirror.tscn")
 	else:
 		GameMode.set_mode(GameMode.Mode.EXPLORATION)
 		get_tree().change_scene_to_file("res://local_coop_mode.tscn")

@@ -2,6 +2,7 @@ extends Control
 
 const HUB_SCENE := preload("res://scenes/world/preparation/preparation_hub.tscn")
 const MACHINE_CELL := Vector2i(3, 10)
+const ECONOMY := preload("res://scripts/systems/linewars_economy.gd")
 
 @onready var viewport_a: SubViewport = $Layout/Sides/SideA/Header/ViewportContainer/Viewport
 @onready var viewport_b: SubViewport = $Layout/Sides/SideB/Header/ViewportContainer/Viewport
@@ -48,17 +49,18 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_update_status_labels()
+	_update_send_buttons()
 
 func _wire_buttons() -> void:
 	build_a_button.pressed.connect(_complete_opening_for_side.bind("A"))
 	build_b_button.pressed.connect(_complete_opening_for_side.bind("B"))
 	build_both_button.pressed.connect(_complete_both_openings)
 	start_button.pressed.connect(_start_match)
-	gems_button.pressed.connect(_grant_gems)
-	send_a_rat_button.pressed.connect(_queue_send.bind("A", "RAT RAID", 5, "RAT", 1))
-	send_a_trogg_button.pressed.connect(_queue_send.bind("A", "TROGG PUSH", 2, "TROGG", 2))
-	send_b_rat_button.pressed.connect(_queue_send.bind("B", "RAT RAID", 5, "RAT", 1))
-	send_b_trogg_button.pressed.connect(_queue_send.bind("B", "TROGG PUSH", 2, "TROGG", 2))
+	gems_button.pressed.connect(_grant_test_resources)
+	send_a_rat_button.pressed.connect(_queue_send.bind("A", "rat_raid"))
+	send_a_trogg_button.pressed.connect(_queue_send.bind("A", "trogg_push"))
+	send_b_rat_button.pressed.connect(_queue_send.bind("B", "rat_raid"))
+	send_b_trogg_button.pressed.connect(_queue_send.bind("B", "trogg_push"))
 	restart_button.pressed.connect(_restart_scene)
 
 func _create_side(viewport: SubViewport, side_label: String, player_id: int) -> void:
@@ -78,8 +80,6 @@ func _create_side(viewport: SubViewport, side_label: String, player_id: int) -> 
 	controller.vs_opening_ready.connect(_on_side_ready)
 	controller.vs_run_finished.connect(_on_side_finished)
 	var machine: Node = controller.get("war_machine_controller")
-	var hud := world.get_node("HUD")
-	hud.set("total_gems", 5)
 	if side_label == "PLAYER A":
 		hub_a = hub
 		world_a = world
@@ -159,27 +159,28 @@ func _reveal_war_machine(world: Node2D, machine: Node) -> void:
 	if not bool(machine.get("machine_revealed")):
 		machine.call("_reveal_machine")
 
-func _grant_gems() -> void:
+func _grant_test_resources() -> void:
 	for world_value in [world_a, world_b]:
 		var world := world_value as Node2D
 		if world == null:
 			continue
 		var hud := world.get_node("HUD")
+		if hud.has_method("add_gold"):
+			hud.call("add_gold", 100)
 		if hud.has_method("add_gems"):
-			hud.call("add_gems", 5)
-		else:
-			hud.set("total_gems", int(hud.get("total_gems")) + 5)
-	status_label.text = "BOTH SIDES RECEIVED 5 TEST GEMS"
+			hud.call("add_gems", 2)
+	status_label.text = "PLAYTEST BOOST • BOTH SIDES RECEIVED 100 GOLD + 2 GEMS"
 
-func _queue_send(side: String, label: String, count: int, enemy_type: String, cost: int) -> void:
+func _queue_send(side: String, send_id: String) -> void:
 	if not match_started or match_finished:
 		return
 	var machine: Node = machine_a if side == "A" else machine_b
 	if machine == null:
 		return
-	var queued := bool(machine.call("_queue_send", label, count, enemy_type, cost))
+	var queued := bool(machine.call("_queue_reliable_send", send_id))
 	if queued:
-		status_label.text = "PLAYER %s QUEUED %s • DISPATCHES IN 7 SECONDS" % [side, label]
+		var definition: Dictionary = ECONOMY.send(send_id)
+		status_label.text = "PLAYER %s SENT %s • ARRIVED IN THE OPPONENT TUNNEL" % [side, str(definition.get("label", "PRESSURE"))]
 
 func _on_side_finished(side_label: String, victory: bool, base_health: int) -> void:
 	if match_finished:
@@ -212,6 +213,20 @@ func _set_send_buttons_enabled(enabled: bool) -> void:
 	send_b_rat_button.disabled = not enabled
 	send_b_trogg_button.disabled = not enabled
 
+func _update_send_buttons() -> void:
+	var live := match_started and not match_finished
+	var rat_cost := int(ECONOMY.send("rat_raid").get("gold_cost", 0))
+	var trogg_cost := int(ECONOMY.send("trogg_push").get("gold_cost", 0))
+	send_a_rat_button.disabled = not live or _side_gold(world_a) < rat_cost
+	send_a_trogg_button.disabled = not live or _side_gold(world_a) < trogg_cost
+	send_b_rat_button.disabled = not live or _side_gold(world_b) < rat_cost
+	send_b_trogg_button.disabled = not live or _side_gold(world_b) < trogg_cost
+
+func _side_gold(world: Node2D) -> int:
+	if world == null:
+		return 0
+	return int(world.get_node("HUD").get("total_gold"))
+
 func _update_status_labels() -> void:
 	side_a_status.text = _side_status_text(controller_a, world_a, "PLAYER A")
 	side_b_status.text = _side_status_text(controller_b, world_b, "PLAYER B")
@@ -220,9 +235,16 @@ func _side_status_text(controller: Node, world: Node2D, label: String) -> String
 	if controller == null or world == null:
 		return "%s • LOADING" % label
 	var state: Dictionary = controller.call("get_vs_state")
-	var gems := int(world.get_node("HUD").get("total_gems"))
 	var ready_text := "LIVE" if bool(state.get("started", false)) else ("READY" if bool(state.get("ready", false)) else "BUILDING")
-	return "%s • %s • BASE %d • GEMS %d • INCOMING %d" % [label, ready_text, int(state.get("base_health", 0)), gems, int(state.get("incoming_queue", 0))]
+	return "%s • %s • BASE %d • GOLD %d (+%d) • GEMS %d • PRESSURE %d" % [
+		label,
+		ready_text,
+		int(state.get("base_health", 0)),
+		int(state.get("gold", 0)),
+		int(state.get("passive_gold", ECONOMY.BASE_PASSIVE_GOLD)),
+		int(state.get("gems", 0)),
+		int(state.get("enemy_pressure", 0)),
+	]
 
 func _force_solid(world: Node2D, block_layer: TileMapLayer, cell: Vector2i) -> void:
 	block_layer.set_cell(cell, 1, Vector2i.ZERO)
