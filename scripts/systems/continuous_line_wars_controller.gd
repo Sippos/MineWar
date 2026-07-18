@@ -953,8 +953,8 @@ func _snap_command_cell(cell: Vector2i) -> Vector2i:
 			var candidate := Vector2i(x, y)
 			if not _is_valid_command_target(candidate):
 				continue
-				var distance: int = absi(candidate.x - cell.x) + absi(candidate.y - cell.y)
-				if distance < best_distance:
+			var distance: int = absi(candidate.x - cell.x) + absi(candidate.y - cell.y)
+			if distance < best_distance:
 				best_distance = distance
 				best_cell = candidate
 	return best_cell
