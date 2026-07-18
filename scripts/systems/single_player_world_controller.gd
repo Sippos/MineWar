@@ -2,7 +2,7 @@ extends Node
 
 const MODE_SIGNS_SCENE := preload("res://scenes/world/preparation/single_player_mode_signs.tscn")
 const HUB_HUD_SCENE := preload("res://scenes/ui/overlays/single_player_hub_hud.tscn")
-const LINE_WARS_CONTROLLER_SCRIPT := preload("res://scripts/systems/continuous_line_wars_controller.gd")
+const LINE_WARS_CONTROLLER_SCRIPT: Script = preload("res://scripts/systems/continuous_line_wars_controller.gd")
 const STRONGHOLD_AMBIENCE_SCRIPT := preload("res://scripts/systems/stronghold_ambience_controller.gd")
 const STRONGHOLD_PRACTICE_GEM_SCRIPT := preload("res://scripts/systems/stronghold_practice_gem_controller.gd")
 
