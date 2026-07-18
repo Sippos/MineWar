@@ -99,9 +99,11 @@ func _prepare_isolated_progression() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 	Global.unlocked_heroes = ["Dwarf"]
 	Global.unlocked_bases = ["default_base"]
-	Global.first_level_beaten = false
-	Global.minewars_runs_completed = 0
-	Global.minewars_victories = 0
+	# The practice yard is intentionally a post-first-run feature. Fresh saves
+	# should show only the starting hero and bastion.
+	Global.first_level_beaten = true
+	Global.minewars_runs_completed = 1
+	Global.minewars_victories = 1
 	Global.hero_victories = {}
 	Global.unlocked_stronghold_ambience = []
 	Global.pending_unlock_rewards = []
