@@ -711,6 +711,12 @@ func _create_ui() -> void:
 	ui_layer.layer = 25
 	add_child(ui_layer)
 	var panel := PanelContainer.new()
+	# The expedition controller still owns these labels for state updates and
+	# short-lived completion feedback, but the persistent card no longer belongs
+	# in the gameplay HUD. It sat directly below the hero portrait and obscured
+	# the health module on narrow/mobile screens.
+	panel.visible = false
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.position = Vector2(16, 96)
 	panel.custom_minimum_size = Vector2(304, 0)
 	var style := StyleBoxFlat.new()
