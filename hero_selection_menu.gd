@@ -360,6 +360,6 @@ func _on_start_pressed() -> void:
 		Global.set_run_loadout(available_heroes[p1_index], Global.selected_base_id)
 		get_tree().change_scene_to_file("res://scenes/boot/main.tscn")
 	elif current_mode == Mode.VS_LOCAL:
-		get_tree().change_scene_to_file("res://vs_mode.tscn")
+		get_tree().change_scene_to_file("res://scenes/world/preparation/linewars_vs_mirror.tscn")
 	elif current_mode == Mode.VS_ONLINE:
 		get_tree().change_scene_to_file("res://online_lobby.tscn")
