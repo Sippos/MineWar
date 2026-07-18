@@ -88,6 +88,14 @@ func _ready() -> void:
 	world.add_child(signs)
 	hub_hud = HUB_HUD_SCENE.instantiate() as CanvasLayer
 	add_child(hub_hud)
+	var hub_title := hub_hud.get_node("TopPanel/Margin/VBox/Title") as Label
+	var hub_subtitle := hub_hud.get_node("TopPanel/Margin/VBox/Subtitle") as Label
+	if not Global.first_level_beaten:
+		hub_title.text = "FIRST EXPEDITION • DWARF BASTION"
+		hub_subtitle.text = "One hero • one base • descend to begin"
+	else:
+		hub_title.text = "SINGLE PLAYER • STRONGHOLD"
+		hub_subtitle.text = "Expand the hall • Choose your path • Return stronger"
 	status_label = hub_hud.get_node("StatusPanel/Margin/Status") as Label
 	_configure_progression_signs()
 	_set_initial_status()
@@ -157,7 +165,10 @@ func _create_first_run_stronghold_cue() -> void:
 		sound_fx.play_mine_awaken()
 
 func _create_practice_gem_station() -> void:
-	if world == null or player == null:
+	# The first run is intentionally quiet: the player sees only the base, the
+	# active hero, and the MineWars entrance. The practice vein, cart, and peon
+	# return after the first completed expedition when the hall expands.
+	if not Global.first_level_beaten or world == null or player == null:
 		return
 	var existing := world.get_node_or_null("StrongholdPracticeYard") as Node2D
 	if existing != null:
@@ -173,7 +184,8 @@ func _create_hub_camera() -> void:
 	hub_camera = Camera2D.new()
 	hub_camera.name = "HeroHallCamera"
 	hub_camera.position = Vector2(0, 20)
-	hub_camera.zoom = Vector2(0.82, 0.82)
+	var zoom_value := 0.82 if Global.first_level_beaten else 1.14
+	hub_camera.zoom = Vector2(zoom_value, zoom_value)
 	hub_camera.position_smoothing_enabled = false
 	world.add_child(hub_camera)
 	hub_camera.enabled = true
@@ -187,7 +199,11 @@ func _refresh_stronghold_ambience() -> void:
 		return
 	if stronghold_ambience != null and is_instance_valid(stronghold_ambience):
 		stronghold_ambience.queue_free()
-	stronghold_ambience = null
+		stronghold_ambience = null
+	# Do not show a dormant railway on a fresh save. It is a reward object, not
+	# part of the first-run onboarding scene.
+	if selected_base == Global.DEFAULT_BASE_ID and not cart_unlocked:
+		return
 	if world == null or base == null:
 		return
 	var ambience := Node2D.new()
@@ -251,10 +267,10 @@ func _configure_progression_signs() -> void:
 			adventure.modulate = Color.WHITE
 
 func _set_initial_status() -> void:
-	if Global.minewars_runs_completed == 0:
-		_set_status("The lower shaft is awake.")
+	if not Global.first_level_beaten:
+		_set_status("Your first expedition starts here. One hero, one bastion, one mine.")
 	elif _advanced_modes_unlocked():
-		_set_status("The stronghold is ready.")
+		_set_status("The stronghold has expanded. New heroes and routes can now awaken.")
 	else:
 		_set_status("The bastion endures.")
 
