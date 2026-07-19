@@ -473,25 +473,9 @@ func _begin_player_journey() -> void:
 	onboarding_active = not Global.prototype_onboarding_completed
 	var hud := get_node_or_null("HUD")
 	var legacy_summary := _apply_permanent_run_upgrades(hud)
-	if onboarding_active and hud:
-		# The first-run tutorial temporarily exposes the complete information HUD
-		# so the player can learn what each system means. This does not set upgrade
-		# ownership; the next run returns to the intended purchasable HUD modules.
-		if hud.has_method("unlock_wave_timer"):
-			hud.unlock_wave_timer()
-		if hud.has_method("unlock_base_healthbar"):
-			hud.unlock_base_healthbar()
-		if hud.has_method("unlock_healthbar"):
-			hud.unlock_healthbar()
-		if hud.has_method("unlock_stats"):
-			hud.unlock_stats()
-		if hud.has_method("unlock_xp"):
-			hud.unlock_xp()
-		var player := get_node_or_null("Player")
-		if player and hud.has_method("update_stats"):
-			hud.update_stats(int(player.strength), int(player.agility), int(player.intelligence))
-		if player and hud.has_method("update_xp"):
-			hud.update_xp(int(player.level), int(player.xp), int(player.max_xp))
+	# First-run guidance must not bypass the information-upgrade progression. The
+	# player starts with the immersive resource/portrait HUD and purchases health,
+	# stats, wave, and XP modules one at a time as originally designed.
 	if onboarding_active:
 		_create_entry_marker()
 		_set_onboarding_stage(OnboardingStage.DIG_DOWN)

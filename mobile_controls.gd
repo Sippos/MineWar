@@ -26,10 +26,13 @@ var buttons = [
 const UI_GOLD := Color(0.95, 0.72, 0.28, 0.96)
 const UI_PANEL := Color(0.035, 0.045, 0.06, 0.92)
 const UI_PANEL_ACTIVE := Color(0.12, 0.14, 0.18, 0.98)
+const ABILITY_SLOT_SIZE := 56.0
+const ABILITY_BOTTOM_MARGIN := 18.0
+const ACTION_ROW_GAP := 12.0
 
 func _ready() -> void:
 	set_process(true)
-	set_process_input(true)
+	set_process_unhandled_input(true)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if get_parent() and "player_id" in get_parent():
 		player_id = get_parent().player_id
@@ -44,28 +47,25 @@ func _process(_delta: float) -> void:
 	pass
 
 func _on_size_changed() -> void:
-	# Under canvas-item stretching, draw coordinates are in the expanded logical
-	# canvas while touch coordinates are in the physical viewport. Scale the
-	# native mobile layout into that canvas so it stays correctly sized on both.
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var physical_size: Vector2 = get_viewport().size
-	var stretch_scale: float = viewport_size.x / maxf(physical_size.x, 1.0)
-	var min_axis: float = min(physical_size.x, physical_size.y)
-	var compact = min_axis < 520.0
-	var margin: float = (18.0 if compact else 30.0) * stretch_scale
-	button_radius = clamp(min_axis * 0.062, 29.0, 42.0) * stretch_scale
-	joystick_radius = clamp(min_axis * 0.13, 52.0, 80.0) * stretch_scale
+	# This full-rect Control already lives in stretched canvas coordinates. Base
+	# drawing and hit regions on its actual size so iPad landscape cannot apply a
+	# second scale and push actions into the ability dock.
+	var viewport_size: Vector2 = size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = get_viewport().get_visible_rect().size
+	var min_axis: float = min(viewport_size.x, viewport_size.y)
+	var margin: float = clamp(min_axis * 0.025, 14.0, 24.0)
+	button_radius = clamp(min_axis * 0.035, 24.0, 28.0)
+	joystick_radius = clamp(min_axis * 0.1, 54.0, 72.0)
 	joystick_knob_radius = joystick_radius * 0.5
-	menu_button_radius = clamp(min_axis * 0.055, 26.0, 36.0) * stretch_scale
-	base_tap_radius = clamp(min_axis * 0.18, 72.0, 112.0) * stretch_scale
+	menu_button_radius = clamp(min_axis * 0.035, 22.0, 26.0)
+	base_tap_radius = clamp(min_axis * 0.15, 72.0, 108.0)
 	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
 	joystick_current_pos = joystick_center
 
-	var gap: float = button_radius * 2.15
-	# Keep the context actions in a compact, matching row above the ability bar.
-	# Their hit targets never intercept the ability or Stomp taps below them.
-	var controls_row_offset: float = (192.0 * stretch_scale) + button_radius
-	var bottom_y: float = viewport_size.y - controls_row_offset
+	var gap: float = button_radius * 2.0 + 8.0
+	# PICK/DROP form a dedicated row above the 56px ability dock.
+	var bottom_y: float = viewport_size.y - ABILITY_BOTTOM_MARGIN - ABILITY_SLOT_SIZE - ACTION_ROW_GAP - button_radius
 	var right_x: float = viewport_size.x - margin - button_radius
 	buttons[1].pos = Vector2(right_x, bottom_y) # Drop
 	buttons[0].pos = Vector2(right_x - gap, bottom_y) # Grab
@@ -74,7 +74,7 @@ func _on_size_changed() -> void:
 	menu_button_pos = Vector2(viewport_size.x * 0.5, margin + menu_button_radius)
 	queue_redraw()
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch_position := _screen_to_canvas(event.position)
 		if event.pressed:
@@ -96,10 +96,9 @@ func _input(event: InputEvent) -> void:
 			if _try_open_upgrade_menu_from_base_tap(touch_position):
 				get_viewport().set_input_as_handled()
 				return
-			if touch_position.x < get_viewport().get_visible_rect().size.x / 2.0:
+			if _can_start_joystick(touch_position):
 				joystick_active = true
 				joystick_touch_id = event.index
-				joystick_center = touch_position
 				joystick_current_pos = touch_position
 				queue_redraw()
 				get_viewport().set_input_as_handled()
@@ -133,12 +132,12 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _screen_to_canvas(screen_position: Vector2) -> Vector2:
-	var physical_size: Vector2 = get_viewport().size
-	var canvas_size: Vector2 = get_viewport().get_visible_rect().size
-	return Vector2(
-		screen_position.x * canvas_size.x / maxf(physical_size.x, 1.0),
-		screen_position.y * canvas_size.y / maxf(physical_size.y, 1.0)
-	)
+	return make_canvas_position_local(screen_position)
+
+func _can_start_joystick(touch_position: Vector2) -> bool:
+	# Movement owns only the visible lower-left pad. It must never capture taps
+	# on world prompts, menus, PICK/DROP, or the ability dock.
+	return touch_position.distance_to(joystick_center) <= joystick_radius * 1.35
 
 func update_joystick_input() -> void:
 	if not joystick_active:
@@ -198,10 +197,10 @@ func _draw() -> void:
 		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.32, 0.62, 0.72, 0.72))
 		draw_arc(joystick_current_pos, joystick_knob_radius, 0.0, TAU, 32, Color(0.85, 0.9, 0.92, 0.78), 2.0)
 	else:
-		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.42))
-		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.52), 2.0)
-		draw_circle(joystick_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.42))
-		draw_arc(joystick_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.45), 2.0)
+		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.24))
+		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.42), 2.0)
+		draw_circle(joystick_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.26))
+		draw_arc(joystick_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.36), 2.0)
 	for btn in buttons:
 		_draw_action_button(btn)
 
