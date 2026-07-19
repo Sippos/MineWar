@@ -38,7 +38,7 @@ func _setup_pickup_prompt() -> void:
 	var pickup_prompt := Label.new()
 	pickup_prompt.name = "PickupPrompt"
 	pickup_prompt.text = "SPACE / A"
-	pickup_prompt.visible = bool(get_meta("tutorial_emphasis", false))
+	pickup_prompt.visible = bool(get_meta("tutorial_emphasis", false)) and not _is_touch_runtime()
 	pickup_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pickup_prompt.position = Vector2(-52, -58)
 	pickup_prompt.size = Vector2(104, 28)
@@ -60,14 +60,17 @@ func get_carry_weight() -> int:
 
 func set_tutorial_emphasis(enabled: bool) -> void:
 	set_meta("tutorial_emphasis", enabled)
-	var pickup_prompt := get_node_or_null("PickupPrompt") as Label
-	if pickup_prompt:
-		pickup_prompt.visible = enabled and tethered_to == null
+	_set_pickup_prompt_visible(enabled)
 
 func _set_pickup_prompt_visible(should_show: bool) -> void:
 	var pickup_prompt := get_node_or_null("PickupPrompt") as Label
 	if pickup_prompt:
-		pickup_prompt.visible = should_show and tethered_to == null
+		# The touch HUD already provides a contextual PICK control. Keyboard glyphs
+		# repeated over every nearby gem obscure the mine on phones and tablets.
+		pickup_prompt.visible = should_show and tethered_to == null and not _is_touch_runtime()
+
+func _is_touch_runtime() -> bool:
+	return OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android") or bool(get_tree().root.get_meta("web_low_memory_mode", false))
 
 func tether_to(player) -> bool:
 	if tethered_to != null and is_instance_valid(tethered_to) and tethered_to != player:

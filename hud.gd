@@ -130,13 +130,14 @@ const BASE_WARNING_COLORS = {
 }
 
 func _is_mobile_hud() -> bool:
-	# Canvas-item stretching expands the logical canvas on narrow windows. Use the
-	# physical viewport for the decision so portrait web playtests and native phones
-	# receive the same compact HUD without changing the desktop layout.
+	# Web touch detection is owned by WebIOSLightingFallback. Reuse its root meta
+	# so HUD and controls can never disagree on landscape iPads.
+	if bool(get_tree().root.get_meta("web_low_memory_mode", false)):
+		return true
 	var physical_size: Vector2 = get_viewport().size
 	if physical_size.x <= 0.0 or physical_size.y <= 0.0:
 		return false
-	if OS.has_feature("mobile"):
+	if OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android"):
 		return true
 	return physical_size.x < 760.0 and physical_size.y > physical_size.x * 1.05
 
@@ -571,6 +572,10 @@ func show_objective(step_text: String, title_text: String, body_text: String) ->
 		var compact_text := title_text.strip_edges()
 		if compact_text.is_empty():
 			compact_text = step_text.strip_edges()
+		if compact_text.contains("SPACE / A"):
+			compact_text = "TAP PICK"
+		elif compact_text.contains("E / Y"):
+			compact_text = "TAP THE BASE"
 		show_notice(compact_text, 2.6)
 		return
 	objective_step_label.text = step_text
@@ -930,7 +935,9 @@ func _apply_base_warning_state(pulse: bool) -> void:
 		# The base sprite stays readable; the frame and health bar communicate danger.
 		base_status_icon.modulate = Color.WHITE if base_warning_state == "stable" else Color.WHITE.lerp(warning_color, 0.28)
 	if base_status_label:
-		base_status_label.visible = true
+		# Mobile has one base-health readout: the unlockable bar beneath the icon.
+		# A second percentage inside the portrait was visual noise.
+		base_status_label.visible = not _is_mobile_hud()
 		base_status_label.text = "BASE %d%%" % int(round(float(base_warning_health) / float(max(base_warning_max_health, 1)) * 100.0))
 		base_status_label.add_theme_color_override("font_color", warning_color)
 	base_status_panel.queue_redraw()
@@ -1091,8 +1098,11 @@ func _relayout_unlocked_hud() -> void:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		minimap.position = Vector2(viewport_size.x - edge - minimap.size.x, 148.0)
 
-func _relayout_mobile_hud(canvas_size: Vector2, physical_size: Vector2) -> void:
-	var scale_factor: float = canvas_size.x / maxf(physical_size.x, 1.0)
+func _relayout_mobile_hud(canvas_size: Vector2, _physical_size: Vector2) -> void:
+	# CanvasLayer children and the full-rect touch Control share the same logical
+	# canvas. Applying a physical/logical ratio here creates the exact offset that
+	# made the previous iPad HUD drift away from its touch controls.
+	var scale_factor: float = 1.0
 	var logical: Callable = func(value: float) -> float:
 		return value * scale_factor
 	var edge: float = logical.call(10.0)
@@ -1131,33 +1141,42 @@ func _relayout_mobile_hud(canvas_size: Vector2, physical_size: Vector2) -> void:
 		gold_value.size = Vector2(logical.call(34.0), logical.call(32.0))
 		gold_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
 
-	# Stats, tutorial cards, minimap and XP are secondary on a phone. They are
-	# intentionally removed from the combat surface instead of shrinking to noise.
+	# Tutorial cards and the large persistent reward card do not belong on the
+	# touch playfield. Purchased HUD modules remain available and are laid out
+	# compactly below, preserving the game's progressive information unlocks.
 	var stats_container := get_node_or_null("StatsContainer") as Control
-	if stats_container:
-		stats_container.visible = false
-	if stats_backdrop:
-		stats_backdrop.visible = false
 	if objective_panel:
 		objective_panel.visible = false
-	if xp_label:
-		xp_label.visible = false
-	if xp_bar:
-		xp_bar.visible = false
 	if minimap:
 		minimap.visible = false
 	if cave_reward_container:
 		cave_reward_container.visible = false
 
-	# Keep health as a thin, readable edge-to-edge strip, below the resource row.
-	_layout_health_hud_module("PlayerLabel", player_health_bar, logical.call(66.0), false, edge, logical.call(142.0))
+	# Unlocked hero information grows down from the portrait one compact module at
+	# a time. The RPG detail sentence is separately suppressed on touch devices.
+	var player_stack_y: float = float(logical.call(66.0))
+	player_stack_y = _layout_health_hud_module("PlayerLabel", player_health_bar, player_stack_y, false, edge, float(logical.call(178.0)))
+	if stats_container and stats_container.visible:
+		stats_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		stats_container.scale = Vector2.ONE
+		stats_container.position = Vector2(edge + logical.call(6.0), player_stack_y)
+		stats_container.size = Vector2(logical.call(172.0), logical.call(24.0))
+		stats_container.add_theme_constant_override("separation", int(logical.call(4.0)))
+	if stats_backdrop:
+		stats_backdrop.visible = stats_container != null and stats_container.visible
+		stats_backdrop.offset_left = edge
+		stats_backdrop.offset_top = player_stack_y - logical.call(2.0)
+		stats_backdrop.offset_right = edge + logical.call(178.0)
+		stats_backdrop.offset_bottom = player_stack_y + logical.call(28.0)
 	if base_status_panel:
 		base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		base_status_panel.offset_left = -logical.call(78.0)
 		base_status_panel.offset_top = logical.call(8.0)
 		base_status_panel.offset_right = -edge
 		base_status_panel.offset_bottom = logical.call(62.0)
-	_layout_health_hud_module("BaseLabel", base_health_bar, logical.call(66.0), true, edge, logical.call(78.0))
+	if base_status_label:
+		base_status_label.visible = false
+	_layout_health_hud_module("BaseLabel", base_health_bar, logical.call(66.0), true, edge, logical.call(126.0))
 
 	# The stage label sits below the menu button, never under the bastion icon.
 	if wave_label:
@@ -1175,6 +1194,28 @@ func _relayout_mobile_hud(canvas_size: Vector2, physical_size: Vector2) -> void:
 		wave_bar.offset_right = logical.call(78.0)
 		wave_bar.offset_bottom = logical.call(89.0)
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
+
+	# XP is one centered, self-contained module. The label occupies the bar rather
+	# than floating below it, and only appears after the XP HUD upgrade is owned.
+	if xp_label and xp_bar and (xp_label.visible or xp_bar.visible):
+		var xp_width: float = float(logical.call(230.0))
+		var xp_height: float = float(logical.call(18.0))
+		xp_bar.visible = true
+		xp_label.visible = true
+		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		xp_bar.offset_left = -xp_width * 0.5
+		xp_bar.offset_top = -logical.call(26.0) - xp_height
+		xp_bar.offset_right = xp_width * 0.5
+		xp_bar.offset_bottom = -logical.call(26.0)
+		xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		xp_label.offset_left = -xp_width * 0.5
+		xp_label.offset_top = -logical.call(26.0) - xp_height
+		xp_label.offset_right = xp_width * 0.5
+		xp_label.offset_bottom = -logical.call(26.0)
+		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		xp_label.add_theme_font_size_override("font_size", int(logical.call(11.0)))
+		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))
 
 	if carry_status_panel:
 		carry_status_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -1216,6 +1257,8 @@ func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: f
 		return y
 	var x := get_viewport().get_visible_rect().size.x - edge - module_width if align_right else edge
 	if bar:
+		bar.scale = Vector2.ONE
+		bar.nine_patch_stretch = true
 		bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		bar.position = Vector2(x, y)
 		bar.size = Vector2(module_width, 22.0)
@@ -1235,6 +1278,8 @@ func _style_hud_progress_bar(bar: TextureProgressBar, progress_color: Color) -> 
 	if not bar:
 		return
 	bar.tint_under = Color(0.025, 0.03, 0.04, 0.92)
+	bar.scale = Vector2.ONE
+	bar.nine_patch_stretch = true
 	bar.tint_progress = progress_color
 	bar.tint_over = Color(1, 1, 1, 0.78)
 
@@ -1469,7 +1514,7 @@ func update_player_health(current: int, max_hp: int) -> void:
 
 func update_xp(level: int, current_xp: int, max_xp: int) -> void:
 	if xp_label:
-		xp_label.text = "Lvl %d: %d / %d XP" % [level, current_xp, max_xp]
+		xp_label.text = ("LV %d  •  %d/%d XP" if _is_mobile_hud() else "Lvl %d: %d / %d XP") % [level, current_xp, max_xp]
 	if xp_bar:
 		xp_bar.max_value = max_xp
 		xp_bar.value = current_xp

@@ -1295,11 +1295,11 @@ func _ensure_hud() -> void:
 	# Mobile abilities share the same compact card language as the pick/drop
 	# controls. Three active abilities fit in a single row without pushing into
 	# the browser safe area; desktop keeps the wider legacy footprint.
-	ability_bar.offset_left = (-228.0 if mobile_runtime else -326.0)
-	ability_bar.offset_top = (-186.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.offset_left = (-198.0 if mobile_runtime else -326.0)
+	ability_bar.offset_top = (-74.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
 	ability_bar.offset_right = -18.0
-	ability_bar.offset_bottom = (-118.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
-	ability_bar.add_theme_constant_override("separation", 7 if mobile_runtime else 8)
+	ability_bar.offset_bottom = (-18.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.add_theme_constant_override("separation", 6 if mobile_runtime else 8)
 	ability_bar.alignment = BoxContainer.ALIGNMENT_END
 	hud.add_child(ability_bar)
 	_rebuild_hud()
@@ -1372,7 +1372,7 @@ func _mobile_action_for_ability(ability: String) -> String:
 func _create_ability_slot(ability: String, display_name: String, key_text: String) -> PanelContainer:
 	var slot := PanelContainer.new()
 	var mobile_runtime := _is_mobile_runtime()
-	var slot_size := Vector2(64, 64) if mobile_runtime else ICON_SIZE
+	var slot_size := Vector2(56, 56) if mobile_runtime else ICON_SIZE
 	slot.custom_minimum_size = slot_size
 	slot.tooltip_text = display_name
 	var style := StyleBoxFlat.new()
@@ -1499,6 +1499,10 @@ func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldo
 	var timer: Node = slot.get_node_or_null("Root/Timer")
 	var level_label: Node = slot.get_node_or_null("Root/Level")
 	var locked := level_value <= 0
+	if _is_mobile_runtime():
+		# Touch HUD shows usable actions only. Locked/passive future skills remain in
+		# the upgrade menu until they become actionable.
+		slot.visible = not locked
 	if icon:
 		icon.modulate = Color(1.2, 0.92, 0.42, 1.0) if active else (Color(0.38, 0.38, 0.38, 0.85) if locked else Color.WHITE)
 	if overlay:
