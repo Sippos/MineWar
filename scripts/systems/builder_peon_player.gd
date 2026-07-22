@@ -13,6 +13,16 @@ const DIG_IMPACT_FRAME := 4
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var camera: Camera2D = $Camera2D
 
+# RPG-stat compatibility. The peon is not a hero, but shared HUD/upgrade code
+# reads these properties directly off the "Player" node; expose harmless
+# defaults so a peon-as-player never crashes with "Invalid access to 'strength'".
+var strength := 1
+var agility := 1
+var intelligence := 1
+var level := 1
+var xp := 0
+var max_xp := 1
+
 var controlled := true
 var awaiting_neutral_input := false
 var animation_timer := 0.0
