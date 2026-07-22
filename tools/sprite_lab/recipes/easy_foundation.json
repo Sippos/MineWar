@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "material": "easy",
+  "fill_variants": [
+    {"id": "easy_fill_a", "seed": 1001, "rock_count": 9, "mottle_strength": 22},
+    {"id": "easy_fill_b", "seed": 1002, "rock_count": 8, "mottle_strength": 18},
+    {"id": "easy_fill_c", "seed": 1003, "rock_count": 10, "mottle_strength": 24},
+    {"id": "easy_fill_d", "seed": 1004, "rock_count": 7, "mottle_strength": 20}
+  ],
+  "edge_masks": {
+    "count": 16,
+    "seed_base": 2100,
+    "bit_order": {"top": 1, "right": 2, "bottom": 4, "left": 8}
+  },
+  "front_walls": {
+    "states": ["standalone", "left", "right", "both"],
+    "seed_base": 3200
+  },
+  "damage": {
+    "directions": ["top", "right", "bottom", "left"],
+    "stages": 3,
+    "seed_base": 4300
+  },
+  "front_damage": {
+    "stages": 3,
+    "seed_base": 5200
+  }
+}

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/golden_tile_lab_v3_voronoi.gd" id="1_builder"]
+
+[node name="BuildGoldenTileLabV3" type="Node"]
+script = ExtResource("1_builder")

@@ -14,18 +14,25 @@ var joystick_current_pos = Vector2()
 
 var button_radius = 40.0
 var base_tap_radius = 96.0
-var menu_button_pos = Vector2(64, 64)
+var menu_button_pos = Vector2(0, 0)
 var menu_button_radius = 34.0
 var menu_button_active = false
 var menu_button_touch_id = -1
 var buttons = [
-	{ "action": "p%d_grab", "role": "grab", "pos": Vector2(), "color": Color(0.2, 0.8, 0.2), "active": false, "touch_id": -1, "label": "Grab" },
-	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(0.8, 0.2, 0.2), "active": false, "touch_id": -1, "label": "Release" },
+	{ "action": "p%d_grab", "role": "grab", "pos": Vector2(), "color": Color(0.25, 0.86, 0.78), "active": false, "touch_id": -1, "label": "PICK" },
+	{ "action": "p%d_drop", "role": "drop", "pos": Vector2(), "color": Color(1.0, 0.52, 0.25), "active": false, "touch_id": -1, "label": "DROP" },
 ]
+
+const UI_GOLD := Color(0.95, 0.72, 0.28, 0.96)
+const UI_PANEL := Color(0.035, 0.045, 0.06, 0.92)
+const UI_PANEL_ACTIVE := Color(0.12, 0.14, 0.18, 0.98)
+const ABILITY_SLOT_SIZE := 56.0
+const ABILITY_BOTTOM_MARGIN := 18.0
+const ACTION_ROW_GAP := 12.0
 
 func _ready() -> void:
 	set_process(true)
-	set_process_input(true)
+	set_process_unhandled_input(true)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if get_parent() and "player_id" in get_parent():
 		player_id = get_parent().player_id
@@ -40,33 +47,38 @@ func _process(_delta: float) -> void:
 	pass
 
 func _on_size_changed() -> void:
-	var viewport_size = get_viewport().get_visible_rect().size
-	var min_axis = min(viewport_size.x, viewport_size.y)
-	var compact = min_axis < 520.0
-	var margin = 18.0 if compact else 30.0
-	button_radius = clamp(min_axis * 0.062, 29.0, 42.0)
-	joystick_radius = clamp(min_axis * 0.13, 52.0, 80.0)
+	# This full-rect Control already lives in stretched canvas coordinates. Base
+	# drawing and hit regions on its actual size so iPad landscape cannot apply a
+	# second scale and push actions into the ability dock.
+	var viewport_size: Vector2 = size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = get_viewport().get_visible_rect().size
+	var min_axis: float = min(viewport_size.x, viewport_size.y)
+	var margin: float = clamp(min_axis * 0.025, 14.0, 24.0)
+	button_radius = clamp(min_axis * 0.035, 24.0, 28.0)
+	joystick_radius = clamp(min_axis * 0.1, 54.0, 72.0)
 	joystick_knob_radius = joystick_radius * 0.5
-	menu_button_radius = clamp(min_axis * 0.055, 26.0, 36.0)
-	base_tap_radius = clamp(min_axis * 0.18, 72.0, 112.0)
+	menu_button_radius = clamp(min_axis * 0.035, 22.0, 26.0)
+	base_tap_radius = clamp(min_axis * 0.15, 72.0, 108.0)
 	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
 	joystick_current_pos = joystick_center
 
-	var gap: float = button_radius * 2.18
-	# Keep Grab/Drop in a dedicated row above Stomp and the hero ability bar.
-	# Their touch circles must never intercept ability or Stomp taps.
-	var controls_row_offset: float = 186.0 + button_radius
-	var bottom_y: float = viewport_size.y - controls_row_offset
+	var gap: float = button_radius * 2.0 + 8.0
+	# PICK/DROP form a dedicated row above the 56px ability dock.
+	var bottom_y: float = viewport_size.y - ABILITY_BOTTOM_MARGIN - ABILITY_SLOT_SIZE - ACTION_ROW_GAP - button_radius
 	var right_x: float = viewport_size.x - margin - button_radius
 	buttons[1].pos = Vector2(right_x, bottom_y) # Drop
 	buttons[0].pos = Vector2(right_x - gap, bottom_y) # Grab
-	menu_button_pos = Vector2(viewport_size.x - margin - menu_button_radius, margin + menu_button_radius)
+	# The old top-right menu button was drawn over the bastion status icon. Keep
+	# it in the empty top-center safe area instead.
+	menu_button_pos = Vector2(viewport_size.x * 0.5, margin + menu_button_radius)
 	queue_redraw()
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
+		var touch_position := _screen_to_canvas(event.position)
 		if event.pressed:
-			if event.position.distance_to(menu_button_pos) < menu_button_radius * 1.4:
+			if touch_position.distance_to(menu_button_pos) < menu_button_radius * 1.4:
 				menu_button_active = true
 				menu_button_touch_id = event.index
 				queue_redraw()
@@ -74,21 +86,20 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 			for btn in buttons:
-				if event.position.distance_to(btn.pos) < button_radius * 1.05:
+				if touch_position.distance_to(btn.pos) < button_radius * 1.05:
 					btn.active = true
 					btn.touch_id = event.index
 					Input.action_press(btn.action)
 					queue_redraw()
 					get_viewport().set_input_as_handled()
 					return
-			if _try_open_upgrade_menu_from_base_tap(event.position):
+			if _try_open_upgrade_menu_from_base_tap(touch_position):
 				get_viewport().set_input_as_handled()
 				return
-			if event.position.x < get_viewport().get_visible_rect().size.x / 2.0:
+			if _can_start_joystick(touch_position):
 				joystick_active = true
 				joystick_touch_id = event.index
-				joystick_center = event.position
-				joystick_current_pos = event.position
+				joystick_current_pos = touch_position
 				queue_redraw()
 				get_viewport().set_input_as_handled()
 		else:
@@ -113,12 +124,20 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
 		if joystick_touch_id == event.index:
-			joystick_current_pos = event.position
+			joystick_current_pos = _screen_to_canvas(event.position)
 			if joystick_current_pos.distance_to(joystick_center) > joystick_radius:
 				joystick_current_pos = joystick_center + (joystick_current_pos - joystick_center).normalized() * joystick_radius
 			update_joystick_input()
 			queue_redraw()
 			get_viewport().set_input_as_handled()
+
+func _screen_to_canvas(screen_position: Vector2) -> Vector2:
+	return make_canvas_position_local(screen_position)
+
+func _can_start_joystick(touch_position: Vector2) -> bool:
+	# Movement owns only the visible lower-left pad. It must never capture taps
+	# on world prompts, menus, PICK/DROP, or the ability dock.
+	return touch_position.distance_to(joystick_center) <= joystick_radius * 1.35
 
 func update_joystick_input() -> void:
 	if not joystick_active:
@@ -173,37 +192,52 @@ func _find_node_named(node: Node, node_name: String) -> Node:
 func _draw() -> void:
 	_draw_menu_button()
 	if joystick_active:
-		draw_circle(joystick_center, joystick_radius, Color(0.5, 0.5, 0.5, 0.3))
-		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.8, 0.8, 0.8, 0.6))
+		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.72))
+		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.78, 0.9, 0.82), 2.0)
+		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.32, 0.62, 0.72, 0.72))
+		draw_arc(joystick_current_pos, joystick_knob_radius, 0.0, TAU, 32, Color(0.85, 0.9, 0.92, 0.78), 2.0)
 	else:
-		draw_circle(joystick_center, joystick_radius, Color(0.5, 0.5, 0.5, 0.1))
-		draw_circle(joystick_center, joystick_knob_radius, Color(0.8, 0.8, 0.8, 0.2))
+		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.24))
+		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.42), 2.0)
+		draw_circle(joystick_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.26))
+		draw_arc(joystick_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.36), 2.0)
 	for btn in buttons:
 		_draw_action_button(btn)
 
 func _draw_action_button(btn: Dictionary) -> void:
 	var c: Color = btn.color
-	c.a = 0.82 if btn.active else 0.48
-	draw_circle(btn.pos, button_radius * (0.92 if btn.active else 1.0), c)
-	draw_arc(btn.pos, button_radius, 0.0, TAU, 32, Color(0.95, 0.78, 0.38, 0.9), 2.0)
+	var size: float = button_radius * 2.0
+	var rect := Rect2(btn.pos - Vector2.ONE * button_radius, Vector2.ONE * size)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UI_PANEL_ACTIVE if btn.active else UI_PANEL
+	style.border_color = c if btn.active else UI_GOLD
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 4
+	draw_style_box(style, rect)
 	var icon_texture: Texture2D = GRAB_ICON if btn.role == "grab" else DROP_ICON
-	var icon_size: float = button_radius * 1.22
+	var icon_size: float = button_radius * 1.08
 	var icon_rect := Rect2(
-		btn.pos + Vector2(-icon_size * 0.5, -icon_size * 0.66),
+		btn.pos + Vector2(-icon_size * 0.5, -icon_size * 0.56),
 		Vector2(icon_size, icon_size)
 	)
-	draw_texture_rect(icon_texture, icon_rect, false, Color(1.0, 1.0, 1.0, 0.95 if btn.active else 0.82))
+	draw_texture_rect(icon_texture, icon_rect, false, Color(1.0, 1.0, 1.0, 1.0 if btn.active else 0.9))
 	var font = ThemeDB.fallback_font
 	if font:
-		var font_size := 12 if btn.label.length() > 8 else 14
+		var font_size := 11
 		var str_size = font.get_string_size(btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
+		draw_string(font, btn.pos + Vector2(-str_size.x / 2.0, button_radius * 0.78), btn.label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color(0.96, 0.96, 0.98, 1.0))
 
 func _draw_menu_button() -> void:
-	var bg = Color(0.08, 0.08, 0.08, 0.55)
-	if menu_button_active:
-		bg.a = 0.85
-	draw_circle(menu_button_pos, menu_button_radius, bg)
+	var diameter: float = menu_button_radius * 2.0
+	var rect := Rect2(menu_button_pos - Vector2.ONE * menu_button_radius, Vector2.ONE * diameter)
+	var style := StyleBoxFlat.new()
+	style.bg_color = UI_PANEL_ACTIVE if menu_button_active else UI_PANEL
+	style.border_color = UI_GOLD
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	draw_style_box(style, rect)
 	var roof_y = menu_button_pos.y - menu_button_radius * 0.25
 	var wall_top = menu_button_pos.y - menu_button_radius * 0.05
 	var wall_bottom = menu_button_pos.y + menu_button_radius * 0.42
@@ -214,5 +248,5 @@ func _draw_menu_button() -> void:
 		Vector2(right, roof_y),
 		Vector2(left, roof_y)
 	])
-	draw_colored_polygon(roof, Color(1, 1, 1, 0.95))
-	draw_rect(Rect2(Vector2(left * 0.96 + menu_button_pos.x * 0.04, wall_top), Vector2((right - left) * 0.92, wall_bottom - wall_top)), Color(1, 1, 1, 0.95))
+	draw_colored_polygon(roof, Color(0.96, 0.96, 0.98, 0.95))
+	draw_rect(Rect2(Vector2(left * 0.96 + menu_button_pos.x * 0.04, wall_top), Vector2((right - left) * 0.92, wall_bottom - wall_top)), Color(0.96, 0.96, 0.98, 0.95))

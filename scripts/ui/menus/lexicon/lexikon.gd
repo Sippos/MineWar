@@ -33,6 +33,8 @@ const BASE_ENTRIES := [
 	}
 ]
 
+var returning_to_menu := false
+
 func _ready() -> void:
 	var back_btn := $VBoxContainer/TopBar/BackButton as Button
 	if not back_btn.pressed.is_connected(_on_back_pressed):
@@ -41,23 +43,33 @@ func _ready() -> void:
 	populate_heroes()
 	populate_bases()
 	populate_monsters()
+	$VBoxContainer/TopBar/Label.text = "MINEWARS BESTIARY"
 	_update_grid_columns()
 	get_tree().root.size_changed.connect(_update_grid_columns)
+	back_btn.call_deferred("grab_focus")
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
 
 func _on_back_pressed() -> void:
+	if returning_to_menu:
+		return
+	returning_to_menu = true
+	await get_tree().create_timer(0.12, true).timeout
 	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")
 
 func _update_grid_columns() -> void:
 	var viewport_width := get_viewport().get_visible_rect().size.x
-	var bases_grid := $VBoxContainer/ScrollContainer/VBoxContainer/BasesGrid as GridContainer
-	if viewport_width >= 900.0:
-		bases_grid.columns = 6
-	elif viewport_width >= 760.0:
-		bases_grid.columns = 5
-	elif viewport_width >= 560.0:
-		bases_grid.columns = 4
-	else:
-		bases_grid.columns = 3
+	var columns := 6 if viewport_width >= 1000.0 else (5 if viewport_width >= 820.0 else (4 if viewport_width >= 620.0 else (3 if viewport_width >= 460.0 else 2)))
+	var grids: Array[GridContainer] = [
+		$VBoxContainer/ScrollContainer/VBoxContainer/HeroesGrid,
+		$VBoxContainer/ScrollContainer/VBoxContainer/BasesGrid,
+		$VBoxContainer/ScrollContainer/VBoxContainer/MonstersGrid,
+	]
+	for grid in grids:
+		grid.columns = columns
 
 func populate_heroes() -> void:
 	var grid := $VBoxContainer/ScrollContainer/VBoxContainer/HeroesGrid as GridContainer
@@ -121,7 +133,7 @@ func create_base_entry(base_name: String, tex: Texture2D, is_revealed: bool) -> 
 	frame.custom_minimum_size = Vector2(88, 88)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = Color(0.035, 0.045, 0.065, 0.96)
+	frame_style.bg_color = Color(0.075, 0.038, 0.018, 0.96)
 	frame_style.border_color = Color(0.62, 0.43, 0.18, 0.9) if is_revealed else Color(0.18, 0.2, 0.25, 0.9)
 	frame_style.set_border_width_all(2)
 	frame_style.set_corner_radius_all(6)

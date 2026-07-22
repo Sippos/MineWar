@@ -1,0 +1,80 @@
+{
+  "version": 3,
+  "material": "easy",
+  "seed": 8301,
+  "design_rules": {
+    "large_forms": "dominant",
+    "small_noise": "minimal",
+    "open_edges": "thin_chipped",
+    "front_wall": "seam_friendly_cross_section"
+  },
+  "fill_variants": [
+    {
+      "id": "easy_v3_a",
+      "placements": [
+        {"stamp": "packed_plate_a", "x": 3, "y": 5},
+        {"stamp": "packed_plate_b", "x": 16, "y": 18, "flip_x": true}
+      ]
+    },
+    {
+      "id": "easy_v3_b",
+      "placements": [
+        {"stamp": "packed_plate_b", "x": 2, "y": 17},
+        {"stamp": "packed_plate_a", "x": 15, "y": 3, "flip_x": true},
+        {"stamp": "small_rock_b", "x": 23, "y": 24}
+      ]
+    },
+    {
+      "id": "easy_v3_c",
+      "placements": [
+        {"stamp": "packed_plate_a", "x": 8, "y": 12, "flip_y": true},
+        {"stamp": "medium_clod_a", "x": 3, "y": 23},
+        {"stamp": "small_rock_a", "x": 24, "y": 5}
+      ]
+    },
+    {
+      "id": "easy_v3_d",
+      "placements": [
+        {"stamp": "packed_plate_b", "x": 4, "y": 2},
+        {"stamp": "packed_plate_a", "x": 17, "y": 20, "flip_x": true},
+        {"stamp": "medium_clod_b", "x": 2, "y": 19}
+      ]
+    }
+  ],
+  "golden_tiles": [
+    {"id": "buried_a", "fill": 0, "mask": 0},
+    {"id": "buried_b", "fill": 1, "mask": 0},
+    {"id": "top_exposed", "fill": 2, "mask": 1},
+    {"id": "left_exposed", "fill": 3, "mask": 8},
+    {"id": "right_exposed", "fill": 0, "mask": 2},
+    {"id": "top_left", "fill": 1, "mask": 9},
+    {"id": "top_right", "fill": 2, "mask": 3},
+    {"id": "front_wall", "front_state": 3},
+    {"id": "isolated", "fill": 3, "mask": 15},
+    {"id": "damaged", "fill": 0, "mask": 1, "damage_direction": 0, "damage_stage": 1}
+  ],
+  "edge_profiles": {
+    "minimum_depth": 2,
+    "maximum_depth": 3,
+    "segment_length": 8,
+    "seed_base": 9100,
+    "chip_frequency": 5
+  },
+  "front_walls": {
+    "visible_depth": 16,
+    "hanging_min": 1,
+    "hanging_max": 3,
+    "seed_base": 9300
+  },
+  "damage": {
+    "stages": 3,
+    "directions": 4,
+    "seed_base": 10500
+  },
+  "preview": {
+    "repetition_columns": 10,
+    "repetition_rows": 8,
+    "excavation_columns": 18,
+    "excavation_rows": 10
+  }
+}

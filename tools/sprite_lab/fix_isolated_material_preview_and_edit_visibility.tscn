@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/sprite_lab/fix_isolated_material_preview_and_edit_visibility.gd" type="Script" id="1"]
+
+[node name="FixIsolatedMaterialPreviewAndEditVisibility" type="Node"]
+script = ExtResource("1")

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/apply_small_vertex_hole_patches.gd" id="1"]
+
+[node name="ApplySmallVertexHolePatches" type="Node"]
+script = ExtResource("1")

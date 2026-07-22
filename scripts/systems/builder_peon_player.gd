@@ -4,6 +4,7 @@ signal work_order_finished(kind: String, cell: Vector2i)
 signal work_order_failed(message: String)
 
 const INVALID_CELL := Vector2i(99999, 99999)
+const DIG_IMPACT_FRAME := 4
 
 @export var move_speed := 190.0
 @export var movement_bounds := Rect2(-560.0, -520.0, 1120.0, 660.0)
@@ -27,7 +28,9 @@ var dig_min_cell := Vector2i.ZERO
 var dig_max_cell := Vector2i.ZERO
 var current_dig_cell := INVALID_CELL
 var dig_timer := 0.0
-var dig_feedback_timer := 0.0
+var dig_break_queued := false
+var dig_animation_last_frame := -1
+var dig_animation_last_cycle := -1
 
 # LineWars no longer asks the player to steer this unit in real time. A remote
 # order is a short Warcraft-style macro decision: select one destination, then
@@ -170,7 +173,6 @@ func _begin_order(kind: String, target_cell: Vector2i, planned_path: Array[Vecto
 		call_deferred("_finish_order")
 
 func _physics_process(delta: float) -> void:
-	dig_feedback_timer = maxf(dig_feedback_timer - delta, 0.0)
 	if order_active:
 		_process_remote_order(delta)
 		_update_animation(delta)
@@ -269,30 +271,31 @@ func _process_order_dig_cell(cell: Vector2i, delta: float) -> void:
 	dig_timer += delta
 
 	var progress := clampf(dig_timer / surface_dig_time, 0.0, 1.0)
-	if dig_damage_layer:
-		dig_damage_layer.set_cell(cell, 7 if progress < 0.66 else 8, Vector2i.ZERO)
-	if dig_front_layer and dig_front_damage_layer:
+	var crack_overlay_manager = dig_world.get_node_or_null("CrackOverlayManager")
+	if crack_overlay_manager:
+		crack_overlay_manager.set_damage(cell, progress, false)
+	if dig_front_layer:
 		var below_cell := cell + Vector2i.DOWN
 		if dig_front_layer.get_cell_source_id(below_cell) != -1:
-			dig_front_damage_layer.set_cell(below_cell, 13 if progress < 0.66 else 14, Vector2i.ZERO)
-
-	if dig_feedback_timer <= 0.0 and dig_world and dig_world.has_method("spawn_mining_feedback"):
-		dig_world.call("spawn_mining_feedback", dig_block_layer.to_global(dig_block_layer.map_to_local(cell)))
-		dig_feedback_timer = 0.16
+			if crack_overlay_manager:
+				crack_overlay_manager.set_damage(below_cell, progress, true)
 
 	if dig_timer < surface_dig_time:
 		return
-	if dig_world.has_method("has_gem"):
-		dig_world.call("has_gem", cell)
+	dig_timer = surface_dig_time
+	dig_break_queued = true
+
+func _finish_queued_dig_at_contact() -> void:
+	if current_dig_cell == INVALID_CELL or dig_world == null:
+		return
+	var cell := current_dig_cell
+	var cell_had_gem := bool(dig_world.call("has_gem", cell)) if dig_world.has_method("has_gem") else false
+	_emit_dig_impact(true, cell, cell_had_gem)
 	if dig_world.has_method("on_cell_dug"):
 		dig_world.call("on_cell_dug", cell)
-	if dig_front_damage_layer:
-		dig_front_damage_layer.erase_cell(cell + Vector2i.DOWN)
-	if dig_world.has_method("spawn_mining_feedback"):
-		dig_world.call("spawn_mining_feedback", dig_block_layer.to_global(dig_block_layer.map_to_local(cell)), true, false)
-	var sound_fx := get_node_or_null("/root/SoundFX")
-	if sound_fx:
-		sound_fx.play_block_break(false)
+	var crack_overlay_manager = dig_world.get_node_or_null("CrackOverlayManager")
+	if crack_overlay_manager:
+		crack_overlay_manager.clear_damage(cell + Vector2i.DOWN, true)
 	_clear_dig_progress()
 
 func _finish_order() -> void:
@@ -369,12 +372,15 @@ func _is_open_command_cell(cell: Vector2i) -> bool:
 
 func _clear_dig_progress() -> void:
 	if current_dig_cell != INVALID_CELL:
-		if dig_damage_layer:
-			dig_damage_layer.erase_cell(current_dig_cell)
-		if dig_front_damage_layer:
-			dig_front_damage_layer.erase_cell(current_dig_cell + Vector2i.DOWN)
-	current_dig_cell = INVALID_CELL
-	dig_timer = 0.0
+		var crack_overlay_manager = dig_world.get_node_or_null("CrackOverlayManager") if dig_world != null else null
+		if crack_overlay_manager:
+			crack_overlay_manager.clear_damage(current_dig_cell, false)
+			crack_overlay_manager.clear_damage(current_dig_cell + Vector2i.DOWN, true)
+		current_dig_cell = INVALID_CELL
+		dig_timer = 0.0
+	dig_break_queued = false
+	dig_animation_last_frame = -1
+	dig_animation_last_cycle = -1
 
 func _update_direction_from_vector(direction: Vector2) -> void:
 	if direction.length_squared() < 0.01:
@@ -403,7 +409,38 @@ func _update_animation(delta: float) -> void:
 		return
 	if velocity.length_squared() > 0.01 or current_dig_cell != INVALID_CELL:
 		animation_timer += delta * 12.0
-		sprite.frame = animation_row * 8 + (int(animation_timer) % 8)
+		var frame_index := int(animation_timer) % 8
+		sprite.frame = animation_row * 8 + frame_index
+		_sync_dig_animation_impact(frame_index)
 	else:
 		animation_timer = 0.0
 		sprite.frame = animation_row * 8
+
+func _sync_dig_animation_impact(frame_index: int) -> void:
+	if current_dig_cell == INVALID_CELL:
+		dig_animation_last_frame = frame_index
+		return
+	var cycle := int(animation_timer / 8.0)
+	var crossed_contact := frame_index >= DIG_IMPACT_FRAME and (dig_animation_last_frame < DIG_IMPACT_FRAME or cycle != dig_animation_last_cycle)
+	if crossed_contact:
+		if dig_break_queued:
+			_finish_queued_dig_at_contact()
+		else:
+			_emit_dig_impact(false, current_dig_cell)
+	dig_animation_last_frame = frame_index
+	dig_animation_last_cycle = cycle
+
+func _emit_dig_impact(strong: bool, cell: Vector2i, gem_reveal := false) -> void:
+	if dig_block_layer == null:
+		return
+	var target_position := dig_block_layer.to_global(dig_block_layer.map_to_local(cell))
+	var contact_direction := global_position.direction_to(target_position)
+	var impact_position := target_position - contact_direction * 22.0
+	if dig_world and dig_world.has_method("spawn_mining_feedback"):
+		dig_world.call("spawn_mining_feedback", impact_position, strong, gem_reveal, contact_direction)
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx:
+		if strong:
+			sound_fx.play_block_break(gem_reveal)
+		else:
+			sound_fx.play_dig_hit(dig_block_layer.get_cell_source_id(cell))

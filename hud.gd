@@ -49,6 +49,8 @@ var hero_portrait_container: PanelContainer
 var hero_portrait_icon: TextureRect
 var hero_portrait_dim: ColorRect
 var hero_portrait_timer: Label
+var hero_level_badge: PanelContainer
+var hero_level_label: Label
 var hero_portrait_hero_name := ""
 var base_status_panel: PanelContainer
 var base_status_label: Label
@@ -129,6 +131,18 @@ const BASE_WARNING_COLORS = {
 	"critical": Color(1.0, 0.2, 0.16, 1.0)
 }
 
+func _is_mobile_hud() -> bool:
+	# Web touch detection is owned by WebIOSLightingFallback. Reuse its root meta
+	# so HUD and controls can never disagree on landscape iPads.
+	if bool(get_tree().root.get_meta("web_low_memory_mode", false)):
+		return true
+	var physical_size: Vector2 = get_viewport().size
+	if physical_size.x <= 0.0 or physical_size.y <= 0.0:
+		return false
+	if OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android"):
+		return true
+	return physical_size.x < 760.0 and physical_size.y > physical_size.x * 1.05
+
 func _ready():
 	run_started_msec = Time.get_ticks_msec()
 	_setup_hero_portrait_ui()
@@ -145,7 +159,7 @@ func _ready():
 			var mobile_controls = mobile_controls_scene.instantiate()
 			add_child(mobile_controls)
 	
-	_setup_stomp_ui()
+	# Ability 1 is displayed by the hero ability bar; the obsolete standalone stomp slot is intentionally not created.
 	_setup_notice_ui()
 	_setup_objective_ui()
 	_setup_carry_status_ui()
@@ -158,6 +172,8 @@ func _ready():
 	_setup_nerubian_status_ui()
 	get_tree().root.size_changed.connect(_relayout_unlocked_hud)
 	_relayout_unlocked_hud()
+	if _is_mobile_hud():
+		call_deferred("_hide_mobile_expedition_cards")
 
 func _setup_hero_portrait_ui() -> void:
 	hero_portrait_container = PanelContainer.new()
@@ -216,6 +232,30 @@ func _setup_hero_portrait_ui() -> void:
 	hero_portrait_timer.add_theme_constant_override("outline_size", 5)
 	hero_portrait_timer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	portrait_content.add_child(hero_portrait_timer)
+
+	hero_level_badge = PanelContainer.new()
+	hero_level_badge.name = "LevelBadge"
+	hero_level_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_level_badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	hero_level_badge.offset_left = -25
+	hero_level_badge.offset_top = -25
+	hero_level_badge.offset_right = 1
+	hero_level_badge.offset_bottom = 1
+	var level_style := StyleBoxFlat.new()
+	level_style.bg_color = Color(0.06, 0.035, 0.015, 0.98)
+	level_style.border_color = Color(1.0, 0.72, 0.24, 1.0)
+	level_style.set_border_width_all(2)
+	level_style.set_corner_radius_all(13)
+	hero_level_badge.add_theme_stylebox_override("panel", level_style)
+	portrait_content.add_child(hero_level_badge)
+	hero_level_label = Label.new()
+	hero_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hero_level_label.add_theme_font_size_override("font_size", 12)
+	hero_level_label.add_theme_color_override("font_color", Color.WHITE)
+	hero_level_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	hero_level_label.add_theme_constant_override("outline_size", 3)
+	hero_level_badge.add_child(hero_level_label)
 
 	add_child(hero_portrait_container)
 	_shift_resource_row_for_portrait()
@@ -329,6 +369,7 @@ func _refresh_hero_portrait(force := false) -> void:
 	if not hero_portrait_icon:
 		return
 	var hero_name = _get_active_hero_name_for_portrait()
+	_refresh_hero_level_badge()
 	if not force and hero_name == hero_portrait_hero_name:
 		return
 	hero_portrait_hero_name = hero_name
@@ -338,6 +379,15 @@ func _refresh_hero_portrait(force := false) -> void:
 	hero_portrait_icon.texture = portrait_texture
 	hero_portrait_icon.tooltip_text = hero_name
 	_refresh_base_status_icon(hero_name)
+
+func _refresh_hero_level_badge() -> void:
+	if hero_level_label == null:
+		return
+	var player := _get_player_node()
+	var level_value := 1
+	if player != null and player.get("level") != null:
+		level_value = maxi(1, int(player.get("level")))
+	hero_level_label.text = str(level_value)
 
 func _refresh_base_status_icon(hero_name: String = "") -> void:
 	if not base_status_icon:
@@ -365,70 +415,10 @@ func _load_stomp_texture() -> Texture2D:
 	return null
 
 func _setup_stomp_ui() -> void:
-	stomp_container = Control.new()
-	stomp_container.name = "StompContainer"
-	stomp_container.visible = false
-	stomp_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	# Keep Stomp in its own row above the hero ability bar.
-	# The old bottom-right anchor overlapped the fourth ability card.
-	stomp_container.offset_left = -88
-	stomp_container.offset_top = -168
-	stomp_container.offset_right = -28
-	stomp_container.offset_bottom = -108
-	
-	var stomp_icon = Control.new()
-	stomp_icon.name = "StompIcon"
-	stomp_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	
-	var bg = ColorRect.new()
-	bg.name = "Background"
-	bg.color = Color(0, 0, 0, 0.58)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	stomp_icon.add_child(bg)
-	
-	var icon_texture = _load_stomp_texture()
-	if icon_texture:
-		var icon = TextureRect.new()
-		icon.name = "Icon"
-		icon.texture = icon_texture
-		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-		icon.offset_left = 5
-		icon.offset_top = 5
-		icon.offset_right = -5
-		icon.offset_bottom = -5
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		stomp_icon.add_child(icon)
-	else:
-		var stomp_label = Label.new()
-		stomp_label.text = "STOMP"
-		stomp_label.add_theme_font_size_override("font_size", 12)
-		stomp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		stomp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		stomp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		stomp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		stomp_icon.add_child(stomp_label)
-	
-	stomp_progress = TextureProgressBar.new()
-	stomp_progress.name = "StompProgress"
-	stomp_progress.set_anchors_preset(Control.PRESET_FULL_RECT)
-	stomp_progress.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
-	stomp_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var bg_tex = GradientTexture2D.new()
-	bg_tex.width = 60
-	bg_tex.height = 60
-	bg_tex.fill_from = Vector2(0, 0)
-	bg_tex.fill_to = Vector2(0, 0)
-	var grad = Gradient.new()
-	grad.colors = PackedColorArray([Color(0, 0, 0, 0.68), Color(0, 0, 0, 0.68)])
-	bg_tex.gradient = grad
-	stomp_progress.texture_progress = bg_tex
-	stomp_progress.step = 0.01
-	stomp_icon.add_child(stomp_progress)
-	
-	stomp_container.add_child(stomp_icon)
-	add_child(stomp_container)
+	# Kept as a compatibility no-op for older callers. Ground Stomp is the Dwarf's
+	# first hero ability and already has a proper slot in the hero ability bar.
+	stomp_container = null
+	stomp_progress = null
 
 func _setup_notice_ui() -> void:
 	notice_label = Label.new()
@@ -550,6 +540,19 @@ func _setup_return_cue_ui() -> void:
 
 func show_objective(step_text: String, title_text: String, body_text: String) -> void:
 	if not objective_panel:
+		return
+	if _is_mobile_hud():
+		# Portrait play keeps objectives as a short diegetic cue; the full tutorial
+		# card would cover the health strip and compete with the touch controls.
+		objective_panel.visible = false
+		var compact_text := title_text.strip_edges()
+		if compact_text.is_empty():
+			compact_text = step_text.strip_edges()
+		if compact_text.contains("SPACE / A"):
+			compact_text = "TAP PICK"
+		elif compact_text.contains("E / Y"):
+			compact_text = "TAP THE BASE"
+		show_notice(compact_text, 2.6)
 		return
 	objective_step_label.text = step_text
 	objective_title_label.text = title_text
@@ -908,7 +911,9 @@ func _apply_base_warning_state(pulse: bool) -> void:
 		# The base sprite stays readable; the frame and health bar communicate danger.
 		base_status_icon.modulate = Color.WHITE if base_warning_state == "stable" else Color.WHITE.lerp(warning_color, 0.28)
 	if base_status_label:
-		base_status_label.visible = true
+		# Mobile has one base-health readout: the unlockable bar beneath the icon.
+		# A second percentage inside the portrait was visual noise.
+		base_status_label.visible = not _is_mobile_hud()
 		base_status_label.text = "BASE %d%%" % int(round(float(base_warning_health) / float(max(base_warning_max_health, 1)) * 100.0))
 		base_status_label.add_theme_color_override("font_color", warning_color)
 	base_status_panel.queue_redraw()
@@ -976,6 +981,8 @@ func _update_base_direction_cue() -> void:
 
 func _process(delta):
 	base_hit_notice_cooldown = max(base_hit_notice_cooldown - delta, 0.0)
+	if _is_mobile_hud():
+		_hide_mobile_expedition_cards()
 	if minimap and minimap.visible:
 		minimap.queue_redraw()
 	_refresh_hero_portrait()
@@ -988,6 +995,11 @@ func _process(delta):
 func _relayout_unlocked_hud() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var physical_size: Vector2 = get_viewport().size
+	var mobile := _is_mobile_hud()
+	if mobile:
+		_relayout_mobile_hud(viewport_size, physical_size)
 		return
 	var compact := viewport_size.x < 760.0
 	var edge := 12.0 if compact else 16.0
@@ -1062,6 +1074,158 @@ func _relayout_unlocked_hud() -> void:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		minimap.position = Vector2(viewport_size.x - edge - minimap.size.x, 148.0)
 
+func _relayout_mobile_hud(canvas_size: Vector2, _physical_size: Vector2) -> void:
+	# CanvasLayer children and the full-rect touch Control share the same logical
+	# canvas. Applying a physical/logical ratio here creates the exact offset that
+	# made the previous iPad HUD drift away from its touch controls.
+	var scale_factor: float = 1.0
+	var logical: Callable = func(value: float) -> float:
+		return value * scale_factor
+	var edge: float = logical.call(10.0)
+
+	# The portrait resource row is the only persistent player readout on mobile.
+	# Keep it large enough to read at arm's length and leave the playfield clear.
+	if hero_portrait_container:
+		hero_portrait_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		hero_portrait_container.offset_left = edge
+		hero_portrait_container.offset_top = logical.call(8.0)
+		hero_portrait_container.offset_right = logical.call(62.0)
+		hero_portrait_container.offset_bottom = logical.call(62.0)
+	var resource_panel := get_node_or_null("ResourcePanel") as PanelContainer
+	if resource_panel:
+		resource_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		resource_panel.offset_left = logical.call(68.0)
+		resource_panel.offset_top = logical.call(10.0)
+		resource_panel.offset_right = logical.call(210.0)
+		resource_panel.offset_bottom = logical.call(54.0)
+	var gem_icon := get_node_or_null("GemIcon") as TextureRect
+	var gem_value := get_node_or_null("Label") as Label
+	var gold_icon := get_node_or_null("GoldIcon") as TextureRect
+	var gold_value := get_node_or_null("GoldLabel") as Label
+	if gem_icon:
+		gem_icon.position = Vector2(logical.call(76.0), logical.call(15.0))
+		gem_icon.size = Vector2.ONE * logical.call(28.0)
+	if gem_value:
+		gem_value.position = Vector2(logical.call(106.0), logical.call(13.0))
+		gem_value.size = Vector2(logical.call(30.0), logical.call(32.0))
+		gem_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
+	if gold_icon:
+		gold_icon.position = Vector2(logical.call(140.0), logical.call(15.0))
+		gold_icon.size = Vector2.ONE * logical.call(28.0)
+	if gold_value:
+		gold_value.position = Vector2(logical.call(170.0), logical.call(13.0))
+		gold_value.size = Vector2(logical.call(34.0), logical.call(32.0))
+		gold_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
+
+	# Tutorial cards and the large persistent reward card do not belong on the
+	# touch playfield. Purchased HUD modules remain available and are laid out
+	# compactly below, preserving the game's progressive information unlocks.
+	var stats_container := get_node_or_null("StatsContainer") as Control
+	if objective_panel:
+		objective_panel.visible = false
+	if minimap:
+		minimap.visible = false
+	if cave_reward_container:
+		cave_reward_container.visible = false
+
+	# Unlocked hero information grows down from the portrait one compact module at
+	# a time. The RPG detail sentence is separately suppressed on touch devices.
+	var player_stack_y: float = float(logical.call(66.0))
+	player_stack_y = _layout_health_hud_module("PlayerLabel", player_health_bar, player_stack_y, false, edge, float(logical.call(178.0)))
+	if stats_container and stats_container.visible:
+		stats_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		stats_container.scale = Vector2.ONE
+		stats_container.position = Vector2(edge + logical.call(6.0), player_stack_y)
+		stats_container.size = Vector2(logical.call(172.0), logical.call(24.0))
+		stats_container.add_theme_constant_override("separation", int(logical.call(4.0)))
+	if stats_backdrop:
+		stats_backdrop.visible = stats_container != null and stats_container.visible
+		stats_backdrop.offset_left = edge
+		stats_backdrop.offset_top = player_stack_y - logical.call(2.0)
+		stats_backdrop.offset_right = edge + logical.call(178.0)
+		stats_backdrop.offset_bottom = player_stack_y + logical.call(28.0)
+	if base_status_panel:
+		base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		base_status_panel.offset_left = -logical.call(78.0)
+		base_status_panel.offset_top = logical.call(8.0)
+		base_status_panel.offset_right = -edge
+		base_status_panel.offset_bottom = logical.call(62.0)
+	if base_status_label:
+		base_status_label.visible = false
+	_layout_health_hud_module("BaseLabel", base_health_bar, logical.call(66.0), true, edge, logical.call(126.0))
+
+	# The stage label sits below the menu button, never under the bastion icon.
+	if wave_label:
+		wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		wave_label.offset_left = -logical.call(78.0)
+		wave_label.offset_top = logical.call(62.0)
+		wave_label.offset_right = logical.call(78.0)
+		wave_label.offset_bottom = logical.call(82.0)
+		wave_label.add_theme_font_size_override("font_size", int(logical.call(13.0)))
+	if get_node_or_null("WaveBar"):
+		var wave_bar := get_node("WaveBar") as TextureProgressBar
+		wave_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		wave_bar.offset_left = -logical.call(78.0)
+		wave_bar.offset_top = logical.call(83.0)
+		wave_bar.offset_right = logical.call(78.0)
+		wave_bar.offset_bottom = logical.call(89.0)
+		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
+
+	# XP is one centered, self-contained module. The label occupies the bar rather
+	# than floating below it, and only appears after the XP HUD upgrade is owned.
+	if xp_label and xp_bar and (xp_label.visible or xp_bar.visible):
+		var xp_width: float = float(logical.call(230.0))
+		var xp_height: float = float(logical.call(18.0))
+		xp_bar.visible = true
+		xp_label.visible = true
+		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		xp_bar.offset_left = -xp_width * 0.5
+		xp_bar.offset_top = -logical.call(26.0) - xp_height
+		xp_bar.offset_right = xp_width * 0.5
+		xp_bar.offset_bottom = -logical.call(26.0)
+		xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		xp_label.offset_left = -xp_width * 0.5
+		xp_label.offset_top = -logical.call(26.0) - xp_height
+		xp_label.offset_right = xp_width * 0.5
+		xp_label.offset_bottom = -logical.call(26.0)
+		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		xp_label.add_theme_font_size_override("font_size", int(logical.call(11.0)))
+		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))
+
+	if carry_status_panel:
+		carry_status_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		carry_status_panel.offset_left = logical.call(68.0)
+		carry_status_panel.offset_top = logical.call(58.0)
+		carry_status_panel.offset_right = logical.call(160.0)
+		carry_status_panel.offset_bottom = logical.call(82.0)
+		if carry_status_label:
+			carry_status_label.add_theme_font_size_override("font_size", int(logical.call(11.0)))
+	if notice_label:
+		notice_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		notice_label.offset_left = logical.call(72.0)
+		notice_label.offset_top = logical.call(94.0)
+		notice_label.offset_right = -logical.call(72.0)
+		notice_label.offset_bottom = logical.call(116.0)
+		notice_label.add_theme_font_size_override("font_size", int(logical.call(13.0)))
+	_hide_mobile_expedition_cards()
+
+func _hide_mobile_expedition_cards() -> void:
+	if not _is_mobile_hud():
+		return
+	var root: Node = get_tree().current_scene
+	if root:
+		_hide_mobile_cards_recursive(root)
+
+func _hide_mobile_cards_recursive(node: Node) -> void:
+	for child in node.get_children():
+		if child is CanvasLayer and child != self and child.layer == 25:
+			child.visible = false
+			for overlay in child.get_children():
+				if overlay is Control:
+					overlay.visible = false
+		_hide_mobile_cards_recursive(child)
+
 func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: float, align_right: bool, edge: float, module_width: float) -> float:
 	var value_label := get_node_or_null(label_name) as Label
 	var is_visible := (bar != null and bar.visible) or (value_label != null and value_label.visible)
@@ -1069,6 +1233,8 @@ func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: f
 		return y
 	var x := get_viewport().get_visible_rect().size.x - edge - module_width if align_right else edge
 	if bar:
+		bar.scale = Vector2.ONE
+		bar.nine_patch_stretch = true
 		bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		bar.position = Vector2(x, y)
 		bar.size = Vector2(module_width, 22.0)
@@ -1088,6 +1254,8 @@ func _style_hud_progress_bar(bar: TextureProgressBar, progress_color: Color) -> 
 	if not bar:
 		return
 	bar.tint_under = Color(0.025, 0.03, 0.04, 0.92)
+	bar.scale = Vector2.ONE
+	bar.nine_patch_stretch = true
 	bar.tint_progress = progress_color
 	bar.tint_over = Color(1, 1, 1, 0.78)
 
@@ -1322,22 +1490,28 @@ func update_player_health(current: int, max_hp: int) -> void:
 
 func update_xp(level: int, current_xp: int, max_xp: int) -> void:
 	if xp_label:
-		xp_label.text = "Lvl %d: %d / %d XP" % [level, current_xp, max_xp]
+		xp_label.text = ("LV %d  •  %d/%d XP" if _is_mobile_hud() else "Lvl %d: %d / %d XP") % [level, current_xp, max_xp]
 	if xp_bar:
 		xp_bar.max_value = max_xp
 		xp_bar.value = current_xp
 
-func update_stomp_cooldown(stomp_level: int, current_cooldown: float, max_cooldown: float) -> void:
-	if stomp_level > 0:
-		if stomp_container and not stomp_container.visible:
-			stomp_container.visible = true
-		if stomp_progress:
-			stomp_progress.max_value = max_cooldown
-			stomp_progress.value = current_cooldown
+func update_stomp_cooldown(_stomp_level: int, _current_cooldown: float, _max_cooldown: float) -> void:
+	# Compatibility hook: cooldown presentation is owned by the hero ability bar.
+	pass
 
 func show_notice(text: String, duration: float = 1.8) -> void:
 	if not notice_label:
 		return
+	if _is_mobile_hud():
+		var compact_text := text.strip_edges()
+		for separator in ["\n", " — ", " - ", " • "]:
+			var separator_index := compact_text.find(separator)
+			if separator_index > 0:
+				compact_text = compact_text.substr(0, separator_index).strip_edges()
+				break
+		if compact_text.length() > 26:
+			compact_text = compact_text.substr(0, 25).strip_edges() + "…"
+		text = compact_text
 	if notice_tween and notice_tween.is_running():
 		notice_tween.kill()
 	notice_label.text = text

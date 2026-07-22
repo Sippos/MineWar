@@ -1,0 +1,28 @@
+{
+  "atlas": "golden_tiles_v3_atlas.png",
+  "columns": 5,
+  "frame_size": [
+    64,
+    64
+  ],
+  "frames": [
+    "buried_a",
+    "buried_b",
+    "top_exposed",
+    "left_exposed",
+    "right_exposed",
+    "top_left",
+    "top_right",
+    "front_wall",
+    "isolated",
+    "damaged"
+  ],
+  "mask_bit_order": {
+    "bottom": 4,
+    "left": 8,
+    "right": 2,
+    "top": 1
+  },
+  "review_status": "refined_candidate_not_yet_live",
+  "version": 3
+}

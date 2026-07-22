@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/fix_local_coop_player_card_binding.gd" id="1_script"]
+
+[node name="FixLocalCoopPlayerCardBinding" type="Node"]
+script = ExtResource("1_script")

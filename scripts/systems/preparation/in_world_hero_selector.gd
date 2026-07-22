@@ -181,17 +181,41 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	_select_hero(nearby_hero)
 
+func _compact_hero_choices() -> Array[String]:
+	var choices: Array[String] = []
+	# A fresh stronghold needs no shrine for the hero already equipped. The first
+	# real unlock introduces a compact current-vs-alternative choice.
+	if Global.unlocked_heroes.size() <= 1:
+		return choices
+	_add_compact_choice(choices, str(Global.selected_hero_id))
+	var newly_unlocked: Array = world.get_meta("newly_unlocked_heroes", []) if world != null else []
+	for index in range(newly_unlocked.size() - 1, -1, -1):
+		_add_compact_choice(choices, str(newly_unlocked[index]))
+	for index in range(Global.unlocked_heroes.size() - 1, -1, -1):
+		_add_compact_choice(choices, str(Global.unlocked_heroes[index]))
+		if choices.size() >= 2:
+			break
+	return choices
+
+func _add_compact_choice(choices: Array[String], hero_name: String) -> void:
+	if choices.size() >= 2 or hero_name.is_empty() or choices.has(hero_name):
+		return
+	if not _hero_unlocked(hero_name):
+		return
+	choices.append(hero_name)
+
 func _build_hero_shrines() -> void:
 	shrine_root = Node2D.new()
 	shrine_root.name = "PhysicalHeroShrines"
 	shrine_root.z_index = 12
 	world.add_child(shrine_root)
-	for hero_name in HERO_ORDER:
-		if not _hero_unlocked(hero_name):
-			continue
+	var visible_choices := _compact_hero_choices()
+	var compact_positions := [Vector2(-205, -62), Vector2(205, -62)]
+	for choice_index in range(visible_choices.size()):
+		var hero_name: String = visible_choices[choice_index]
 		var root := Node2D.new()
 		root.name = hero_name.replace(" ", "") + "Shrine"
-		root.position = HERO_POSITIONS[hero_name]
+		root.position = compact_positions[choice_index]
 		shrine_root.add_child(root)
 
 		var glow := Polygon2D.new()
@@ -532,8 +556,12 @@ func _update_card_position() -> void:
 	elif preferred_side < 0.0 and target_x < 12.0:
 		target_x = screen_position.x + 74.0
 	var target_y := screen_position.y - CARD_SIZE.y * 0.45
+	var top_safe := CARD_TOP_SAFE
+	var first_run_guide := get_parent().get_node_or_null("SinglePlayerWorldController/FirstRunStrongholdGuide")
+	if first_run_guide != null and is_instance_valid(first_run_guide):
+		top_safe = 174.0
 	target_x = clampf(target_x, 12.0, maxf(12.0, viewport_size.x - CARD_SIZE.x - 12.0))
-	target_y = clampf(target_y, CARD_TOP_SAFE, maxf(CARD_TOP_SAFE, viewport_size.y - CARD_SIZE.y - CARD_BOTTOM_SAFE))
+	target_y = clampf(target_y, top_safe, maxf(top_safe, viewport_size.y - CARD_SIZE.y - CARD_BOTTOM_SAFE))
 	card.position = Vector2(target_x, target_y)
 
 func _select_hero(hero_name: String) -> void:

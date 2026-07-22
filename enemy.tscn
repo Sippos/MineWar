@@ -45,6 +45,7 @@ corner_radius_bottom_right = 1
 corner_radius_bottom_left = 1
 
 [node name="Enemy" type="CharacterBody2D" groups=["enemies"]]
+z_index = 2
 collision_layer = 4
 collision_mask = 1
 script = ExtResource("1_script")

@@ -1,0 +1,323 @@
+[gd_scene format=3 uid="uid://cads35kywyo0i"]
+
+[ext_resource type="Script" path="res://scripts/systems/world_generation/world_gem_visuals.gd" id="1_world"]
+[ext_resource type="Script" uid="uid://bwa3xg44g5nig" path="res://player.gd" id="2_h2yge"]
+[ext_resource type="PackedScene" uid="uid://baseuid" path="res://base.tscn" id="5_base"]
+[ext_resource type="PackedScene" uid="uid://huduid" path="res://hud.tscn" id="6_hud"]
+[ext_resource type="PackedScene" uid="uid://b4q4firriech2" path="res://upgrade_menu.tscn" id="7_menu"]
+[ext_resource type="Texture2D" uid="uid://dp6make6ovuxy" path="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
+[ext_resource type="Script" uid="uid://bedi75wufu35r" path="res://map_bounds.gd" id="9_bounds"]
+[ext_resource type="Texture2D" uid="uid://b7payklavahgh" path="res://assets/environment/lighting/player_light_gradient.tres" id="25_vagr4"]
+[ext_resource type="Texture2D" uid="uid://cck4fvu57eoy8" path="res://assets/sprites/world/terrain/Black_BG_TransparentBorder.png" id="tex_bg"]
+[ext_resource type="Texture2D" uid="uid://c7yxku7w2ec6t" path="res://assets/sprites/world/terrain/damage/First_Hitting.png" id="tex_dmg1"]
+[ext_resource type="Texture2D" uid="uid://i4oql01gvcj" path="res://assets/sprites/world/terrain/damage/Second_Hitting.png" id="tex_dmg2"]
+[ext_resource type="Texture2D" uid="uid://8lw4xn2idsg5" path="res://assets/sprites/world/terrain/bricks/Easy_Brick.png" id="tex_easy"]
+[ext_resource type="Texture2D" uid="uid://dicx4ww0i4uue" path="res://assets/sprites/world/terrain/edges/Easy_Edge_Atlas.png" id="tex_edge_easy"]
+[ext_resource type="Texture2D" uid="uid://c6pohbbjk680u" path="res://assets/sprites/world/terrain/edges/Hard_Edge_Atlas.png" id="tex_edge_hard"]
+[ext_resource type="Texture2D" uid="uid://xqwlaaxd76ho" path="res://assets/sprites/world/terrain/edges/Medium_Edge_Atlas.png" id="tex_edge_med"]
+[ext_resource type="Texture2D" uid="uid://dv4nl6lcai5mk" path="res://assets/sprites/world/fog/fog_mask_atlas.png" id="tex_fog"]
+[ext_resource type="Texture2D" uid="uid://ck1a0md0g34sl" path="res://assets/sprites/world/terrain/front_damage/First-Hit-Front.png" id="tex_front_dmg1"]
+[ext_resource type="Texture2D" uid="uid://cnuy3cfvfiudc" path="res://assets/sprites/world/terrain/front_damage/Next-Hit-Front.png" id="tex_front_dmg2"]
+[ext_resource type="Texture2D" uid="uid://g6hdmk1w4xx2" path="res://assets/sprites/world/terrain/front_walls/Easy_Brick-Front.png" id="tex_front_easy"]
+[ext_resource type="Texture2D" uid="uid://f4q6fvcwmiwc" path="res://assets/sprites/world/terrain/front_walls/Hard-Brick-Front.png" id="tex_front_hard"]
+[ext_resource type="Texture2D" uid="uid://bxagcnkimo0sj" path="res://assets/sprites/world/terrain/front_walls/Medium-Brick-Front.png" id="tex_front_med"]
+[ext_resource type="Texture2D" uid="uid://bsdavxp821k7d" path="res://assets/environment/ground/blue_mine_ground.svg" id="tex_ground_backdrop"]
+[ext_resource type="Texture2D" uid="uid://cr5hlhxbu2fsg" path="res://assets/sprites/world/terrain/bricks/Hard_Brick.png" id="tex_hard"]
+[ext_resource type="Texture2D" uid="uid://05q4s6yyeyv1" path="res://assets/sprites/world/terrain/bricks/Medium_Brick.png" id="tex_med"]
+[ext_resource type="Texture2D" uid="uid://cms5uuj14o6du" path="res://assets/sprites/world/rails/rail_trail_atlas.png" id="tex_rail"]
+
+[sub_resource type="TileSetAtlasSource" id="Source_bg"]
+texture = ExtResource("tex_bg")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_easy"]
+texture = ExtResource("tex_easy")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_front_easy"]
+texture = ExtResource("tex_front_easy")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_front_med"]
+texture = ExtResource("tex_front_med")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_front_hard"]
+texture = ExtResource("tex_front_hard")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_front_dmg1"]
+texture = ExtResource("tex_front_dmg1")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_front_dmg2"]
+texture = ExtResource("tex_front_dmg2")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_rail"]
+texture = ExtResource("tex_rail")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_med"]
+texture = ExtResource("tex_med")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_hard"]
+texture = ExtResource("tex_hard")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="Source_edge_easy"]
+texture = ExtResource("tex_edge_easy")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_edge_med"]
+texture = ExtResource("tex_edge_med")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_edge_hard"]
+texture = ExtResource("tex_edge_hard")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_dmg1"]
+texture = ExtResource("tex_dmg1")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_dmg2"]
+texture = ExtResource("tex_dmg2")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="Source_fog"]
+texture = ExtResource("tex_fog")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_main"]
+tile_size = Vector2i(64, 64)
+physics_layer_0/collision_layer = 1
+sources/0 = SubResource("Source_bg")
+sources/1 = SubResource("Source_easy")
+sources/2 = SubResource("Source_med")
+sources/3 = SubResource("Source_hard")
+sources/4 = SubResource("Source_edge_easy")
+sources/5 = SubResource("Source_edge_med")
+sources/6 = SubResource("Source_edge_hard")
+sources/7 = SubResource("Source_dmg1")
+sources/8 = SubResource("Source_dmg2")
+sources/9 = SubResource("Source_fog")
+sources/13 = SubResource("Source_front_dmg1")
+sources/14 = SubResource("Source_front_dmg2")
+sources/10 = SubResource("Source_front_easy")
+sources/11 = SubResource("Source_front_med")
+sources/12 = SubResource("Source_front_hard")
+sources/15 = SubResource("Source_rail")
+
+[sub_resource type="Gradient" id="Gradient_shadow"]
+colors = PackedColorArray(0, 0, 0, 0.6, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shadow"]
+gradient = SubResource("Gradient_shadow")
+width = 48
+height = 24
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.8, 0.8)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6iedr"]
+size = Vector2(40, 40)
+
+[node name="Level" type="Node2D" unique_id=1865611792]
+y_sort_enabled = true
+script = ExtResource("1_world")
+
+[node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=479574395]
+color = Color(0.44, 0.47, 0.55, 1)
+
+[node name="MapBounds" type="Node" parent="." unique_id=1512449446]
+script = ExtResource("9_bounds")
+
+[node name="HUD" parent="." unique_id=1429791628 instance=ExtResource("6_hud")]
+
+[node name="UpgradeMenu" parent="." unique_id=1930045817 instance=ExtResource("7_menu")]
+
+[node name="Base" parent="." unique_id=1592149591 instance=ExtResource("5_base")]
+position = Vector2(0, -64)
+
+[node name="GroundBackdrop" type="TextureRect" parent="." unique_id=1713925056]
+z_index = -10
+texture_filter = 1
+texture_repeat = 2
+offset_left = -2048.0
+offset_top = -1024.0
+offset_right = 2048.0
+offset_bottom = 3072.0
+mouse_filter = 2
+texture = ExtResource("tex_ground_backdrop")
+expand_mode = 1
+stretch_mode = 1
+
+[node name="BackgroundLayer" type="TileMapLayer" parent="." unique_id=391879346]
+z_index = -5
+tile_set = SubResource("TileSet_main")
+
+[node name="BlockLayer" type="TileMapLayer" parent="." unique_id=639870398]
+y_sort_enabled = true
+tile_set = SubResource("TileSet_main")
+
+[node name="RailLayer" type="TileMapLayer" parent="." unique_id=1642735964]
+z_index = -1
+tile_set = SubResource("TileSet_main")
+
+[node name="FrontWallLayer" type="TileMapLayer" parent="." unique_id=601881360]
+z_index = 3
+tile_set = SubResource("TileSet_main")
+
+[node name="EdgeLayer" type="TileMapLayer" parent="." unique_id=1939264169]
+z_index = 1
+tile_set = SubResource("TileSet_main")
+
+[node name="DamageLayer" type="TileMapLayer" parent="." unique_id=1684106595]
+z_index = 1
+y_sort_enabled = true
+tile_set = SubResource("TileSet_main")
+
+[node name="FrontDamageLayer" type="TileMapLayer" parent="." unique_id=1720352593]
+z_index = 4
+tile_set = SubResource("TileSet_main")
+
+[node name="FogLayer" type="TileMapLayer" parent="." unique_id=1508172334]
+visible = false
+z_index = 10
+tile_set = SubResource("TileSet_main")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=885445882 groups=["players"]]
+position = Vector2(0, -32)
+script = ExtResource("2_h2yge")
+
+[node name="Shadow" type="Sprite2D" parent="Player" unique_id=12173724]
+texture = SubResource("GradientTexture2D_shadow")
+
+[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=978097206]
+position = Vector2(0, -24)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("8_sprite")
+hframes = 8
+vframes = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1397634610]
+position = Vector2(0, -24)
+shape = SubResource("RectangleShape2D_6iedr")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=1406918664]
+position = Vector2(0, -24)
+zoom = Vector2(1.5, 1.5)
+
+[node name="PointLight2D" type="PointLight2D" parent="Player" unique_id=543987745]
+position = Vector2(0, -24)
+color = Color(1, 0.84, 0.66, 1)
+energy = 1.15
+shadow_color = Color(0, 0, 0, 1)
+texture = ExtResource("25_vagr4")
+texture_scale = 1.25
+
+[connection signal="base_damaged" from="Base" to="HUD" method="update_health"]
+[connection signal="game_over" from="Base" to="HUD" method="on_game_over"]
+[connection signal="gems_deposited" from="Base" to="HUD" method="add_gems"]
+[connection signal="upgrade_requested" from="Base" to="UpgradeMenu" method="show_menu"]

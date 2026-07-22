@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/refine_front_mask_outer_ends.gd" id="1"]
+
+[node name="RefineFrontMaskOuterEnds" type="Node"]
+script = ExtResource("1")

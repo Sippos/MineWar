@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/sprite_lab/diagnose_final_hole_endpoint.gd" type="Script" id="1"]
+
+[node name="DiagnoseFinalHoleEndpoint" type="Node"]
+script = ExtResource("1")

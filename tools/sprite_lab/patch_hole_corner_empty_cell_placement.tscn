@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/sprite_lab/patch_hole_corner_empty_cell_placement.gd" type="Script" id="1"]
+
+[node name="PatchHoleCornerEmptyCellPlacement" type="Node"]
+script = ExtResource("1")

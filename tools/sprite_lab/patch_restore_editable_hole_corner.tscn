@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/sprite_lab/patch_restore_editable_hole_corner.gd" type="Script" id="1"]
+
+[node name="PatchRestoreEditableHoleCorner" type="Node"]
+script = ExtResource("1")

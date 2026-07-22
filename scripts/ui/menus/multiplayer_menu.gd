@@ -5,7 +5,10 @@ const HERO_SELECTION = preload("res://hero_selection_menu.tscn")
 const LOCAL_HERO_SELECTION = preload("res://scenes/menus/multiplayer_hero_select.tscn")
 
 var online_mode := false
+var closing := false
 
+@onready var panel: PanelContainer = $Dimmer/Center/Panel
+@onready var vbox: VBoxContainer = $Dimmer/Center/Panel/VBox
 @onready var title_label: Label = $Dimmer/Center/Panel/VBox/Title
 @onready var description_label: Label = $Dimmer/Center/Panel/VBox/Description
 @onready var coop_button: Button = $Dimmer/Center/Panel/VBox/CoopButton
@@ -17,6 +20,8 @@ func setup(use_online_mode: bool) -> void:
 	online_mode = use_online_mode
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	z_index = 100
 	theme = MENU_THEME
 	coop_button.pressed.connect(_on_coop_pressed)
 	maze_button.pressed.connect(_on_maze_pressed)
@@ -24,12 +29,19 @@ func _ready() -> void:
 	back_button.pressed.connect(_on_back_pressed)
 	_configure_mode()
 	_configure_focus()
-	(coop_button if not coop_button.disabled else legacy_online_button).grab_focus()
+	get_tree().root.size_changed.connect(_layout_for_screen)
+	_layout_for_screen()
+	(coop_button if not coop_button.disabled else legacy_online_button).call_deferred("grab_focus")
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
 
 func _configure_mode() -> void:
 	if online_mode:
 		title_label.text = "ONLINE MULTIPLAYER"
-		description_label.text = "The existing WebRTC build currently supports Exploration VS. Online co-op and maze synchronization stay visible here as the next network milestones."
+		description_label.text = "Exploration VS is playable through WebRTC room codes. Online co-op and synchronized Maze Builder remain future network modes."
 		coop_button.text = "Co-op Exploration — Coming Soon"
 		coop_button.disabled = true
 		maze_button.text = "Maze Builder VS — Coming Soon"
@@ -55,6 +67,28 @@ func _configure_focus() -> void:
 		maze_button.focus_neighbor_bottom = back_button.get_path()
 		back_button.focus_neighbor_top = maze_button.get_path()
 
+func _layout_for_screen() -> void:
+	if panel == null:
+		return
+	var size := get_viewport().get_visible_rect().size
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	var compact := size.x < 720.0 or size.y < 540.0
+	panel.custom_minimum_size = Vector2(
+		minf(650.0, maxf(310.0, size.x - 24.0)),
+		minf(460.0, maxf(300.0, size.y - 24.0))
+	)
+	vbox.add_theme_constant_override("separation", 6 if compact else 12)
+	title_label.custom_minimum_size.y = 34.0 if compact else 48.0
+	title_label.add_theme_font_size_override("font_size", 23 if compact else 30)
+	description_label.custom_minimum_size.y = 48.0 if compact else 64.0
+	description_label.add_theme_font_size_override("font_size", 12 if compact else 15)
+	var button_width := minf(440.0, maxf(250.0, size.x - 120.0))
+	var button_height := 42.0 if compact else 54.0
+	for button in [coop_button, maze_button, legacy_online_button]:
+		button.custom_minimum_size = Vector2(button_width, button_height)
+	back_button.custom_minimum_size = Vector2(button_width, 40.0 if compact else 50.0)
+
 func _restore_focus(button: Control) -> void:
 	if is_inside_tree() and is_instance_valid(button) and button.is_inside_tree():
 		button.grab_focus()
@@ -63,7 +97,7 @@ func _open_local_hero_selection(mode_name: String) -> void:
 	var selector = LOCAL_HERO_SELECTION.instantiate()
 	selector.setup(mode_name)
 	add_child(selector)
-	selector.tree_exited.connect(_restore_focus.bind(coop_button))
+	selector.tree_exited.connect(_restore_focus.bind(coop_button if mode_name == "local_coop" else maze_button))
 
 func _open_online_hero_selection() -> void:
 	var selector = HERO_SELECTION.instantiate()
@@ -84,4 +118,8 @@ func _on_legacy_online_pressed() -> void:
 	_open_online_hero_selection()
 
 func _on_back_pressed() -> void:
-	queue_free()
+	if closing:
+		return
+	closing = true
+	# Keep the clicked button alive through mouse release so the event cannot hit the menu below.
+	get_tree().create_timer(0.12, true).timeout.connect(queue_free)

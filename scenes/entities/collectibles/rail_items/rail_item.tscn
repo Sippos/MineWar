@@ -9,6 +9,7 @@ size = Vector2(24, 16)
 radius = 32.0
 
 [node name="RailItem" type="RigidBody2D"]
+z_index = 2
 collision_layer = 0
 collision_mask = 0
 script = ExtResource("1_script")

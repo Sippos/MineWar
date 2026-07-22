@@ -38,6 +38,9 @@ func _seal_old_line_wars_chamber() -> void:
 				continue
 			block_layer.set_cell(cell, 1, Vector2i.ZERO)
 			damage_layer.erase_cell(cell)
+			if crack_overlay_manager:
+				crack_overlay_manager.clear_damage(cell, false)
+				crack_overlay_manager.clear_damage(cell + Vector2i.DOWN, true)
 			edge_layer.erase_cell(cell)
 			fog_layer.set_cell(cell, 9, Vector2i.ZERO)
 
@@ -47,6 +50,7 @@ func _seal_old_line_wars_chamber() -> void:
 			var cell := Vector2i(x, y)
 			update_fog_mask(cell)
 			update_front_wall(cell)
+			update_inside_corners(cell)
 
 func _rebuild_extended_navigation() -> void:
 	# Enemy.gd uses world.astar. Build the same world-specific region that the

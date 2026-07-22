@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
-<rect width="64" height="64" fill="#565078"/>
-<path fill="#67618a" d="M7 9h7v4h4v5h-5v3H6v-4H3v-5h4zM35 7h8v4h5v5h-4v4h-8v-3h-5v-6h4zM18 31h9v4h4v5h-5v4h-8v-3h-5v-6h5zM43 35h8v4h5v5h-4v4h-8v-3h-5v-6h4zM6 52h7v3h4v4h-4v3H6v-3H2v-4h4z"/>
-<path fill="#77709b" d="M9 11h4v3H9zm28-2h4v3h-4zM20 33h5v3h-5zm25 4h4v3h-4zM8 54h3v2H8z"/>
-<path fill="#443f61" d="M24 7h3v2h-3zM54 17h4v2h-4zM4 28h3v2H4zM34 27h4v2h-4zM57 51h3v2h-3zM29 55h4v2h-4z"/>
+<rect width="64" height="64" fill="#2b273d"/>
+<path fill="#242133" d="M0 0h64v2H0zM0 62h64v2H0z"/>
+<rect x="8" y="10" width="7" height="4" fill="#403951"/><rect x="10" y="8" width="4" height="2" fill="#403951"/><rect x="26" y="7" width="8" height="5" fill="#353047"/><rect x="28" y="5" width="5" height="2" fill="#353047"/><rect x="45" y="15" width="6" height="4" fill="#242133"/><rect x="47" y="13" width="3" height="2" fill="#242133"/><rect x="16" y="31" width="9" height="5" fill="#403951"/><rect x="18" y="29" width="6" height="2" fill="#403951"/><rect x="39" y="38" width="8" height="5" fill="#353047"/><rect x="41" y="36" width="5" height="2" fill="#353047"/><rect x="7" y="51" width="6" height="4" fill="#242133"/><rect x="9" y="49" width="3" height="2" fill="#242133"/><rect x="51" y="52" width="7" height="4" fill="#403951"/><rect x="53" y="50" width="4" height="2" fill="#403951"/>
 </svg>

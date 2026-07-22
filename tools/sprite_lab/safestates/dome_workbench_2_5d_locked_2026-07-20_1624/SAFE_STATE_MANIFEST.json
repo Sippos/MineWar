@@ -1,0 +1,23 @@
+{
+	"created": "2026-07-20 16:24",
+	"directories": [
+		"res://tools/sprite_lab/source/dome_material",
+		"res://assets/sprites/world/terrain/dome"
+	],
+	"files": [
+		"res://tools/sprite_lab/dome_corner_builder.gd",
+		"res://tools/sprite_lab/dome_material_canvas.gd",
+		"res://tools/sprite_lab/dome_material_preview_v2.gd",
+		"res://tools/sprite_lab/dome_material_workbench.gd",
+		"res://tools/sprite_lab/dome_material_workbench.tscn",
+		"res://tools/sprite_lab/export_dome_material_assets.gd",
+		"res://tools/sprite_lab/export_dome_material_assets.tscn",
+		"res://scripts/systems/world_generation/world.gd",
+		"res://scripts/systems/world_generation/world_terrain_runtime.gd",
+		"res://scripts/systems/world_generation/dome_front_extrusion_renderer.gd",
+		"res://scenes/world/mine/level.tscn"
+	],
+	"name": "Dome Workbench 2.5D Locked",
+	"reason": "User-approved authored borders, corners, independent materials and generated 2.5D front extrusion before full-width face correction.",
+	"restore_note": "Copy files from this directory back to their matching res:// paths."
+}

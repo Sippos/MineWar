@@ -30,6 +30,11 @@ func _run() -> void:
 
 	_test_initial_journey_state()
 	_test_build_identities()
+	if bool(controller.get("first_run_training_active")):
+		level.set("onboarding_active", false)
+		Global.complete_prototype_onboarding()
+		await _wait_frames(4)
+		_expect(not bool(controller.get("first_run_training_active")), "Completing the tutorial should start the first expedition clock")
 
 	var initial_gems := int(hud.get("total_gems"))
 	await _complete_stage_objective(1)

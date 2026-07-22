@@ -5,6 +5,7 @@ signal send_dispatched(payload: Dictionary)
 
 const MACHINE_CELL := Vector2i(3, 10)
 const INTERACT_RADIUS := 92.0
+const DISPATCH_INTERVAL := 7.0
 const MECH_TEXTURE := preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
 
 var world: Node2D
@@ -18,9 +19,8 @@ var menu_layer: CanvasLayer
 var queue_label: Label
 var machine_revealed := false
 var menu_open := false
-
-# Kept as compatibility state for older tests/tools. Instant sending never leaves
-# anything waiting in this array; dispatched_sends is the useful send history.
+var auto_pressure := false
+var dispatch_timer := DISPATCH_INTERVAL
 var send_queue: Array[Dictionary] = []
 var dispatched_sends: Array[Dictionary] = []
 
@@ -34,7 +34,7 @@ func setup(p_world: Node2D, p_hero: CharacterBody2D, p_world_hud: CanvasLayer) -
 	set_process(true)
 	set_process_unhandled_input(true)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if world == null or hero == null or block_layer == null:
 		return
 	if not machine_revealed and block_layer.get_cell_source_id(MACHINE_CELL) == -1:
@@ -43,6 +43,15 @@ func _process(_delta: float) -> void:
 		return
 	var near := hero.global_position.distance_to(machine_root.global_position) <= INTERACT_RADIUS
 	prompt_label.visible = near and not menu_open
+	if auto_pressure and send_queue.is_empty() and _available_gems() >= 1:
+		_queue_send("RAT RAID", 5, "RAT", 1)
+	if send_queue.is_empty():
+		dispatch_timer = DISPATCH_INTERVAL
+		return
+	dispatch_timer = maxf(dispatch_timer - delta, 0.0)
+	if dispatch_timer <= 0.0:
+		_dispatch_next()
+		dispatch_timer = DISPATCH_INTERVAL
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not machine_revealed or hero == null:
@@ -134,9 +143,9 @@ func _build_menu() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
 	panel.offset_left = -330
-	panel.offset_top = -205
+	panel.offset_top = -235
 	panel.offset_right = 330
-	panel.offset_bottom = 205
+	panel.offset_bottom = 235
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.028, 0.02, 0.98)
 	style.border_width_left = 3
@@ -167,7 +176,7 @@ func _build_menu() -> void:
 	title.add_theme_font_size_override("font_size", 26)
 	column.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "Spend gems to send enemies immediately into the opponent's farthest tunnel."
+	subtitle.text = "Queue pressure for the enemy side. Networking will consume the same send payloads later."
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.add_theme_font_size_override("font_size", 15)
@@ -178,8 +187,9 @@ func _build_menu() -> void:
 	queue_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28, 1.0))
 	column.add_child(queue_label)
 
-	column.add_child(_choice_button("RAT RAID • 1 GEM", "Send 5 fast rats now", _choose_rat_raid))
-	column.add_child(_choice_button("TROGG PUSH • 2 GEMS", "Send 2 durable troggs now", _choose_trogg_push))
+	column.add_child(_choice_button("RAT RAID • 1 GEM", "Queue 5 fast rats", _choose_rat_raid))
+	column.add_child(_choice_button("TROGG PUSH • 2 GEMS", "Queue 2 durable troggs", _choose_trogg_push))
+	column.add_child(_choice_button("AUTO PRESSURE", "Automatically queue Rat Raids whenever 1 gem is available", _toggle_auto_pressure))
 	var close := Button.new()
 	close.custom_minimum_size = Vector2(0, 52)
 	close.text = "RETURN TO MINE"
@@ -199,7 +209,7 @@ func _reveal_machine() -> void:
 	machine_revealed = true
 	machine_root.visible = true
 	status_label.text = "GOBLIN WAR MACHINE • ONLINE"
-	_announce("WAR MACHINE UNCOVERED\nINSTANT SENDS AVAILABLE")
+	_announce("WAR MACHINE UNCOVERED\nPRESSURE OPTIONS AVAILABLE")
 
 func _open_menu() -> void:
 	if not machine_revealed:
@@ -221,42 +231,41 @@ func _choose_rat_raid() -> void:
 func _choose_trogg_push() -> void:
 	_queue_send("TROGG PUSH", 2, "TROGG", 2)
 
+func _toggle_auto_pressure() -> void:
+	auto_pressure = not auto_pressure
+	_refresh_menu()
+
 func _queue_send(label: String, count: int, enemy_type: String, gem_cost: int) -> bool:
 	if _available_gems() < gem_cost:
 		_announce("WAR MACHINE NEEDS %d GEM%s" % [gem_cost, "S" if gem_cost != 1 else ""])
 		return false
 	_spend_gems(gem_cost)
-	var send_data := {
+	var payload := {
 		"label": label,
 		"count": count,
 		"enemy_type": enemy_type,
 		"gem_cost": gem_cost,
-		"sent_at_msec": Time.get_ticks_msec()
+		"queued_at_msec": Time.get_ticks_msec()
 	}
-	# The signals remain small data boundaries for the future network transport,
-	# but there is no gameplay queue: the opponent receives this in the same tick.
-	send_queued.emit(send_data)
-	dispatched_sends.append(send_data)
-	send_dispatched.emit(send_data)
-	_announce("%s SENT\nENEMIES ENTERED THE OPPONENT TUNNEL" % label)
+	send_queue.append(payload)
+	send_queued.emit(payload)
+	_announce("%s QUEUED\nDISPATCH IN %ds" % [label, int(ceil(dispatch_timer))])
 	_refresh_menu()
-	if menu_open:
-		_close_menu()
 	return true
 
 func _dispatch_next() -> void:
-	# Compatibility helper for old tools. Instant sends leave no pending work.
 	if send_queue.is_empty():
 		return
-	var send_data: Dictionary = send_queue.pop_front()
-	dispatched_sends.append(send_data)
-	send_dispatched.emit(send_data)
+	var payload: Dictionary = send_queue.pop_front()
+	dispatched_sends.append(payload)
+	send_dispatched.emit(payload)
+	_announce("%s DISPATCHED\nENEMY PRESSURE SENT" % str(payload.get("label", "SEND")))
 	_refresh_menu()
 
 func _refresh_menu() -> void:
 	if queue_label == null:
 		return
-	queue_label.text = "GEMS %d • SENDS ARRIVE IMMEDIATELY" % _available_gems()
+	queue_label.text = "QUEUE %d • GEMS %d • AUTO %s" % [send_queue.size(), _available_gems(), "ON" if auto_pressure else "OFF"]
 
 func _announce(text: String) -> void:
 	var controller := get_parent()

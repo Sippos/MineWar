@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/fix_scene_transition_release.gd" id="1_script"]
+
+[node name="FixSceneTransitionRelease" type="Node"]
+script = ExtResource("1_script")

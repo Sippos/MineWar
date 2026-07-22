@@ -15,6 +15,7 @@ const ENEMY_STATUS_SCRIPT = preload("res://enemy_status.gd")
 const MAX_BASIC_LEVEL := 3
 const ULTIMATE_REQUIRED_LEVEL := 6
 const ICON_SIZE := Vector2(68, 68)
+const LEVEL_UP_MENU_SCENE := preload("res://scenes/ui/overlays/level_up/level_up_menu.tscn")
 
 const ICON_PATHS := {
 	"stomp": "res://ability_icons/generated/Dwarf_GroundStomp.png",
@@ -98,7 +99,7 @@ var broodmother_duration := 0.0
 var broodmother_active := false
 var carapace_regen_tick := 0.0
 
-var mole_level := 1
+var mole_level := 0
 var mole_cooldown := 0.0
 var mole_duration := 0.0
 var mole_active := false
@@ -114,7 +115,7 @@ var tunnel_entrance_visual: Node2D
 var tunnel_exit_visual: Node2D
 var worldroot_cooldown := 0.0
 
-var undead_summon_level := 1
+var undead_summon_level := 0
 var undead_summon_cooldown := 0.0
 var grave_might_level := 0
 var soul_harvest_level := 0
@@ -127,6 +128,8 @@ var ability_slots := {}
 var icon_cache := {}
 var current_hud_hero := ""
 var configured_input_player_id := 0
+var starter_choice_open := false
+var learned_hud_signature := ""
 
 func _ready() -> void:
 	player = get_parent() as CharacterBody2D
@@ -152,10 +155,12 @@ func _physics_process(delta: float) -> void:
 	if configured_input_player_id != _player_id():
 		_ensure_inputs()
 	_ensure_hud()
+	_ensure_starter_choice()
 	_update_facing_direction()
 	_tick_cooldowns(delta)
 	var hero := _hero_name()
-	if hero != current_hud_hero:
+	var learned_signature := _learned_ability_signature()
+	if hero != current_hud_hero or learned_signature != learned_hud_signature:
 		_initialize_starting_skill()
 		_rebuild_hud()
 	if bool(player.get("is_dead")):
@@ -236,6 +241,11 @@ func _ensure_input_action(action_name: String, keycode: Key, joy_button: JoyButt
 		InputMap.action_add_event(action_name, joy_event)
 
 func _initialize_starting_skill() -> void:
+	# Single player now begins each expedition by choosing one of three basic
+	# abilities. Other modes retain one automatic starter so co-op never opens two
+	# competing modal menus.
+	if _uses_single_player_starter_choice():
+		return
 	match _hero_name():
 		HERO_DWARF:
 			if int(player.get("stomp_level")) <= 0:
@@ -246,6 +256,88 @@ func _initialize_starting_skill() -> void:
 		HERO_NERUBIAN:
 			if brood_level <= 0:
 				brood_level = 1
+		HERO_DRUID:
+			if mole_level <= 0:
+				mole_level = 1
+		HERO_UNDEAD_KING:
+			if undead_summon_level <= 0:
+				undead_summon_level = 1
+
+func _uses_single_player_starter_choice() -> bool:
+	if _player_id() != 1 or world == null or world.get_parent() == null:
+		return false
+	return world.get_parent().name == "SinglePlayerWorld"
+
+func _ensure_starter_choice() -> void:
+	if not _uses_single_player_starter_choice() or not GameMode.is_siege():
+		return
+	if starter_choice_open or _has_any_learned_basic_ability() or get_tree().paused:
+		return
+	if _starter_options().is_empty():
+		return
+	starter_choice_open = true
+	get_tree().paused = true
+	var menu := LEVEL_UP_MENU_SCENE.instantiate()
+	menu.name = "StarterAbilityChoice"
+	world.add_child(menu)
+	if menu.has_method("setup_for_player"):
+		menu.setup_for_player(player)
+	menu.connect("upgrade_selected", Callable(self, "_on_starter_ability_selected"), CONNECT_ONE_SHOT)
+
+func _on_starter_ability_selected(ability_id: String) -> void:
+	# Ground Stomp is stored on Player for legacy combat compatibility; every
+	# other starter is owned directly by this controller.
+	if ability_id == "stomp" and int(player.get("stomp_level")) <= 0:
+		player.set("stomp_level", 1)
+	starter_choice_open = false
+	call_deferred("_rebuild_hud")
+
+func _has_any_learned_basic_ability() -> bool:
+	match _hero_name():
+		HERO_DWARF:
+			return int(player.get("stomp_level")) > 0 or hammer_level > 0 or bash_level > 0
+		HERO_SHAMAN:
+			return totem_level > 0 or chain_level > 0 or wisdom_level > 0
+		HERO_NERUBIAN:
+			return brood_level > 0 or web_level > 0 or carapace_level > 0
+		HERO_DRUID:
+			return mole_level > 0 or tunnel_level > 0 or deep_roots_level > 0
+		HERO_UNDEAD_KING:
+			return undead_summon_level > 0 or grave_might_level > 0 or soul_harvest_level > 0
+	return true
+
+func _ability_is_learned(ability_id: String) -> bool:
+	match ability_id:
+		"stomp": return int(player.get("stomp_level")) > 0
+		"hammer": return hammer_level > 0
+		"bash": return bash_level > 0
+		"avatar": return avatar_level > 0
+		"totem": return totem_level > 0
+		"chain": return chain_level > 0
+		"wisdom": return wisdom_level > 0
+		"ascendance": return ascendance_level > 0
+		"brood": return brood_level > 0
+		"web": return web_level > 0
+		"carapace": return carapace_level > 0
+		"broodmother": return broodmother_level > 0
+		"mole": return mole_level > 0
+		"tunnel": return tunnel_level > 0
+		"deep_roots": return deep_roots_level > 0
+		"worldroot": return worldroot_level > 0
+		"raise_dead": return undead_summon_level > 0
+		"grave_might": return grave_might_level > 0
+		"soul_harvest": return soul_harvest_level > 0
+		"death_march": return death_march_level > 0
+	return false
+
+func _learned_ability_signature() -> String:
+	return "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [
+		_hero_name(), int(player.get("stomp_level")), hammer_level, bash_level, avatar_level,
+		totem_level, chain_level, wisdom_level, ascendance_level,
+		brood_level, web_level, carapace_level, broodmother_level,
+		mole_level, tunnel_level, deep_roots_level, worldroot_level,
+		undead_summon_level, grave_might_level, soul_harvest_level + death_march_level
+	]
 
 func _tick_cooldowns(delta: float) -> void:
 	hammer_cooldown = max(0.0, hammer_cooldown - delta)
@@ -1152,6 +1244,8 @@ func _cancel_temporary_forms() -> void:
 		_end_mole_form()
 
 func get_level_up_options() -> Array:
+	if starter_choice_open:
+		return _starter_options()
 	var options := []
 	match _hero_name():
 		HERO_DWARF:
@@ -1190,6 +1284,40 @@ func get_level_up_options() -> Array:
 				_option("death_march", "Death March", "Raise reinforcements and empower the entire army", death_march_level, 1, ULTIMATE_REQUIRED_LEVEL)
 			]
 	return options
+
+func _starter_options() -> Array:
+	match _hero_name():
+		HERO_DWARF:
+			return [
+				_option("stomp", "Ground Stomp", "Area damage and stun", int(player.get("stomp_level")), MAX_BASIC_LEVEL, 0),
+				_option("hammer", "Throwing Hammer", "Ranged stun that breaks soft blocks", hammer_level, MAX_BASIC_LEVEL, 0),
+				_option("bash", "Dwarven Bash", "Every third attack or mined block is empowered", bash_level, MAX_BASIC_LEVEL, 0),
+			]
+		HERO_SHAMAN:
+			return [
+				_option("totem", "Totemic Invocation", "Choose Dig, Heal, Radar, or Gem totem", totem_level, MAX_BASIC_LEVEL, 0),
+				_option("chain", "Chain Lightning", "Lightning jumps between nearby enemies", chain_level, MAX_BASIC_LEVEL, 0),
+				_option("wisdom", "Ancestral Wisdom", "Improves totems and grants Intelligence", wisdom_level, MAX_BASIC_LEVEL, 0),
+			]
+		HERO_NERUBIAN:
+			return [
+				_option("brood", "Spawn Brood", "More, faster, longer-lived mining spiders", brood_level, MAX_BASIC_LEVEL, 0),
+				_option("web", "Web Burst", "Damage, root, and slow nearby enemies", web_level, MAX_BASIC_LEVEL, 0),
+				_option("carapace", "Worker Carapace", "Toughens the hero and improves spider digging", carapace_level, MAX_BASIC_LEVEL, 0),
+			]
+		HERO_DRUID:
+			return [
+				_option("mole", "Mole Form", "Transform for faster digging", mole_level, MAX_BASIC_LEVEL, 0),
+				_option("tunnel", "Burrow Tunnel", "Place linked tunnel openings", tunnel_level, MAX_BASIC_LEVEL, 0),
+				_option("deep_roots", "Deep Roots", "Gain health and natural recovery", deep_roots_level, MAX_BASIC_LEVEL, 0),
+			]
+		HERO_UNDEAD_KING:
+			return [
+				_option("raise_dead", "Raise Dead", "Summon an undead miner", undead_summon_level, MAX_BASIC_LEVEL, 0),
+				_option("grave_might", "Grave Might", "Empower the undead host", grave_might_level, MAX_BASIC_LEVEL, 0),
+				_option("soul_harvest", "Soul Harvest", "Minion damage heals the king", soul_harvest_level, MAX_BASIC_LEVEL, 0),
+			]
+	return []
 
 func _option(id: String, title: String, description: String, level_value: int, max_level: int, required_level: int) -> Dictionary:
 	var enabled := level_value < max_level and (required_level <= 0 or int(player.get("level")) >= required_level)
@@ -1267,8 +1395,9 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 		"death_march":
 			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
 				death_march_level = 1
+	starter_choice_open = false
 	_refresh_stats_hud()
-	_update_ability_hud()
+	_rebuild_hud()
 
 func _is_mobile_runtime() -> bool:
 	var is_mobile := OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
@@ -1292,11 +1421,14 @@ func _ensure_hud() -> void:
 	ability_bar.name = "HeroAbilityBarP%d" % _player_id()
 	ability_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	var mobile_runtime := _is_mobile_runtime()
-	ability_bar.offset_left = -326.0
-	ability_bar.offset_top = (-182.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
-	ability_bar.offset_right = -20.0
-	ability_bar.offset_bottom = (-106.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
-	ability_bar.add_theme_constant_override("separation", 8)
+	# Mobile abilities share the same compact card language as the pick/drop
+	# controls. Three active abilities fit in a single row without pushing into
+	# the browser safe area; desktop keeps the wider legacy footprint.
+	ability_bar.offset_left = (-198.0 if mobile_runtime else -326.0)
+	ability_bar.offset_top = (-74.0 if mobile_runtime else -96.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.offset_right = -18.0
+	ability_bar.offset_bottom = (-18.0 if mobile_runtime else -20.0) - (78.0 if _player_id() > 1 else 0.0)
+	ability_bar.add_theme_constant_override("separation", 6 if mobile_runtime else 8)
 	ability_bar.alignment = BoxContainer.ALIGNMENT_END
 	hud.add_child(ability_bar)
 	_rebuild_hud()
@@ -1349,12 +1481,17 @@ func _rebuild_hud() -> void:
 				["death_march", "Death March", "T / LB"]
 			]
 	var mobile_runtime := _is_mobile_runtime()
-	ability_bar.visible = definitions.size() > 0
+	var learned_definitions := []
 	for definition in definitions:
+		if _ability_is_learned(str(definition[0])):
+			learned_definitions.append(definition)
+	ability_bar.visible = learned_definitions.size() > 0
+	for definition in learned_definitions:
 		var ability_id := str(definition[0])
 		if mobile_runtime and _mobile_action_for_ability(ability_id) == "":
 			continue
 		ability_slots[ability_id] = _create_ability_slot(ability_id, str(definition[1]), str(definition[2]))
+	learned_hud_signature = _learned_ability_signature()
 	_update_ability_hud()
 
 func _mobile_action_for_ability(ability: String) -> String:
@@ -1368,20 +1505,21 @@ func _mobile_action_for_ability(ability: String) -> String:
 
 func _create_ability_slot(ability: String, display_name: String, key_text: String) -> PanelContainer:
 	var slot := PanelContainer.new()
-	slot.custom_minimum_size = ICON_SIZE
+	var mobile_runtime := _is_mobile_runtime()
+	var slot_size := Vector2(56, 56) if mobile_runtime else ICON_SIZE
+	slot.custom_minimum_size = slot_size
 	slot.tooltip_text = display_name
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.055, 0.05, 0.92)
-	style.border_color = Color(0.62, 0.47, 0.25, 1.0)
+	style.bg_color = Color(0.035, 0.045, 0.06, 0.94) if mobile_runtime else Color(0.06, 0.055, 0.05, 0.92)
+	style.border_color = Color(0.95, 0.72, 0.28, 0.96) if mobile_runtime else Color(0.62, 0.47, 0.25, 1.0)
 	style.set_border_width_all(2)
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
+	style.set_corner_radius_all(11 if mobile_runtime else 6)
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 4
 	slot.add_theme_stylebox_override("panel", style)
 	var root := Control.new()
 	root.name = "Root"
-	root.custom_minimum_size = ICON_SIZE
+	root.custom_minimum_size = slot_size
 	slot.add_child(root)
 	var icon := TextureRect.new()
 	icon.name = "Icon"
@@ -1389,10 +1527,10 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	icon.offset_left = 5
-	icon.offset_top = 5
-	icon.offset_right = -5
-	icon.offset_bottom = -5
+	icon.offset_left = 5 if not mobile_runtime else 6
+	icon.offset_top = 5 if not mobile_runtime else 6
+	icon.offset_right = -5 if not mobile_runtime else -6
+	icon.offset_bottom = -5 if not mobile_runtime else -6
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(icon)
 	var overlay := ColorRect.new()
@@ -1425,7 +1563,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	key_label.offset_top = -17.0
 	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key_label.text = key_text
-	key_label.visible = not _is_mobile_runtime()
+	key_label.visible = not mobile_runtime
 	key_label.add_theme_font_size_override("font_size", 9)
 	key_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.55))
 	key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1440,7 +1578,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	level_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.55))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(level_label)
-	if _is_mobile_runtime():
+	if mobile_runtime:
 		var action_name := _mobile_action_for_ability(ability)
 		if action_name != "":
 			var touch_button := Button.new()
@@ -1495,6 +1633,10 @@ func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldo
 	var timer: Node = slot.get_node_or_null("Root/Timer")
 	var level_label: Node = slot.get_node_or_null("Root/Level")
 	var locked := level_value <= 0
+	if _is_mobile_runtime():
+		# Touch HUD shows usable actions only. Locked/passive future skills remain in
+		# the upgrade menu until they become actionable.
+		slot.visible = not locked
 	if icon:
 		icon.modulate = Color(1.2, 0.92, 0.42, 1.0) if active else (Color(0.38, 0.38, 0.38, 0.85) if locked else Color.WHITE)
 	if overlay:

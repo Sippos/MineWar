@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "purpose": "Calm packed-earth forms with sparse stones and reusable edge/front details.",
+  "legend": {
+    ".": "transparent",
+    "O": "outline",
+    "S": "deep_shadow",
+    "D": "easy_dark",
+    "M": "easy_mid",
+    "L": "easy_light",
+    "H": "easy_highlight",
+    "C": "cave"
+  },
+  "stamps": {
+    "packed_plate_a": {"rows": ["..LLLLLLLL....", ".LLHLLLLLDDD..", "LLLLLLLLLDDDD.", "MLLLLLLLDDDSS.", "MMLLLLDDDSSS..", "..DDDDSSS....."]},
+    "packed_plate_b": {"rows": ["....LLLLLLL...", "..LLLLHLLLLDD.", ".LLLLLLLLDDDDD", "MLLLLLLDDDDSS.", "MMLLLDDDDSS...", "...DDDSSS....."]},
+    "medium_clod_a": {"rows": ["..OOOOO..", ".OLLLLDO.", "OLHLLDDDO", "OLLLDDD.O", ".ODDDSSO.", "..OOO..."]},
+    "medium_clod_b": {"rows": ["...OOOO..", ".OOLLLDO.", "OLHLLDDDO", "OLLLLDD.O", ".ODDDSSO.", "..OOO..."]},
+    "small_rock_a": {"rows": [".OOOO.", "OLHLDO", "OLLDDO", ".OSSO."]},
+    "small_rock_b": {"rows": ["..OOO.", ".OLHLO", "OLLLDO", ".ODSO."]},
+    "cavity_a": {"rows": [".OOOOO.", "OSSSSSO", "OSCCSSO", ".OSSSO."]},
+    "edge_chip_a": {"rows": ["..HH....", ".HLLH...", "OLLLDO..", ".ODDSO.."]},
+    "edge_chip_b": {"rows": [".HHH....", "HLLLH...", "OLLLDDO.", ".ODDSO.."]},
+    "ledge_clod": {"rows": ["HHHHHHHH", "LLLLLLDD", "LLLLDDDD", "OODDDDSS", "..OOSSS."]},
+    "wall_strata_a": {"rows": ["LLLLLLLLLLLL", "LLLDDDLLLLDD", "DDDDDDDDDDDD", "MMDMMMMDDDDD", "DDDSSDDDDSSS"]},
+    "wall_strata_b": {"rows": ["LLLLDDLLLLLL", "LLDDDDLLLDDD", "DDDDDDDDDDDD", "MDDDMMMMDDDD", "DDSSSDDDDSSS"]},
+    "hanging_shard_a": {"rows": ["OOO", "DSO", ".SO", ".O."]},
+    "hanging_shard_b": {"rows": [".OO", "ODS", "OS.", "O.."]},
+    "root_fragment": {"rows": ["O....", ".O...", "..O..", "..OO.", "...O."]}
+  }
+}

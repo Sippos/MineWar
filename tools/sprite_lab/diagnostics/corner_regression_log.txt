@@ -1,0 +1,68 @@
+=== Dome Corner Regression Test ===
+Date: 2026-07-21T18:35:13
+
+--- Testing tier: UNMINEABLE ---
+  ✓ stamp_load_unmineable: All 3 stamps loaded for unmineable
+  ✓ output_size_unmineable: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_unmineable: Format is RGBA8
+  ✓ has_content_unmineable: Hole corner has visible pixels
+  ✓ rim_alignment_unmineable: Rim pixels found near y=15 (±2px tolerance)
+  ✓ regen_size_unmineable: Regenerated corner is 32x32
+  ✓ regen_rim_unmineable: Regenerated corner rim at y=15 (or empty)
+  ✓ no_stray_unmineable: Stray pixels outside shift margin: 0 (allowed ≤24)
+  ✓ builder_validate_unmineable: Builder validation: Rim aligned at y=15
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/unmineable_hole_corner_test.png
+--- Testing tier: EASY ---
+  ✓ stamp_load_easy: All 3 stamps loaded for easy
+  ✓ output_size_easy: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_easy: Format is RGBA8
+  ✓ has_content_easy: Hole corner has visible pixels
+  ✓ rim_alignment_easy: Rim pixels found near y=15 (±2px tolerance)
+  ✓ regen_size_easy: Regenerated corner is 32x32
+  ✓ regen_rim_easy: Regenerated corner rim at y=15 (or empty)
+  ✓ no_stray_easy: Stray pixels outside shift margin: 0 (allowed ≤24)
+  ✓ builder_validate_easy: Builder validation: Rim aligned at y=15
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/easy_hole_corner_test.png
+--- Testing tier: MEDIUM ---
+  ✓ stamp_load_medium: All 3 stamps loaded for medium
+  ✓ output_size_medium: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_medium: Format is RGBA8
+  ✓ has_content_medium: Hole corner has visible pixels
+  ✓ rim_alignment_medium: Rim pixels found near y=15 (±2px tolerance)
+  ✓ regen_size_medium: Regenerated corner is 32x32
+  ✓ regen_rim_medium: Regenerated corner rim at y=15 (or empty)
+  ✓ no_stray_medium: Stray pixels outside shift margin: 6 (allowed ≤24)
+  ✓ builder_validate_medium: Builder validation: Rim aligned at y=15
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/medium_hole_corner_test.png
+--- Testing tier: HARD ---
+  ✓ stamp_load_hard: All 3 stamps loaded for hard
+  ✓ output_size_hard: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_hard: Format is RGBA8
+  ✓ has_content_hard: Hole corner has visible pixels
+  ✓ rim_alignment_hard: Rim pixels found near y=15 (±2px tolerance)
+  ✓ regen_size_hard: Regenerated corner is 32x32
+  ✓ regen_rim_hard: Regenerated corner rim at y=15 (or empty)
+  ✓ no_stray_hard: Stray pixels outside shift margin: 18 (allowed ≤24)
+  ✓ builder_validate_hard: Builder validation: Rim aligned at y=15
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/hard_hole_corner_test.png
+--- Testing tier: GEMS ---
+  ✓ stamp_load_gems: All 3 stamps loaded for gems
+  ✓ output_size_gems: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_gems: Format is RGBA8
+  ✓ has_content_gems: Hole corner has visible pixels
+  ✓ rim_alignment_gems: Rim pixels found near y=15 (±2px tolerance)
+  ✓ regen_size_gems: Regenerated corner is 32x32
+  ✓ regen_rim_gems: Regenerated corner rim at y=15 (or empty)
+  ✓ no_stray_gems: Stray pixels outside shift margin: 0 (allowed ≤24)
+  ✓ builder_validate_gems: Builder validation: Rim aligned at y=15
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/gems_hole_corner_test.png
+--- Testing tier: CRACKS ---
+  ✓ stamp_load_cracks: All 3 stamps loaded for cracks
+  ✓ output_size_cracks: Hole corner is 32x32 (expected 32x32)
+  ✓ output_format_cracks: Format is RGBA8
+  ✓ empty_tier_corner_cracks: Empty border produces empty hole corner
+  (Tier cracks has empty border — skipping rim alignment tests)
+  ✓ builder_validate_cracks: Builder validation: Both border and corner are empty (overlay tier)
+  Saved diagnostic: res://tools/sprite_lab/diagnostics/cracks_hole_corner_test.png
+
+=== Results: 50 passed, 0 failed ===

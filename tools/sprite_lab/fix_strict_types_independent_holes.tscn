@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://tools/sprite_lab/fix_strict_types_independent_holes.gd" type="Script" id="1"]
+
+[node name="FixStrictTypesIndependentHoles" type="Node"]
+script = ExtResource("1")

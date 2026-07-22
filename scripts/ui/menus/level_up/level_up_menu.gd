@@ -4,11 +4,22 @@ signal upgrade_selected(upgrade_type: String)
 
 const HERO_SCRIPT = preload("res://hero_abilities.gd")
 const MENU_TEX = preload("res://assets/sprites/ui/common/MenuPanel.png")
+const MENU_FONT = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
+const DECORATIVE_FONT = preload("res://assets/fonts/grenze_gotisch/GrenzeGotisch-Variable.ttf")
 
 var player: Node
 var controller: Node
 var grid: GridContainer
 var compact := false
+var cached_button_font: FontVariation = null
+
+func _get_button_font() -> FontVariation:
+	if cached_button_font == null:
+		cached_button_font = FontVariation.new()
+		cached_button_font.base_font = MENU_FONT
+		cached_button_font.variation_opentype = {"wght": 900.0}
+		cached_button_font.variation_embolden = 0.85
+	return cached_button_font
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -60,7 +71,7 @@ func _build_visuals() -> void:
 		child.queue_free()
 	var view_size := get_viewport().get_visible_rect().size
 	compact = view_size.x < 900.0
-	var max_panel_width := 620.0 if compact else 900.0
+	var max_panel_width := 620.0 if compact else 960.0
 	var width: float = min(max_panel_width, max(390.0, view_size.x - 28.0))
 	var height: float = min(560.0, max(430.0, view_size.y - 28.0))
 	panel.offset_left = -width * 0.5
@@ -88,7 +99,8 @@ func _build_visuals() -> void:
 	var title := Label.new()
 	title.text = "%s — Choose Ability" % str(player.get("current_hero_name"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24 if compact else 29)
+	title.add_theme_font_override("font", DECORATIVE_FONT)
+	title.add_theme_font_size_override("font_size", 30 if compact else 38)
 	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.46))
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 4)
@@ -99,13 +111,16 @@ func _build_visuals() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(scroll)
 
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(center)
+
 	grid = GridContainer.new()
-	grid.columns = 1 if compact else 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid.columns = 1 if compact else 3
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8 if compact else 10)
-	scroll.add_child(grid)
+	center.add_child(grid)
 
 	var options: Array = controller.call("get_level_up_options")
 	if options.is_empty():
@@ -121,33 +136,34 @@ func _build_visuals() -> void:
 
 func _ability_card(option: Dictionary) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 78 if compact else 155)
+	button.custom_minimum_size = Vector2(180, 220) if compact else Vector2(260, 280)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
 	button.disabled = not bool(option.get("enabled", true))
 	button.text = ""
 	button.clip_contents = true
 	_apply_card_style(button)
 
-	var row := HBoxContainer.new()
+	var row := VBoxContainer.new()
 	row.set_anchors_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 10
+	row.offset_left = 6
 	row.offset_top = 8
-	row.offset_right = -10
+	row.offset_right = -6
 	row.offset_bottom = -8
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 4)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	button.add_child(row)
 
 	var icon_holder := CenterContainer.new()
-	icon_holder.custom_minimum_size = Vector2(54, 54) if compact else Vector2(72, 72)
+	icon_holder.custom_minimum_size = Vector2(80, 80) if compact else Vector2(120, 120)
 	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon_holder)
 	var path := str(option.get("icon_path", ""))
 	if path != "" and ResourceLoader.exists(path):
 		var icon := TextureRect.new()
 		icon.texture = load(path)
-		icon.custom_minimum_size = Vector2(46, 46) if compact else Vector2(64, 64)
+		icon.custom_minimum_size = Vector2(72, 72) if compact else Vector2(108, 108)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -155,10 +171,10 @@ func _ability_card(option: Dictionary) -> Button:
 	else:
 		var fallback := Label.new()
 		fallback.text = "?"
-		fallback.custom_minimum_size = Vector2(46, 46) if compact else Vector2(64, 64)
+		fallback.custom_minimum_size = Vector2(72, 72) if compact else Vector2(108, 108)
 		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback.add_theme_font_size_override("font_size", 28 if compact else 38)
+		fallback.add_theme_font_size_override("font_size", 48 if compact else 72)
 		fallback.add_theme_color_override("font_color", Color(0.85, 0.68, 0.3))
 		fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon_holder.add_child(fallback)
@@ -175,8 +191,10 @@ func _ability_card(option: Dictionary) -> Button:
 	var heading := Label.new()
 	heading.text = "%s%s" % [str(option.get("title", "Ability")), suffix]
 	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_theme_font_size_override("font_size", 16 if compact else 18)
+	heading.add_theme_font_override("font", _get_button_font())
+	heading.add_theme_font_size_override("font_size", 18 if compact else 22)
 	heading.add_theme_color_override("font_color", Color(0.62, 0.59, 0.54) if button.disabled else Color(1.0, 0.9, 0.68))
 	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_box.add_child(heading)
@@ -185,8 +203,10 @@ func _ability_card(option: Dictionary) -> Button:
 	var description := Label.new()
 	description.text = reason if reason != "" else str(option.get("description", ""))
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	description.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	description.add_theme_font_override("font", _get_button_font())
 	description.add_theme_font_size_override("font_size", 13 if compact else 15)
 	description.add_theme_color_override("font_color", Color(0.75, 0.55, 0.45) if reason != "" else Color(0.88, 0.82, 0.7))
 	description.mouse_filter = Control.MOUSE_FILTER_IGNORE

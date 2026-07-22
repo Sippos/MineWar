@@ -19,7 +19,7 @@ var warned_ancient_stone := false
 var base_jetpack_thrust = 1500.0
 const JUMP_VELOCITY = -400.0
 const AUTO_DEFEND_DISTANCE := 140.0
-const MINING_FEEDBACK_INTERVAL := 0.28
+const DEFAULT_DIG_IMPACT_FRAME := 5
 
 const GEM_SCENE = preload("res://scenes/entities/collectibles/gems/gem.tscn")
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
@@ -49,12 +49,16 @@ var stomp_level = 0
 var stomp_cooldown_timer = 0.0
 
 var dig_timer = 0.0
-var mining_feedback_timer = 0.0
+var current_dig_target_time := 0.0
+var current_dig_swing_time := 0.0
+var dig_break_queued := false
 var currently_digging_cell = null
 var walk_timer = 0.0
 var action_anim_timer = 0.0
 var action_anim_active = false
 var current_anim_row = 0
+var dig_animation_last_frame := -1
+var dig_animation_last_cycle := -1
 
 var current_hero_name = "Dwarf"
 var current_sprite_scale = Vector2(0.85, 0.85)
@@ -66,26 +70,30 @@ const HERO_ANIMATIONS = {
 		"walk_fps": 12.0,
 		"attack_frames": 8,
 		"attack_fps": 8.0,
-		"attack_hold_frames": 2.0
+		"attack_hold_frames": 2.0,
+		"dig_impact_frame": 6
 	},
 	"Mech": {
 		"walk_frames": 8,
 		"walk_fps": 12.0,
 		"attack_frames": 8,
-		"attack_fps": 12.0
+		"attack_fps": 12.0,
+		"dig_impact_frame": 4
 	},
 	"Shaman": {
 		"walk_frames": 8,
 		"walk_fps": 11.0,
 		"attack_frames": 8,
 		"attack_fps": 8.0,
-		"attack_hold_frames": 1.0
+		"attack_hold_frames": 1.0,
+		"dig_impact_frame": 4
 	},
 	"Nerubian": {
 		"walk_frames": 8,
 		"walk_fps": 12.0,
 		"attack_frames": 8,
-		"attack_fps": 8.0
+		"attack_fps": 8.0,
+		"dig_impact_frame": 5
 	},
 	"Druid": {
 		"walk_frames": 8,
@@ -93,17 +101,20 @@ const HERO_ANIMATIONS = {
 		"attack_frames": 8,
 		"attack_fps": 8.0,
 		"attack_hold_frames": 1.0,
+		"dig_impact_frame": 5,
 		"mole_walk_frames": 8,
 		"mole_walk_fps": 10.0,
 		"mole_attack_frames": 8,
 		"mole_attack_fps": 8.0,
-		"mole_attack_hold_frames": 1.0
+		"mole_attack_hold_frames": 1.0,
+		"mole_dig_impact_frame": 5
 	},
 	"Undead King": {
 		"walk_frames": 8,
 		"walk_fps": 12.0,
 		"attack_frames": 8,
-		"attack_fps": 12.0
+		"attack_fps": 12.0,
+		"dig_impact_frame": 4
 	}
 }
 
@@ -248,9 +259,7 @@ func _uses_mirrored_action_animation() -> bool:
 	return false
 
 func _is_currently_performing_action() -> bool:
-	if current_hero_name == "Nerubian":
-		return currently_attacking_enemy != null or nerubian_cast_timer > 0.0
-	return currently_attacking_enemy != null or currently_digging_cell != null
+	return currently_attacking_enemy != null or nerubian_cast_timer > 0.0 or currently_digging_cell != null
 
 func _use_walk_animation_state() -> void:
 	if $Sprite2D.texture != tex_walk:
@@ -423,7 +432,6 @@ func respawn() -> void:
 var can_move = true
 
 func _physics_process(delta: float) -> void:
-	mining_feedback_timer = max(mining_feedback_timer - delta, 0.0)
 	if shaman_spell_cooldown_timer > 0.0:
 		shaman_spell_cooldown_timer -= delta
 	if nerubian_spawn_cooldown_timer > 0.0:
@@ -637,12 +645,16 @@ func _update_action_animation(delta: float) -> void:
 	var attack_fps := float(settings.get("attack_fps", 12.0))
 	var hold_frames: float = maxf(0.0, float(settings.get("attack_hold_frames", 0.0)))
 	var cycle_frames: float = maxf(float(attack_frames), float(attack_frames) + hold_frames)
+	var impact_frame := clampi(int(settings.get("dig_impact_frame", DEFAULT_DIG_IMPACT_FRAME)), 0, attack_frames - 1)
+	if currently_digging_cell != null and current_dig_target_time > 0.0:
+		attack_fps = _get_synchronized_dig_fps(attack_fps, cycle_frames, impact_frame)
 	action_anim_active = true
 	action_anim_timer += delta * attack_fps
 	var cycle_position: float = fmod(action_anim_timer, cycle_frames)
 	var frame_index: int = mini(int(cycle_position), attack_frames - 1)
 	$Sprite2D.flip_h = _uses_mirrored_action_animation()
 	$Sprite2D.frame = _get_action_animation_row() * attack_frames + frame_index
+	_sync_dig_animation_impact(frame_index, cycle_frames, impact_frame)
 
 func _update_mole_walk_animation(delta: float) -> void:
 	var settings := _get_hero_animation_settings()
@@ -658,15 +670,22 @@ func _update_mole_attack_animation(delta: float) -> void:
 	var settings := _get_hero_animation_settings()
 	var attack_frames: int = maxi(1, int(settings.get("mole_attack_frames", 8)))
 	var attack_fps := float(settings.get("mole_attack_fps", 8.0))
+	var impact_frame := clampi(int(settings.get("mole_dig_impact_frame", DEFAULT_DIG_IMPACT_FRAME)), 0, attack_frames - 1)
+	if currently_digging_cell != null and current_dig_target_time > 0.0:
+		attack_fps = _get_synchronized_dig_fps(attack_fps, float(attack_frames), impact_frame)
 	action_anim_active = true
 	action_anim_timer += delta * attack_fps
 	$Sprite2D.flip_h = false
-	$Sprite2D.frame = current_anim_row * attack_frames + (int(action_anim_timer) % attack_frames)
+	var frame_index := int(action_anim_timer) % attack_frames
+	$Sprite2D.frame = current_anim_row * attack_frames + frame_index
+	_sync_dig_animation_impact(frame_index, float(attack_frames), impact_frame)
 
 func _reset_action_animation() -> void:
 	action_anim_timer = 0.0
 	action_anim_active = false
 	magic_orb_last_animation_cycle = -1
+	dig_animation_last_frame = -1
+	dig_animation_last_cycle = -1
 	if has_node("Sprite2D"):
 		var settings := _get_hero_animation_settings()
 		if $Sprite2D.texture == tex_attack:
@@ -712,7 +731,8 @@ func _show_mining_tier_feedback(block_id: int) -> void:
 
 func handle_digging(delta: float) -> void:
 	if current_hero_name == "Nerubian":
-		_stop_digging()
+		# Nerubian claw mining is owned by HeroBalanceController, but it still
+		# uses this player's action sheet for the shared contact cue.
 		return
 	
 	var input_dir = Vector2.ZERO
@@ -751,13 +771,6 @@ func handle_digging(delta: float) -> void:
 					return
 				if currently_digging_cell == cell:
 					dig_timer += delta
-					if mining_feedback_timer <= 0.0 and get_parent().has_method("spawn_mining_feedback"):
-						var impact_position = tile_map.to_global(tile_map.map_to_local(cell))
-						get_parent().spawn_mining_feedback(impact_position)
-						var sound_fx := get_node_or_null("/root/SoundFX")
-						if sound_fx:
-							sound_fx.play_dig_hit(tile_map.get_cell_source_id(cell))
-						mining_feedback_timer = MINING_FEEDBACK_INTERVAL
 					var calculated_dig_time: float = base_dig_time
 					var rpg_mining: Node = _rpg_controller()
 					if rpg_mining != null and rpg_mining.has_method("get_dig_time_multiplier"):
@@ -767,49 +780,38 @@ func handle_digging(delta: float) -> void:
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
 					if current_hero_name == "Druid" and druid_mole_active:
 						calculated_dig_time *= 0.55
+					# Keep the authored swing cadence independent from block hardness.
+					# Harder blocks consume more contacts, rather than stretching this
+					# animation cycle.
+					current_dig_swing_time = calculated_dig_time
 					var block_id := tile_map.get_cell_source_id(cell)
 					var hardness_multiplier := get_block_hardness_multiplier(block_id)
 					if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
 						hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
 					var current_target_dig_time: float = calculated_dig_time * hardness_multiplier
-					var damage_progress = dig_timer / current_target_dig_time
-					var source_id = 7 if damage_progress < 0.66 else 8
-					damage_layer.set_cell(cell, source_id, Vector2i(0, 0))
+					current_dig_target_time = current_target_dig_time
+					var damage_progress = clampf(dig_timer / current_target_dig_time, 0.0, 1.0)
 					var below_cell = Vector2i(cell.x, cell.y + 1)
-					if front_layer.get_cell_source_id(below_cell) != -1:
-						var front_source_id = 13 if damage_progress < 0.66 else 14
-						front_damage_layer.set_cell(below_cell, front_source_id, Vector2i(0, 0))
+					if world and world.get("crack_overlay_manager") != null:
+						world.crack_overlay_manager.set_damage(cell, damage_progress, false)
+						world.crack_overlay_manager.set_damage(below_cell, damage_progress, true)
 					if dig_timer >= current_target_dig_time:
-						tile_map.erase_cell(cell)
-						damage_layer.erase_cell(cell)
-						front_damage_layer.erase_cell(below_cell)
-						var cell_had_gem = get_parent().has_gem(cell)
-						if cell_had_gem and get_parent().has_method("notify_minewars_gem_dug"):
-							get_parent().notify_minewars_gem_dug(cell)
-						if get_parent().has_method("notify_tutorial_cell_dug"):
-							get_parent().notify_tutorial_cell_dug(cell, cell_had_gem)
-						if get_parent().has_method("try_spawn_cave_reward"):
-							get_parent().try_spawn_cave_reward(cell)
-						if get_parent().has_method("spawn_mining_feedback"):
-							var break_position = tile_map.to_global(tile_map.map_to_local(cell))
-							get_parent().spawn_mining_feedback(break_position, true, cell_had_gem)
-						var break_sound_fx := get_node_or_null("/root/SoundFX")
-						if break_sound_fx:
-							break_sound_fx.play_block_break(cell_had_gem)
-						get_parent().on_cell_dug(cell)
-						var gems_to_spawn = 1 if cell_had_gem else 0
-						if _roll_shaman_gem_bonus():
-							gems_to_spawn += 1
-						_spawn_dug_gems(cell, gems_to_spawn)
-						currently_digging_cell = null
-						dig_timer = 0.0
+						# Do not break from the progress timer. The next visible contact
+						# frame owns the terrain change, dust, and audio as one event.
+						dig_break_queued = true
+						dig_timer = current_target_dig_time
 				else:
 					_stop_digging()
 					currently_digging_cell = cell
 					_show_mining_tier_feedback(tile_map.get_cell_source_id(cell))
 					dig_timer = 0.0
+					current_dig_target_time = 0.0
+					current_dig_swing_time = 0.0
+					dig_break_queued = false
 					action_anim_timer = 0.0
 					action_anim_active = true
+					dig_animation_last_frame = -1
+					dig_animation_last_cycle = -1
 					magic_orb_last_animation_cycle = -1
 			else:
 				_stop_digging()
@@ -844,11 +846,89 @@ func _show_protected_dig_feedback(cell: Vector2i) -> void:
 
 func _stop_digging() -> void:
 	if currently_digging_cell != null:
-		damage_layer.erase_cell(currently_digging_cell)
 		var below_cell = Vector2i(currently_digging_cell.x, currently_digging_cell.y + 1)
-		front_damage_layer.erase_cell(below_cell)
+		var world := get_parent()
+		if world and world.get("crack_overlay_manager") != null:
+			world.crack_overlay_manager.clear_damage(currently_digging_cell, false)
+			world.crack_overlay_manager.clear_damage(below_cell, true)
 		currently_digging_cell = null
 		dig_timer = 0.0
+		current_dig_target_time = 0.0
+		current_dig_swing_time = 0.0
+		dig_break_queued = false
+	dig_animation_last_frame = -1
+	dig_animation_last_cycle = -1
+
+func _get_synchronized_dig_fps(base_fps: float, cycle_frames: float, impact_frame: int) -> float:
+	if current_dig_swing_time <= 0.0:
+		return base_fps
+	# Rock hardness changes hit count, never the authored swing cadence. Keep
+	# the first contact aligned to the normal dirt timing, then repeat the same
+	# action cycle until the tougher block has taken enough contacts.
+	return clampf(float(impact_frame) / maxf(current_dig_swing_time, 0.05), 5.0, 24.0)
+
+func _sync_dig_animation_impact(frame_index: int, cycle_frames: float, impact_frame: int) -> void:
+	if currently_digging_cell == null or cycle_frames <= float(impact_frame):
+		dig_animation_last_frame = frame_index
+		return
+	var cycle := int(action_anim_timer / cycle_frames)
+	var crossed_contact := frame_index >= impact_frame and (dig_animation_last_frame < impact_frame or cycle != dig_animation_last_cycle)
+	if crossed_contact:
+		if dig_break_queued:
+			_finish_queued_dig_at_contact()
+		else:
+			_emit_dig_impact(false, currently_digging_cell, tile_map.get_cell_source_id(currently_digging_cell))
+	dig_animation_last_frame = frame_index
+	dig_animation_last_cycle = cycle
+
+func _finish_queued_dig_at_contact() -> void:
+	if currently_digging_cell == null:
+		return
+	var cell: Vector2i = currently_digging_cell
+	var block_id := tile_map.get_cell_source_id(cell)
+	if block_id == -1:
+		_stop_digging()
+		return
+	var below_cell := Vector2i(cell.x, cell.y + 1)
+	var world := get_parent()
+	var cell_had_gem := bool(world.has_gem(cell))
+	_emit_dig_impact(true, cell, block_id, cell_had_gem)
+	tile_map.erase_cell(cell)
+	if world.get("crack_overlay_manager") != null:
+		world.crack_overlay_manager.clear_damage(cell, false)
+		world.crack_overlay_manager.clear_damage(below_cell, true)
+	if cell_had_gem and world.has_method("notify_minewars_gem_dug"):
+		world.notify_minewars_gem_dug(cell)
+	if world.has_method("notify_tutorial_cell_dug"):
+		world.notify_tutorial_cell_dug(cell, cell_had_gem)
+	if world.has_method("try_spawn_cave_reward"):
+		world.try_spawn_cave_reward(cell)
+	world.on_cell_dug(cell)
+	var gems_to_spawn := 1 if cell_had_gem else 0
+	if _roll_shaman_gem_bonus():
+		gems_to_spawn += 1
+	_spawn_dug_gems(cell, gems_to_spawn)
+	currently_digging_cell = null
+	dig_timer = 0.0
+	current_dig_target_time = 0.0
+	current_dig_swing_time = 0.0
+	dig_break_queued = false
+
+func _emit_dig_impact(strong: bool, cell: Vector2i, block_id: int = 0, gem_reveal: bool = false) -> void:
+	if tile_map == null:
+		return
+	var target_position := tile_map.to_global(tile_map.map_to_local(cell))
+	var contact_direction := global_position.direction_to(target_position)
+	var impact_position := target_position - contact_direction * 22.0
+	var world := get_parent()
+	if world and world.has_method("spawn_mining_feedback"):
+		world.call("spawn_mining_feedback", impact_position, strong, gem_reveal, contact_direction)
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx:
+		if strong:
+			sound_fx.play_block_break(gem_reveal)
+		else:
+			sound_fx.play_dig_hit(block_id)
 
 func _try_spawn_spider_minion() -> void:
 	if current_hero_name != "Nerubian" or is_dead:

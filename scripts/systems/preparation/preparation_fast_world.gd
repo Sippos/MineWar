@@ -4,12 +4,7 @@ extends "res://scripts/systems/world_generation/world_terrain_runtime.gd"
 # deliberately composed hero hall: one rectangular room, three obvious exits,
 # and the same mine continuing beyond those exits.
 
-# Buried resources use tile-sized transparent decals. They read as crystals
-# embedded in an exposed dirt face instead of a scaled-down loose gem/UI icon.
-const GEM_TEXTURE_FACTORY = preload("res://scripts/systems/preparation/gem_indicator_texture_factory.gd")
-const PREPARATION_GEM_EDGE_PATH := "res://assets/sprites/world/terrain/gem_embedded_edge.svg"
-const PREPARATION_GEM_FRONT_PATH := "res://assets/sprites/world/terrain/gem_embedded_front.svg"
-const PREPARATION_GEM_Z_INDEX := 2
+
 const PREPARATION_TUTORIAL_GEM_CELL := Vector2i(0, 9)
 const INPUT_REGISTRATION_META := "single_player_runtime_input_ready"
 
@@ -46,8 +41,6 @@ const ADVENTURE_ROOM_X_MAX := 18
 const ADVENTURE_ROOM_Y_MIN := -4
 const ADVENTURE_ROOM_Y_MAX := 3
 
-var preparation_gem_edge_texture: Texture2D
-var preparation_gem_front_texture: Texture2D
 
 func _init() -> void:
 	# MatchFlow only recognizes committed MineWars runs. The neutral hub,
@@ -85,7 +78,9 @@ func generate_initial_world() -> void:
 		for y in range(WORLD_TOP, WORLD_DEPTH):
 			var cell := Vector2i(x, y)
 			var block_type = 1
-			if y >= 0:
+			if cell.x <= -20 or cell.x >= 19 or cell.y >= 29 or (cell.y <= 1 and cell.x != 0) or cell.y < 0:
+				block_type = 16
+			elif y >= 0:
 				var depth_factor = y / float(WORLD_DEPTH)
 				var n_val = noise.get_noise_2d(x, y)
 				var score = depth_factor + n_val * 0.5
@@ -99,7 +94,7 @@ func generate_initial_world() -> void:
 				astar.set_point_solid(cell, true)
 
 			if y >= 0 and randf() < 0.10:
-				gem_blocks[cell] = {"top": null, "front": null}
+				block_layer.set_cell(cell, BLOCK_GEM, Vector2i.ZERO)
 
 	_ensure_tutorial_gem()
 
@@ -107,6 +102,7 @@ func generate_initial_world() -> void:
 		for y in range(WORLD_TOP, WORLD_DEPTH):
 			update_fog_mask(Vector2i(x, y))
 			update_front_wall(Vector2i(x, y))
+			update_inside_corners(Vector2i(x, y))
 
 	for x in range(-WORLD_WIDTH / 2, WORLD_WIDTH / 2):
 		for y in range(WORLD_TOP, WORLD_DEPTH):
@@ -156,90 +152,8 @@ func get_protected_dig_message(_cell: Vector2i) -> String:
 	return super.get_protected_dig_message(_cell)
 
 func _ensure_tutorial_gem() -> void:
-	if is_vs_mode or gem_blocks.has(PREPARATION_TUTORIAL_GEM_CELL):
+	if is_vs_mode or block_layer.get_cell_source_id(PREPARATION_TUTORIAL_GEM_CELL) == BLOCK_GEM:
 		return
-	block_layer.set_cell(PREPARATION_TUTORIAL_GEM_CELL, 1, Vector2i(0, 0))
+	block_layer.set_cell(PREPARATION_TUTORIAL_GEM_CELL, BLOCK_GEM, Vector2i.ZERO)
 	if astar.is_in_bounds(PREPARATION_TUTORIAL_GEM_CELL.x, PREPARATION_TUTORIAL_GEM_CELL.y):
 		astar.set_point_solid(PREPARATION_TUTORIAL_GEM_CELL, true)
-	gem_blocks[PREPARATION_TUTORIAL_GEM_CELL] = {"top": null, "front": null}
-
-func _normalize_gem_indicator_sprites() -> void:
-	for raw_cell: Variant in gem_blocks.keys():
-		_refresh_gem_indicator(Vector2i(raw_cell))
-
-func _ensure_gem_indicator_textures() -> bool:
-	if preparation_gem_edge_texture == null:
-		preparation_gem_edge_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_EDGE_PATH)
-	if preparation_gem_front_texture == null:
-		preparation_gem_front_texture = GEM_TEXTURE_FACTORY.load_svg_texture(PREPARATION_GEM_FRONT_PATH)
-	return preparation_gem_edge_texture != null and preparation_gem_front_texture != null
-
-func _ensure_lazy_gem_sprites(cell: Vector2i) -> Dictionary:
-	var sprites: Dictionary = gem_blocks.get(cell, {"top": null, "front": null})
-	var top_sprite := sprites.get("top") as Sprite2D
-	var front_sprite := sprites.get("front") as Sprite2D
-	if not _ensure_gem_indicator_textures():
-		return sprites
-
-	if not is_instance_valid(top_sprite):
-		top_sprite = Sprite2D.new()
-		top_sprite.name = "GemTop_%d_%d" % [cell.x, cell.y]
-		top_sprite.texture = preparation_gem_edge_texture
-		top_sprite.region_enabled = false
-		top_sprite.scale = Vector2.ONE
-		top_sprite.z_index = PREPARATION_GEM_Z_INDEX
-		top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		top_sprite.visible = false
-		add_child(top_sprite)
-		sprites["top"] = top_sprite
-
-	if not is_instance_valid(front_sprite):
-		front_sprite = Sprite2D.new()
-		front_sprite.name = "GemFront_%d_%d" % [cell.x, cell.y]
-		front_sprite.texture = preparation_gem_front_texture
-		front_sprite.region_enabled = false
-		front_sprite.offset = Vector2.ZERO
-		front_sprite.scale = Vector2.ONE
-		front_sprite.z_index = PREPARATION_GEM_Z_INDEX
-		front_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		front_sprite.visible = false
-		add_child(front_sprite)
-		sprites["front"] = front_sprite
-
-	gem_blocks[cell] = sprites
-	return sprites
-
-func _refresh_gem_indicator(cell: Vector2i) -> void:
-	if not gem_blocks.has(cell):
-		return
-
-	var solid := block_layer.get_cell_source_id(cell) != -1
-	var top_open := solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) == -1
-	var right_open := solid and block_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) == -1
-	var bottom_open := solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) == -1
-	var left_open := solid and block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
-	var show_front := bottom_open
-	var show_top := solid and not show_front and (top_open or right_open or left_open)
-
-	var sprites: Dictionary = gem_blocks[cell]
-	var top_sprite := sprites.get("top") as Sprite2D
-	var front_sprite := sprites.get("front") as Sprite2D
-	if (show_top or show_front) and (not is_instance_valid(top_sprite) or not is_instance_valid(front_sprite)):
-		sprites = _ensure_lazy_gem_sprites(cell)
-		top_sprite = sprites.get("top") as Sprite2D
-		front_sprite = sprites.get("front") as Sprite2D
-
-	if is_instance_valid(top_sprite):
-		top_sprite.visible = show_top
-		if show_top:
-			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell))
-			if top_open:
-				top_sprite.rotation_degrees = 0.0
-			elif left_open and not right_open:
-				top_sprite.rotation_degrees = -90.0
-			else:
-				top_sprite.rotation_degrees = 90.0
-
-	if is_instance_valid(front_sprite):
-		_position_front_gem_sprite(front_sprite, cell)
-		front_sprite.visible = show_front

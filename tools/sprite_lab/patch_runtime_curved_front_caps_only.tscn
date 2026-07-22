@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/patch_runtime_curved_front_caps_only.gd" id="1"]
+
+[node name="PatchRuntimeCurvedFrontCapsOnly" type="Node"]
+script = ExtResource("1")

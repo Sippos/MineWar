@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "legend": {
+    ".": "transparent",
+    "O": "outline",
+    "S": "deep_shadow",
+    "D": "easy_dark",
+    "M": "easy_mid",
+    "L": "easy_light",
+    "H": "easy_highlight",
+    "C": "cave"
+  },
+  "stamps": {
+    "large_clod_a": {"rows": ["...OOOOOO...", ".OOLLLLLLOO.", "OOLHHLLLLDOO", "OLLLLLLDDDDO", "OLLLLDDDDD.O", "OODDDDDDDOO.", ".OOSSSSOO...", "...OOOO....."]},
+    "large_clod_b": {"rows": ["..OOOOOOO..", "OOLLLLLLLO.", "OLHLLLLDDOO", "OLLLLLDDDDO", "OLLLDDDDD.O", "OODDDDDD.O.", ".OOSSSSOO..", "...OOOO...."]},
+    "large_clod_c": {"rows": ["....OOOO....", "..OOLLLLOO..", ".OLHLLLLLDO.", "OLLLLLDDDDOO", "OLLLLDDDDDDO", ".OODDDDDD.O.", "..OOSSSOO...", "....OOO....."]},
+    "medium_clod_a": {"rows": ["..OOOO..", ".OLLLLO.", "OLHLLDDO", "OLLLDDDO", ".ODDDDO.", "..OSSO.."]},
+    "medium_clod_b": {"rows": [".OOOOO..", "OLLLLLO.", "OLHLLDDO", "OLLLDDDO", ".ODDDDO.", "..OSSO.."]},
+    "medium_clod_c": {"rows": ["...OOO..", ".OOLLLLO", "OLHLLDDO", "OLLLDDDO", ".ODDDDO.", "..OSSO.."]},
+    "small_rock_a": {"rows": [".OOO.", "OLHLO", "OLLDO", ".ODO."]},
+    "small_rock_b": {"rows": ["..OOO.", ".OLHLO", "OLLLDO", ".ODDO.", "..OO.."]},
+    "small_rock_c": {"rows": [".OOOO.", "OLHLDO", "OLLDDO", ".ODDO."]},
+    "cavity_a": {"rows": [".OOOOO.", "OSSSSSO", "OSCCSSO", ".OSSSO.", "..OOO.."]},
+    "cavity_b": {"rows": [".OOOO.", "OSSSSO", "OSCCSO", ".OSSO."]},
+    "edge_chunk_a": {"rows": ["..HHH...", ".HLLLHH.", "OLLLDDDO", ".ODDDDO.", "..OSSO.."]},
+    "edge_chunk_b": {"rows": [".HHHH..", "HLLLLH.", "OLLLDDO", ".ODDDO.", "..OSO.."]},
+    "corner_chunk": {"rows": ["HHH....", "HLLHH..", "LLLDDO.", "LLDDDO.", "ODDDO..", ".OSO..."]},
+    "pebble_a": {"rows": [".O.", "OLO", ".DO"]},
+    "pebble_b": {"rows": [".OO.", "OLDO", ".OO."]},
+    "root_fragment": {"rows": ["O.....", ".O....", "..OO..", "...O..", "....OO"]}
+  }
+}

@@ -1,57 +1,163 @@
-[gd_scene format=3]
+[gd_scene load_steps=8 format=3]
 
-[node name="OnlineLobby" type="Control" unique_id=1502723169]
+[ext_resource type="Script" path="res://online_lobby.gd" id="1_script"]
+[ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/MenuPanel.png" id="3_panel"]
+[ext_resource type="Script" path="res://scripts/ui/menus/main/main_menu_background_loader.gd" id="4_background"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBox_lobby"]
+texture = ExtResource("3_panel")
+texture_margin_left = 32.0
+texture_margin_top = 32.0
+texture_margin_right = 32.0
+texture_margin_bottom = 32.0
+content_margin_left = 34.0
+content_margin_top = 26.0
+content_margin_right = 34.0
+content_margin_bottom = 26.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_input"]
+bg_color = Color(0.035, 0.025, 0.02, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.42, 0.18, 0.92)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 14.0
+content_margin_right = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_input_focus"]
+bg_color = Color(0.045, 0.032, 0.022, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.72, 0.22, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 14.0
+content_margin_right = 14.0
+
+[node name="OnlineLobby" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
 
-[node name="@Panel@2" type="Panel" parent="." unique_id=608849549]
+[node name="Dimmer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1037472198]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -150.0
-offset_top = -100.0
-offset_right = 150.0
-offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 15
+mouse_filter = 2
 
-[node name="Label" type="Label" parent="VBoxContainer" unique_id=179804320]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "Online VS Mode (WebRTC)"
-horizontal_alignment = 1
+[node name="Background" type="TextureRect" parent="Dimmer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 6
+mouse_filter = 2
+script = ExtResource("4_background")
 
-[node name="StatusLabel" type="Label" parent="VBoxContainer" unique_id=693735018]
-layout_mode = 2
-text = "Enter a room code to play with a friend"
-horizontal_alignment = 1
+[node name="Shade" type="ColorRect" parent="Dimmer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.005, 0.003, 0.002, 0.48)
 
-[node name="RoomInput" type="LineEdit" parent="VBoxContainer" unique_id=1635654887]
-custom_minimum_size = Vector2(0, 40)
+[node name="Center" type="CenterContainer" parent="Dimmer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Dimmer/Center"]
+custom_minimum_size = Vector2(520, 390)
 layout_mode = 2
-placeholder_text = "Room Code (e.g. APPLE)"
+theme_override_styles/panel = SubResource("StyleBox_lobby")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Dimmer/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 11
 alignment = 1
 
-[node name="ConnectBtn" type="Button" parent="VBoxContainer" unique_id=781818018]
-custom_minimum_size = Vector2(0, 40)
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-text = "Connect"
+theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 26
+text = "ONLINE STRONGHOLD"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="BackBtn" type="Button" parent="VBoxContainer" unique_id=886374998]
-custom_minimum_size = Vector2(0, 40)
+[node name="StatusLabel" type="Label" parent="Dimmer/Center/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
-text = "Back to Main Menu"
+theme_override_colors/font_color = Color(0.88, 0.8, 0.66, 1)
+theme_override_font_sizes/font_size = 16
+text = "HOST OR JOIN WITH A PRIVATE PASSWORD"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="RoomInput" type="LineEdit" parent="Dimmer/Center/Panel/VBoxContainer"]
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(252, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBox_input")
+theme_override_styles/focus = SubResource("StyleBox_input_focus")
+placeholder_text = "PRIVATE PASSWORD"
+alignment = 1
+max_length = 18
+
+[node name="ConnectBtn" type="Button" parent="Dimmer/Center/Panel/VBoxContainer"]
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(252, 52)
+layout_mode = 2
+text = "HOST STRONGHOLD"
+
+[node name="JoinBtn" type="Button" parent="Dimmer/Center/Panel/VBoxContainer"]
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(252, 52)
+layout_mode = 2
+text = "JOIN STRONGHOLD"
+
+[node name="Hint" type="Label" parent="Dimmer/Center/Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+visible = false
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BackBtn" type="Button" parent="Dimmer/Center/Panel/VBoxContainer"]
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(252, 48)
+layout_mode = 2
+text = "BACK TO MAIN MENU"

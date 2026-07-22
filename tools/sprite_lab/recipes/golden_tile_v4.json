@@ -1,0 +1,14 @@
+{
+  "version":4,
+  "material":"hybrid_hand_directed_earth",
+  "fill_variants":[
+    {"id":"hybrid_a","placements":[{"stamp":"earth_mass_a","x":2,"y":2},{"stamp":"crack_small","x":22,"y":10}]},
+    {"id":"hybrid_b","placements":[{"stamp":"earth_mass_b","x":4,"y":5},{"stamp":"stone_inclusion","x":20,"y":22}]},
+    {"id":"hybrid_c","placements":[{"stamp":"earth_mass_c","x":0,"y":12},{"stamp":"crack_small","x":18,"y":3}]},
+    {"id":"hybrid_d","placements":[{"stamp":"earth_mass_a","x":10,"y":15},{"stamp":"stone_inclusion","x":3,"y":25}]}
+  ],
+  "edge_profiles":{"minimum_depth":2,"maximum_depth":4,"segment_length":5,"seed_base":12000},
+  "front_walls":{"visible_depth":18,"hanging_min":2,"hanging_max":5,"seed_base":13000},
+  "damage":{"stages":3,"directions":4,"seed_base":14000},
+  "preview":{"repetition_columns":10,"repetition_rows":8,"excavation_columns":18,"excavation_rows":10}
+}

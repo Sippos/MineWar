@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/mine/level.tscn" id="1_level"]
+[ext_resource type="Script" path="res://scripts/systems/preparation/local_multiplayer_hub_controller.gd" id="2_controller"]
+[ext_resource type="Script" path="res://scripts/systems/preparation/local_multiplayer_compact_world.gd" id="3_world"]
+[ext_resource type="Script" path="res://scripts/systems/preparation/local_multiplayer_hero_selector.gd" id="4_selector"]
+
+[node name="LocalMultiplayerHub" type="Node"]
+
+[node name="Level" parent="." instance=ExtResource("1_level")]
+script = ExtResource("3_world")
+preparation_mode = true
+
+[node name="LocalMultiplayerHubController" type="Node" parent="."]
+script = ExtResource("2_controller")
+world_path = NodePath("../Level")
+
+[node name="LocalMultiplayerHeroSelector" type="Node" parent="."]
+script = ExtResource("4_selector")
+world_path = NodePath("../Level")

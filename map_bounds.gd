@@ -3,7 +3,7 @@ extends Node
 const CELL_SIZE := 64
 const DEFAULT_PLAYABLE_RECT := Rect2i(-20, -10, 40, 40)
 const BORDER_THICKNESS := 2
-const BOUNDARY_SOURCE_ID := 3
+const BOUNDARY_SOURCE_ID := 16
 const CAMERA_SMOOTHING_SPEED := 9.0
 
 func _ready() -> void:
