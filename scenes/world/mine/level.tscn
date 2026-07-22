@@ -61,9 +61,9 @@ image = SubResource("Image_tip31")
 
 [sub_resource type="TileSetAtlasSource" id="Source_front_easy"]
 texture = SubResource("ImageTexture_o6bh4")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_vagr4"]
@@ -80,9 +80,9 @@ image = SubResource("Image_vagr4")
 
 [sub_resource type="TileSetAtlasSource" id="Source_front_med"]
 texture = SubResource("ImageTexture_25bmf")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_b80ms"]
@@ -99,9 +99,9 @@ image = SubResource("Image_b80ms")
 
 [sub_resource type="TileSetAtlasSource" id="Source_front_hard"]
 texture = SubResource("ImageTexture_2bpff")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_hm83v"]
@@ -118,9 +118,9 @@ image = SubResource("Image_hm83v")
 
 [sub_resource type="TileSetAtlasSource" id="Source_front_dmg1"]
 texture = SubResource("ImageTexture_xr08u")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_c1hwh"]
@@ -137,9 +137,9 @@ image = SubResource("Image_c1hwh")
 
 [sub_resource type="TileSetAtlasSource" id="Source_front_dmg2"]
 texture = SubResource("ImageTexture_tnrio")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_pqqye"]
@@ -156,9 +156,9 @@ image = SubResource("Image_pqqye")
 
 [sub_resource type="TileSetAtlasSource" id="Source_rail"]
 texture = SubResource("ImageTexture_oq8ap")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 1:0/0 = 0
 2:0/0 = 0
@@ -248,9 +248,9 @@ image = SubResource("Image_4f62u")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4f62u"]
 texture = SubResource("ImageTexture_71ln4")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_71ln4"]
@@ -333,9 +333,9 @@ image = SubResource("Image_58psy")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_otxoy"]
 texture = SubResource("ImageTexture_bwfqx")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_puxhv"]
@@ -352,9 +352,9 @@ image = SubResource("Image_puxhv")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ge0w4"]
 texture = SubResource("ImageTexture_eeid4")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_otxoy"]
@@ -371,9 +371,9 @@ image = SubResource("Image_otxoy")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_am3j1"]
 texture = SubResource("ImageTexture_ge0w4")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_am3j1"]
@@ -390,9 +390,9 @@ image = SubResource("Image_am3j1")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_etsel"]
 texture = SubResource("ImageTexture_etsel")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_dalkj"]
@@ -409,9 +409,9 @@ image = SubResource("Image_dalkj")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dalkj"]
 texture = SubResource("ImageTexture_yyk56")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_hebfn"]
@@ -428,9 +428,9 @@ image = SubResource("Image_hebfn")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_yyk56"]
 texture = SubResource("ImageTexture_dtji6")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_56e4q"]
@@ -447,9 +447,9 @@ image = SubResource("Image_56e4q")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_hebfn"]
 texture = SubResource("ImageTexture_jkltj")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_nbik7"]
@@ -466,9 +466,9 @@ image = SubResource("Image_nbik7")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dtji6"]
 texture = SubResource("ImageTexture_r753c")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_6j6sk"]
@@ -485,9 +485,9 @@ image = SubResource("Image_6j6sk")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_56e4q"]
 texture = SubResource("ImageTexture_876xy")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_jew6j"]
@@ -504,9 +504,9 @@ image = SubResource("Image_jew6j")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jkltj"]
 texture = SubResource("ImageTexture_qf5t8")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="TileSetAtlasSource" id="Source_edge_easy"]
@@ -543,9 +543,9 @@ image = SubResource("Image_pq7p5")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nbik7"]
 texture = SubResource("ImageTexture_uf3op")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_s1x26"]
@@ -562,9 +562,9 @@ image = SubResource("Image_s1x26")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_r753c"]
 texture = SubResource("ImageTexture_35del")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_qiogx"]
@@ -581,9 +581,9 @@ image = SubResource("Image_qiogx")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6j6sk"]
 texture = SubResource("ImageTexture_q8wyn")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_pcxgt"]
@@ -600,9 +600,9 @@ image = SubResource("Image_pcxgt")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_876xy"]
 texture = SubResource("ImageTexture_ffu24")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="Image" id="Image_bfb36"]
@@ -619,9 +619,9 @@ image = SubResource("Image_bfb36")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jew6j"]
 texture = SubResource("ImageTexture_cxhky")
-texture_region_size = Vector2i(64, 26)
+texture_region_size = Vector2i(64, 34)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, 19)
+0:0/0/texture_origin = Vector2i(0, 15)
 0:0/0/y_sort_origin = -32
 
 [sub_resource type="TileSetAtlasSource" id="Source_edge_med"]
