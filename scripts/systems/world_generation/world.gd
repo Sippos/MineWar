@@ -128,6 +128,10 @@ func _ready() -> void:
 	astar.update()
 	
 	world_generation_in_progress = true
+	if inside_corner_tl: inside_corner_tl.position = Vector2(32, 32)
+	if inside_corner_tr: inside_corner_tr.position = Vector2(-32, 32)
+	if inside_corner_bl: inside_corner_bl.position = Vector2(32, -32)
+	if inside_corner_br: inside_corner_br.position = Vector2(-32, -32)
 	generate_initial_world()
 	world_generation_in_progress = false
 	preparation_active = preparation_mode and not is_vs_mode
@@ -158,12 +162,12 @@ func on_cell_dug(cell: Vector2i) -> void:
 	if astar.is_in_bounds(cell.x, cell.y):
 		astar.set_point_solid(cell, false)
 	
-	block_layer.erase_cell(cell)
-	damage_layer.erase_cell(cell)
-	edge_layer.erase_cell(cell)
-	fog_layer.erase_cell(cell)
-	bg_layer.erase_cell(cell)
-	front_layer.erase_cell(Vector2i(cell.x, cell.y + 1)) # Erase its own front wall
+	if block_layer: block_layer.erase_cell(cell)
+	if damage_layer: damage_layer.erase_cell(cell)
+	if edge_layer: edge_layer.erase_cell(cell)
+	if fog_layer: fog_layer.erase_cell(cell)
+	if bg_layer: bg_layer.erase_cell(cell)
+	if front_layer: front_layer.erase_cell(Vector2i(cell.x, cell.y + 1)) # Erase its own front wall
 	
 	if crack_overlay_manager:
 		crack_overlay_manager.clear_damage(cell, false)
@@ -190,7 +194,7 @@ func on_cell_dug(cell: Vector2i) -> void:
 
 func update_fog_mask(cell: Vector2i) -> void:
 	if block_layer.get_cell_source_id(cell) == -1:
-		fog_layer.erase_cell(cell)
+		if fog_layer: fog_layer.erase_cell(cell)
 		return
 		
 	var top_open = block_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) == -1
@@ -222,7 +226,7 @@ func update_fog_mask(cell: Vector2i) -> void:
 	elif block_type == 3: edge_source = 6
 	elif block_type == 16: edge_source = 17
 	elif block_type == BLOCK_GEM: edge_source = 22
-	edge_layer.set_cell(cell, edge_source, Vector2i(atlas_x, atlas_y))
+	if edge_layer: edge_layer.set_cell(cell, edge_source, Vector2i(atlas_x, atlas_y))
 
 func _add_wasd_input() -> void:
 	var keys_p1 = {
@@ -1160,12 +1164,12 @@ func update_front_wall(cell: Vector2i) -> void:
 			var round_right := block_layer.get_cell_source_id(cell + Vector2i.RIGHT) == -1
 			front_id = _front_variant_for(front_id, round_left, round_right)
 
-			front_layer.set_cell(below_cell, front_id, Vector2i(0, 0))
+			if front_layer: front_layer.set_cell(below_cell, front_id, Vector2i(0, 0))
 		else:
-			front_layer.erase_cell(below_cell)
+			if front_layer: front_layer.erase_cell(below_cell)
 	else:
 		# If cell is empty, it can't have a front wall projecting down
-		front_layer.erase_cell(below_cell)
+		if front_layer: front_layer.erase_cell(below_cell)
 		
 	if has_method("_refresh_gem_indicator"):
 		# gem indicator refresh is handled by the block logic, but we can call it if it exists.
@@ -1411,11 +1415,11 @@ func _inside_corner_source_for(diagonal: Vector2i, orth_a: Vector2i, orth_b: Vec
 	return _get_inside_corner_source(orth_a)
 
 func update_inside_corners(cell: Vector2i) -> void:
-	if _is_solid(cell):
-		inside_corner_tl.erase_cell(cell)
-		inside_corner_tr.erase_cell(cell)
-		inside_corner_bl.erase_cell(cell)
-		inside_corner_br.erase_cell(cell)
+	if block_layer and block_layer.get_cell_source_id(cell) != -1:
+		if inside_corner_tl: inside_corner_tl.erase_cell(cell)
+		if inside_corner_tr: inside_corner_tr.erase_cell(cell)
+		if inside_corner_bl: inside_corner_bl.erase_cell(cell)
+		if inside_corner_br: inside_corner_br.erase_cell(cell)
 		return
 
 	var tl_solid = _is_solid(cell + Vector2i(-1, -1))
@@ -1428,21 +1432,21 @@ func update_inside_corners(cell: Vector2i) -> void:
 	var right_solid = _is_solid(cell + Vector2i(1, 0))
 
 	if tl_solid and top_solid and left_solid:
-		inside_corner_tl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, -1), cell + Vector2i(0, -1), cell + Vector2i(-1, 0)), Vector2i(0, 0))
+		if inside_corner_tl: inside_corner_tl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, -1), cell + Vector2i(0, -1), cell + Vector2i(-1, 0)), Vector2i(0, 0))
 	else:
-		inside_corner_tl.erase_cell(cell)
+		if inside_corner_tl: inside_corner_tl.erase_cell(cell)
 
 	if tr_solid and top_solid and right_solid:
-		inside_corner_tr.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, -1), cell + Vector2i(0, -1), cell + Vector2i(1, 0)), Vector2i(1, 0))
+		if inside_corner_tr: inside_corner_tr.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, -1), cell + Vector2i(0, -1), cell + Vector2i(1, 0)), Vector2i(1, 0))
 	else:
-		inside_corner_tr.erase_cell(cell)
+		if inside_corner_tr: inside_corner_tr.erase_cell(cell)
 
 	if bl_solid and bottom_solid and left_solid:
-		inside_corner_bl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, 1), cell + Vector2i(0, 1), cell + Vector2i(-1, 0)), Vector2i(1, 1))
+		if inside_corner_bl: inside_corner_bl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, 1), cell + Vector2i(0, 1), cell + Vector2i(-1, 0)), Vector2i(1, 1))
 	else:
-		inside_corner_bl.erase_cell(cell)
+		if inside_corner_bl: inside_corner_bl.erase_cell(cell)
 
 	if br_solid and bottom_solid and right_solid:
-		inside_corner_br.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, 1), cell + Vector2i(0, 1), cell + Vector2i(1, 0)), Vector2i(0, 1))
+		if inside_corner_br: inside_corner_br.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, 1), cell + Vector2i(0, 1), cell + Vector2i(1, 0)), Vector2i(0, 1))
 	else:
-		inside_corner_br.erase_cell(cell)
+		if inside_corner_br: inside_corner_br.erase_cell(cell)

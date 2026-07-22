@@ -125,10 +125,8 @@ func _install_runtime_terrain_textures() -> void:
 				var tile_data = source.get_tile_data(atlas_coords, 0)
 				if tile_data == null:
 					continue
-				if atlas_coords == Vector2i(0, 0): tile_data.texture_origin = Vector2i(32, 32)
-				elif atlas_coords == Vector2i(1, 0): tile_data.texture_origin = Vector2i(-32, 32)
-				elif atlas_coords == Vector2i(0, 1): tile_data.texture_origin = Vector2i(-32, -32)
-				elif atlas_coords == Vector2i(1, 1): tile_data.texture_origin = Vector2i(32, -32)
+				# We no longer set texture_origin dynamically because it fails to update the renderer in HTML5 exports.
+				# Instead, the TileMapLayers themselves are offset by these amounts in world.gd.
 
 	for source_id_value: Variant in OTHER_TEXTURE_PATHS.keys():
 		var source_id := int(source_id_value)
