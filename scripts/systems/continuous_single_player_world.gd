@@ -36,13 +36,15 @@ func _seal_old_line_wars_chamber() -> void:
 			)
 			if is_entry_pocket:
 				continue
-			block_layer.set_cell(cell, 1, Vector2i.ZERO)
-			damage_layer.erase_cell(cell)
+			if block_layer: block_layer.set_cell(cell, 1, Vector2i.ZERO)
+			if damage_layer: damage_layer.erase_cell(cell)
 			if crack_overlay_manager:
 				crack_overlay_manager.clear_damage(cell, false)
 				crack_overlay_manager.clear_damage(cell + Vector2i.DOWN, true)
-			edge_layer.erase_cell(cell)
-			fog_layer.set_cell(cell, 9, Vector2i.ZERO)
+			if edge_layer: edge_layer.erase_cell(cell)
+			if fog_layer: fog_layer.set_cell(cell, 9, Vector2i.ZERO)
+			if astar and astar.is_in_bounds(cell.x, cell.y):
+				astar.set_point_solid(cell, true)
 
 	# Rebuild visible faces after all cells are sealed, not during each mutation.
 	for x in range(UPPER_ZONE_X_MIN - 1, UPPER_ZONE_X_MAX + 2):

@@ -224,6 +224,7 @@ func _create_hub_camera() -> void:
 	hub_camera.position_smoothing_enabled = false
 	world.add_child(hub_camera)
 	hub_camera.enabled = true
+	hub_camera.make_current()
 
 func _refresh_stronghold_ambience() -> void:
 	_last_ambience_base_id = Global.selected_base_id
