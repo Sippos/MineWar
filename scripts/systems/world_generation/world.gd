@@ -128,10 +128,10 @@ func _ready() -> void:
 	astar.update()
 	
 	world_generation_in_progress = true
-	if inside_corner_tl: inside_corner_tl.position = Vector2(32, 32)
-	if inside_corner_tr: inside_corner_tr.position = Vector2(-32, 32)
-	if inside_corner_bl: inside_corner_bl.position = Vector2(32, -32)
-	if inside_corner_br: inside_corner_br.position = Vector2(-32, -32)
+	
+	
+	
+	
 	generate_initial_world()
 	world_generation_in_progress = false
 	preparation_active = preparation_mode and not is_vs_mode
