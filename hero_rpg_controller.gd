@@ -449,7 +449,10 @@ func _update_hud(force: bool) -> void:
 		return
 	var hud: Node = world.get_node_or_null("HUD") if world != null else null
 	var stats_container: Control = hud.get_node_or_null("StatsContainer") as Control if hud != null else null
-	summary_panel.visible = stats_container != null and stats_container.visible
+	var mobile_hud := hud != null and hud.has_method("_is_mobile_hud") and bool(hud.call("_is_mobile_hud"))
+	# Detailed derived combat math belongs in the upgrade menu/tooltips on mobile,
+	# not as a permanent sentence spanning the playfield.
+	summary_panel.visible = not mobile_hud and stats_container != null and stats_container.visible
 	if summary_label == null:
 		return
 	var primary_text: String = get_primary_attribute().to_upper()

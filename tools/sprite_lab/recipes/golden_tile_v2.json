@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "material": "easy",
+  "seed": 7201,
+  "fill_variants": [
+    {
+      "id": "easy_v2_a",
+      "placements": [
+        {"stamp": "large_clod_a", "x": -1, "y": 1},
+        {"stamp": "large_clod_b", "x": 16, "y": 0, "flip_x": true},
+        {"stamp": "medium_clod_c", "x": 7, "y": 10},
+        {"stamp": "large_clod_c", "x": 17, "y": 16},
+        {"stamp": "medium_clod_a", "x": -1, "y": 20, "flip_y": true},
+        {"stamp": "small_rock_a", "x": 12, "y": 24},
+        {"stamp": "cavity_b", "x": 3, "y": 13},
+        {"stamp": "pebble_a", "x": 27, "y": 12}
+      ]
+    },
+    {
+      "id": "easy_v2_b",
+      "placements": [
+        {"stamp": "large_clod_c", "x": 1, "y": 0},
+        {"stamp": "medium_clod_b", "x": 18, "y": 2},
+        {"stamp": "large_clod_a", "x": 10, "y": 10, "flip_x": true},
+        {"stamp": "medium_clod_c", "x": -1, "y": 17},
+        {"stamp": "large_clod_b", "x": 19, "y": 19, "flip_y": true},
+        {"stamp": "small_rock_c", "x": 6, "y": 26},
+        {"stamp": "cavity_a", "x": 23, "y": 12},
+        {"stamp": "pebble_b", "x": 3, "y": 11}
+      ]
+    },
+    {
+      "id": "easy_v2_c",
+      "placements": [
+        {"stamp": "medium_clod_a", "x": 1, "y": 1},
+        {"stamp": "large_clod_b", "x": 10, "y": -1},
+        {"stamp": "medium_clod_c", "x": 24, "y": 4, "flip_x": true},
+        {"stamp": "large_clod_c", "x": -1, "y": 12, "flip_x": true},
+        {"stamp": "large_clod_a", "x": 15, "y": 13},
+        {"stamp": "medium_clod_b", "x": 7, "y": 24, "flip_y": true},
+        {"stamp": "cavity_b", "x": 24, "y": 24},
+        {"stamp": "pebble_a", "x": 13, "y": 10}
+      ]
+    },
+    {
+      "id": "easy_v2_d",
+      "placements": [
+        {"stamp": "large_clod_a", "x": 2, "y": -1, "flip_y": true},
+        {"stamp": "large_clod_c", "x": 17, "y": 2, "flip_x": true},
+        {"stamp": "medium_clod_b", "x": 8, "y": 11},
+        {"stamp": "medium_clod_a", "x": 23, "y": 14, "flip_x": true},
+        {"stamp": "large_clod_b", "x": -2, "y": 19},
+        {"stamp": "large_clod_c", "x": 14, "y": 22, "flip_y": true},
+        {"stamp": "cavity_a", "x": 20, "y": 10},
+        {"stamp": "small_rock_b", "x": 8, "y": 26}
+      ]
+    }
+  ],
+  "golden_tiles": [
+    {"id": "buried_a", "fill": 0, "mask": 0},
+    {"id": "buried_b", "fill": 1, "mask": 0},
+    {"id": "top_exposed", "fill": 2, "mask": 1},
+    {"id": "left_exposed", "fill": 3, "mask": 8},
+    {"id": "right_exposed", "fill": 0, "mask": 2},
+    {"id": "top_left", "fill": 1, "mask": 9},
+    {"id": "top_right", "fill": 2, "mask": 3},
+    {"id": "front_wall", "front_state": 3},
+    {"id": "isolated", "fill": 3, "mask": 15},
+    {"id": "damaged", "fill": 0, "mask": 1, "damage_direction": 0, "damage_stage": 1}
+  ],
+  "edge_profiles": {
+    "minimum_depth": 2,
+    "maximum_depth": 5,
+    "segment_length": 4,
+    "seed_base": 8100
+  },
+  "front_walls": {
+    "visible_depth": 20,
+    "hanging_min": 1,
+    "hanging_max": 6,
+    "seed_base": 9200
+  },
+  "damage": {
+    "stages": 3,
+    "directions": 4,
+    "seed_base": 10400
+  },
+  "preview": {
+    "repetition_columns": 10,
+    "repetition_rows": 8,
+    "excavation_columns": 18,
+    "excavation_rows": 10
+  }
+}

@@ -6,8 +6,8 @@ extends Node2D
 
 const ENEMY_SCENE := preload("res://enemy.tscn")
 const BOSS_BEHAVIOR := preload("res://scripts/systems/world_generation/minewars_boss_behavior.gd")
-const FIXED_ENTRANCE_CELL := Vector2i(-10, -2)
-const SECONDARY_ENTRANCE_CELL := Vector2i(10, -2)
+const FIXED_ENTRANCE_CELL := Vector2i(12, 0)  # Right tunnel endpoint
+const SECONDARY_ENTRANCE_CELL := Vector2i(12, 0)
 const SPAWN_GAP := 0.42
 const FINAL_STAGE := 4
 const RECOVERY_BASE_DISTANCE := 112.0
@@ -130,6 +130,7 @@ var hint_label: Label
 var entrance_marker: Node2D
 var secondary_entrance_marker: Node2D
 var first_run_training_active := false
+var first_expedition_run := false
 var muster_arrival_announced := false
 
 func _ready() -> void:
@@ -165,6 +166,10 @@ func _activate() -> void:
 		world.ensure_minewars_motherlodes()
 	world.current_wave_number = stage_number
 	world.enemies_per_wave = int(STAGE_ENEMY_COUNTS.get(stage_number, 3))
+	first_expedition_run = Global.minewars_runs_completed == 0
+	first_run_training_active = not Global.prototype_onboarding_completed
+	world.set_meta("minewars_first_expedition", first_expedition_run)
+	world.set_meta("minewars_training_active", first_run_training_active)
 	mining_timer = _mining_window_for(stage_number)
 	_set_phase_meta("mining")
 	_ensure_surface_lanes()
@@ -176,6 +181,11 @@ func _activate() -> void:
 	var sound_fx := get_node_or_null("/root/SoundFX")
 	if sound_fx and sound_fx.has_method("play_mine_awaken"):
 		sound_fx.play_mine_awaken()
+	if hud and hud.has_method("show_notice"):
+		if first_run_training_active:
+			hud.show_notice("MINER'S TRIAL — the assault clock is paused. Complete the five guided steps first.", 5.2)
+		else:
+			hud.show_notice("EXPEDITION I — follow the marked Rich Vein, then return before the assault.", 5.0)
 
 func _spawn_base_signal(signal_color: Color, pulse_count: int = 2, radius: float = 72.0) -> void:
 	if base == null or not is_instance_valid(base):
@@ -299,6 +309,16 @@ func _play_breach_open_feedback() -> void:
 	if sound_fx and sound_fx.has_method("play_breach"):
 		sound_fx.play_breach()
 
+func _finish_first_run_training() -> void:
+	first_run_training_active = false
+	world.set_meta("minewars_training_active", false)
+	mining_timer = _mining_window_for(stage_number)
+	warning_stage = 0
+	_initialize_stage_objective()
+	_spawn_base_signal(Color(1.0, 0.78, 0.24, 0.92), 2, 68.0)
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("EXPEDITION CLOCK STARTED — 90 seconds. Follow the cyan Rich Vein marker, then return to defend.", 5.4)
+
 func _process(delta: float) -> void:
 	if world == null or not is_instance_valid(world) or not GameMode.is_siege():
 		return
@@ -317,6 +337,14 @@ func _process(delta: float) -> void:
 	_update_ui()
 
 func _process_mining(delta: float) -> void:
+	if first_run_training_active:
+		mining_timer = _mining_window_for(stage_number)
+		warning_stage = 0
+		world.set_meta("minewars_force_return_cue", false)
+		world.set_meta("minewars_return_seconds", -1)
+		if Global.prototype_onboarding_completed and world.get("onboarding_active") != true:
+			_finish_first_run_training()
+		return
 	mining_timer = maxf(mining_timer - delta, 0.0)
 	_update_stage_objective()
 	_update_warning_stage()
@@ -369,14 +397,12 @@ func _open_recovery_upgrade_menu() -> void:
 func _ensure_surface_lanes() -> void:
 	var previous_generation_flag: bool = world.world_generation_in_progress
 	world.world_generation_in_progress = true
-	for x in range(FIXED_ENTRANCE_CELL.x, 1):
-		var west_cell := Vector2i(x, FIXED_ENTRANCE_CELL.y)
-		if block_layer.get_cell_source_id(west_cell) != -1:
-			world.on_cell_dug(west_cell)
-	for x in range(0, SECONDARY_ENTRANCE_CELL.x + 1):
-		var east_cell := Vector2i(x, SECONDARY_ENTRANCE_CELL.y)
-		if block_layer.get_cell_source_id(east_cell) != -1:
-			world.on_cell_dug(east_cell)
+	# Ensure the right tunnel is open from hub edge to spawn point.
+	for x in range(5, FIXED_ENTRANCE_CELL.x + 1):
+		for y in range(FIXED_ENTRANCE_CELL.y - 1, FIXED_ENTRANCE_CELL.y + 2):
+			var cell := Vector2i(x, y)
+			if block_layer.get_cell_source_id(cell) != -1:
+				world.on_cell_dug(cell)
 	world.world_generation_in_progress = previous_generation_flag
 	world.topology_revision += 1
 
@@ -619,18 +645,17 @@ func _award_objective_reward() -> void:
 func _motherlode_remaining(stage: int) -> int:
 	var total := int(STAGE_MOTHERLODE_COUNTS.get(stage, 0))
 	var motherlodes_value: Variant = world.get("minewars_motherlodes")
-	var gem_blocks_value: Variant = world.get("gem_blocks")
-	if not motherlodes_value is Dictionary or not gem_blocks_value is Dictionary:
+	var block_layer := world.get_node_or_null("BlockLayer") as TileMapLayer
+	if not motherlodes_value is Dictionary or block_layer == null:
 		return total
 	var motherlodes: Dictionary = motherlodes_value
-	var gem_map: Dictionary = gem_blocks_value
 	if not motherlodes.has(stage):
 		return total
 	var center: Vector2i = motherlodes[stage]
 	var remaining := 0
 	for index in range(total):
 		var cell := center + MOTHERLODE_PATTERN[index % MOTHERLODE_PATTERN.size()]
-		if gem_map.has(cell):
+		if block_layer.get_cell_source_id(cell) == 21:
 			remaining += 1
 	return remaining
 
@@ -726,6 +751,9 @@ func _create_ui() -> void:
 	style.set_corner_radius_all(7)
 	panel.add_theme_stylebox_override("panel", style)
 	ui_layer.add_child(panel)
+	# Objectives still drive world markers and completion feedback, but the large
+	# permanent MineWars text card is intentionally removed from the play HUD.
+	panel.visible = false
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 10)
 	margin.add_theme_constant_override("margin_right", 10)
@@ -761,6 +789,19 @@ func _update_ui() -> void:
 	var depth := _player_depth()
 	_update_build_label()
 	_update_objective_label()
+
+	if first_run_training_active:
+		hint_label.visible = true
+		status_label.text = "MINER'S TRIAL  •  CLOCK PAUSED\nLearn the core loop without pressure"
+		objective_label.text = "TRAINING  •  Complete the five guided HUD steps"
+		match int(world.get("onboarding_stage")):
+			0: hint_label.text = "Dig straight down through the center shaft."
+			1: hint_label.text = "Break the glowing cyan crystal seam."
+			2: hint_label.text = "Stand beside the crystal and press SPACE / A."
+			3: hint_label.text = "Carry it back into the bastion deposit zone."
+			_: hint_label.text = "Open the forge with E / Y and buy one stat upgrade."
+		return
+	hint_label.visible = false
 
 	if phase == Phase.ATTACK:
 		if assault_muster_timer > 0.0:

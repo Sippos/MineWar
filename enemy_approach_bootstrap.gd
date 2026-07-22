@@ -32,7 +32,7 @@ func _try_attach(node: Node) -> void:
 		return
 	if not node.has_node("BlockLayer") or not node.has_node("Base") or not node.has_node("Player"):
 		return
-	if bool(node.get("is_vs_mode")) or node.has_node("EnemyApproachPrototype"):
+	if node.get("is_vs_mode") == true or node.has_node("EnemyApproachPrototype"):
 		return
 	var prototype := Node2D.new()
 	prototype.name = "EnemyApproachPrototype"

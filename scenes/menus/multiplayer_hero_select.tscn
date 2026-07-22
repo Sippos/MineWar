@@ -1,7 +1,19 @@
-[gd_scene format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menus/multiplayer_hero_select.gd" id="1_script"]
 [ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/MenuPanel.png" id="3_panel"]
+
+[sub_resource type="StyleBoxTexture" id="PanelStyle"]
+texture = ExtResource("3_panel")
+texture_margin_left = 34.0
+texture_margin_top = 34.0
+texture_margin_right = 34.0
+texture_margin_bottom = 34.0
+content_margin_left = 46.0
+content_margin_top = 30.0
+content_margin_right = 46.0
+content_margin_bottom = 30.0
 
 [node name="MultiplayerHeroSelect" type="Control"]
 layout_mode = 3
@@ -33,15 +45,16 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Dimmer/Center"]
-custom_minimum_size = Vector2(680, 360)
+custom_minimum_size = Vector2(720, 410)
 layout_mode = 2
+theme_override_styles/panel = SubResource("PanelStyle")
 
 [node name="VBox" type="VBoxContainer" parent="Dimmer/Center/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(0, 58)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -54,7 +67,7 @@ vertical_alignment = 1
 [node name="Selectors" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox"]
 custom_minimum_size = Vector2(0, 130)
 layout_mode = 2
-theme_override_constants/separation = 32
+theme_override_constants/separation = 28
 alignment = 1
 
 [node name="P1Column" type="VBoxContainer" parent="Dimmer/Center/Panel/VBox/Selectors"]

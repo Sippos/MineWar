@@ -25,26 +25,36 @@ var preparation_active: bool = false
 @onready var bg_layer: TileMapLayer = $BackgroundLayer
 @onready var block_layer: TileMapLayer = $BlockLayer
 @onready var edge_layer: TileMapLayer = $EdgeLayer
+@onready var inside_corner_tl: TileMapLayer = $InsideCornerTL
+@onready var inside_corner_tr: TileMapLayer = $InsideCornerTR
+@onready var inside_corner_bl: TileMapLayer = $InsideCornerBL
+@onready var inside_corner_br: TileMapLayer = $InsideCornerBR
 @onready var damage_layer: TileMapLayer = $DamageLayer
 @onready var fog_layer: TileMapLayer = $FogLayer
 @onready var front_layer: TileMapLayer = $FrontWallLayer
 @onready var canvas_modulate: CanvasModulate = $CanvasModulate
 @onready var player_light: PointLight2D = $Player/PointLight2D
 
+var crack_overlay_manager: Node2D
+
 var astar: AStarGrid2D
 const ENEMY_SCENE = preload("res://enemy.tscn")
 const MINERS_SATCHEL_SCENE = preload("res://scenes/entities/collectibles/rewards/miners_satchel.tscn")
 const CAVE_REWARD_MIN_DEPTH := 8
-const FRONT_GEM_Z_INDEX = 2
-const BASE_GEM_TEXTURE_FACTORY = preload("res://scripts/systems/preparation/gem_indicator_texture_factory.gd")
-const GEM_TOP_TEXTURE_PATH := "res://assets/sprites/world/terrain/gem_embedded_edge.svg"
-const GEM_FRONT_TEXTURE_PATH := "res://assets/sprites/world/terrain/gem_embedded_front.svg"
-const GEM_INDICATOR_TOP_SCALE := Vector2.ONE
-const GEM_INDICATOR_FRONT_SCALE := Vector2.ONE
-
-var gem_top_texture: Texture2D
-var gem_front_texture: Texture2D
+const BLOCK_GEM = 21
 const TUTORIAL_GEM_CELL := Vector2i(0, 2)
+
+# Front-wall (26px face) rounded-end variants. Each base front source maps to a
+# source whose bottom-left ("L"), bottom-right ("R") or both ("B") corners are
+# rounded, so a ledge END meets the tunnel rim instead of leaving a square notch.
+# The variant textures are generated at runtime in world_terrain_runtime.gd.
+const FRONT_VARIANTS := {
+	10: {"L": 30, "R": 31, "B": 32}, # Easy
+	11: {"L": 33, "R": 34, "B": 35}, # Medium
+	12: {"L": 36, "R": 37, "B": 38}, # Hard
+	15: {"L": 39, "R": 40, "B": 41}, # Unmineable
+	24: {"L": 42, "R": 43, "B": 44}, # Gem
+}
 const FIRST_WAVE_DELAY := 32.0
 const STANDARD_WAVE_INTERVAL := 36.0
 
@@ -63,7 +73,6 @@ const BREACH_MARKER_Z_INDEX := 19
 
 enum OnboardingStage { DIG_DOWN, FIND_GEM, PICK_UP_GEM, BANK_GEM, OPEN_UPGRADES, COMPLETE }
 
-var gem_blocks = {}
 var minewars_motherlodes: Dictionary = {}
 var cave_reward_spawned := false
 var onboarding_active := false
@@ -88,6 +97,10 @@ var breach_marker: Node2D
 var breach_marker_tween: Tween
 var breach_rng := RandomNumberGenerator.new()
 
+## Testing aid: set to a non-negative value for a fixed, repeatable world
+## (same terrain + gem layout every launch). Set back to -1 for random worlds.
+const DEBUG_FIXED_WORLD_SEED := 424242
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not get_tree().paused:
 		if player_id == 1:
@@ -98,9 +111,15 @@ func _unhandled_input(event: InputEvent) -> void:
 func _ready() -> void:
 	$Player.player_id = player_id
 	_add_wasd_input()
-	_ensure_base_gem_indicator_textures()
 	_configure_mine_lighting()
-	breach_rng.randomize()
+	if DEBUG_FIXED_WORLD_SEED >= 0:
+		breach_rng.seed = DEBUG_FIXED_WORLD_SEED
+	else:
+		breach_rng.randomize()
+	
+	crack_overlay_manager = preload("res://scripts/systems/world_generation/crack_overlay_manager.gd").new()
+	crack_overlay_manager.name = "CrackOverlayManager"
+	add_child(crack_overlay_manager)
 	
 	astar = AStarGrid2D.new()
 	astar.region = Rect2i(-30, -15, 60, 60)
@@ -110,7 +129,6 @@ func _ready() -> void:
 	
 	world_generation_in_progress = true
 	generate_initial_world()
-	_normalize_gem_indicator_sprites()
 	world_generation_in_progress = false
 	preparation_active = preparation_mode and not is_vs_mode
 	if not preparation_active:
@@ -147,20 +165,27 @@ func on_cell_dug(cell: Vector2i) -> void:
 	bg_layer.erase_cell(cell)
 	front_layer.erase_cell(Vector2i(cell.x, cell.y + 1)) # Erase its own front wall
 	
+	if crack_overlay_manager:
+		crack_overlay_manager.clear_damage(cell, false)
+		crack_overlay_manager.clear_damage(Vector2i(cell.x, cell.y + 1), true)
+	
 	update_fog_mask(cell)
-	update_front_wall(cell) # Clean up this cell
-	has_gem(cell) # Ensure any gem overlays are removed if the cell is destroyed automatically
+	update_front_wall(cell)
+	update_inside_corners(cell) # Clean up this cell
 	
-	var neighbors = [
-		Vector2i(cell.x + 1, cell.y),
-		Vector2i(cell.x - 1, cell.y),
-		Vector2i(cell.x, cell.y + 1),
-		Vector2i(cell.x, cell.y - 1)
-	]
-	
-	for n in neighbors:
-		update_fog_mask(n)
-		update_front_wall(n)
+	# Refresh the FULL 3x3 around the dig for every terrain layer. Borders depend
+	# on orthogonal neighbours, inside corners on diagonals, front walls on the
+	# cell above — different sets. Covering the whole 3x3 means no layer can lag
+	# a dig behind (the old code only refreshed orthogonals, so corners/caps
+	# popped in only on the next dig).
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			if dx == 0 and dy == 0:
+				continue
+			var n := Vector2i(cell.x + dx, cell.y + dy)
+			update_fog_mask(n)
+			update_front_wall(n)
+			update_inside_corners(n)
 	_refresh_navigation_weights_around(cell, 2)
 
 func update_fog_mask(cell: Vector2i) -> void:
@@ -185,23 +210,19 @@ func update_fog_mask(cell: Vector2i) -> void:
 	# Source 9 is the new fog_mask_atlas
 	fog_layer.set_cell(cell, 9, Vector2i(atlas_x, atlas_y))
 	
-	# The imported edge atlas has a bright cap on its top-open variants. Keep
-	# side/bottom seams for depth, but omit that cap so open ceilings stay dark
-	# and continuous instead of reading as white scaffolding.
-	var edge_index: int = index - (1 if top_open else 0)
-	if edge_index != 0:
-		var block_type = block_layer.get_cell_source_id(cell)
-		var edge_source = 4 # Easy
-		if block_type == 2: edge_source = 5
-		elif block_type == 3: edge_source = 6
-		var edge_atlas_x := edge_index % 4
-		var edge_atlas_y := edge_index / 4
-		edge_layer.set_cell(cell, edge_source, Vector2i(edge_atlas_x, edge_atlas_y))
-	else:
-		edge_layer.erase_cell(cell)
-		
-	if gem_blocks.has(cell):
-		_refresh_gem_indicator(cell)
+	# Every solid cell renders its own mass tile so the cave-floor backdrop never
+	# shows through unmined rock. Exposed cells use their neighbour-mask frame
+	# (border + rounded cutouts); a fully-interior cell resolves to frame (0,0),
+	# which is the solid universal dark mass with no border and no cutout. The
+	# dark mass therefore always sits on top of the ground tile — no cave floor
+	# or fog bleeding up through solid rock.
+	var block_type = block_layer.get_cell_source_id(cell)
+	var edge_source = 4 # Easy
+	if block_type == 2: edge_source = 5
+	elif block_type == 3: edge_source = 6
+	elif block_type == 16: edge_source = 17
+	elif block_type == BLOCK_GEM: edge_source = 22
+	edge_layer.set_cell(cell, edge_source, Vector2i(atlas_x, atlas_y))
 
 func _add_wasd_input() -> void:
 	var keys_p1 = {
@@ -287,12 +308,6 @@ func _add_wasd_input() -> void:
 	var esc_event = InputEventKey.new(); esc_event.physical_keycode = KEY_ESCAPE; InputMap.action_add_event("pause", esc_event)
 	var start_event = InputEventJoypadButton.new(); start_event.button_index = JOY_BUTTON_START; InputMap.action_add_event("pause", start_event)
 
-func _ensure_base_gem_indicator_textures() -> void:
-	if gem_top_texture == null:
-		gem_top_texture = BASE_GEM_TEXTURE_FACTORY.load_svg_texture(GEM_TOP_TEXTURE_PATH)
-	if gem_front_texture == null:
-		gem_front_texture = BASE_GEM_TEXTURE_FACTORY.load_svg_texture(GEM_FRONT_TEXTURE_PATH)
-
 func _gem_chance_for_cell(cell: Vector2i, block_type: int) -> float:
 	var base_chance := 0.05
 	if block_type == 2:
@@ -303,28 +318,18 @@ func _gem_chance_for_cell(cell: Vector2i, block_type: int) -> float:
 	return minf(base_chance + depth_bonus, 0.38)
 
 func _create_gem_block(cell: Vector2i) -> void:
-	if gem_blocks.has(cell):
+	if block_layer.get_cell_source_id(cell) == BLOCK_GEM:
 		return
-	var sprite := Sprite2D.new()
-	sprite.texture = gem_top_texture
-	sprite.position = block_layer.map_to_local(cell)
-	sprite.visible = false
-	edge_layer.add_child(sprite)
-
-	var front_sprite := Sprite2D.new()
-	front_sprite.texture = gem_front_texture
-	front_sprite.offset.y = -17
-	front_sprite.z_index = FRONT_GEM_Z_INDEX
-	front_sprite.visible = false
-	add_child(front_sprite)
-	_position_front_gem_sprite(front_sprite, cell)
-	gem_blocks[cell] = {"top": sprite, "front": front_sprite}
+	block_layer.set_cell(cell, BLOCK_GEM, Vector2i.ZERO)
 
 func _seed_expedition_motherlodes() -> void:
 	if is_vs_mode:
 		return
 	var rng := RandomNumberGenerator.new()
-	rng.randomize()
+	if DEBUG_FIXED_WORLD_SEED >= 0:
+		rng.seed = DEBUG_FIXED_WORLD_SEED
+	else:
+		rng.randomize()
 	var definitions := [
 		{"stage": 1, "depth": 12, "count": 3, "rock": 2},
 		{"stage": 2, "depth": 18, "count": 4, "rock": 2},
@@ -351,6 +356,7 @@ func _seed_expedition_motherlodes() -> void:
 			for refresh_cell in [cell, cell + Vector2i.LEFT, cell + Vector2i.RIGHT, cell + Vector2i.UP, cell + Vector2i.DOWN]:
 				update_fog_mask(refresh_cell)
 				update_front_wall(refresh_cell)
+				update_inside_corners(refresh_cell)
 	minewars_motherlodes = motherlodes
 
 func ensure_minewars_motherlodes() -> void:
@@ -366,11 +372,15 @@ func get_minewars_prospect_hint(stage: int) -> String:
 	return "Prospecting marks point %s near depth %d." % [direction, cell.y]
 
 func generate_initial_world() -> void:
+	# Deterministic world for testing when a fixed seed is configured, so the
+	# same terrain and gem layout appear on every launch.
+	if DEBUG_FIXED_WORLD_SEED >= 0:
+		seed(DEBUG_FIXED_WORLD_SEED)
 	var width = 40
 	var depth = 30
-	
+
 	var noise = FastNoiseLite.new()
-	noise.seed = randi()
+	noise.seed = DEBUG_FIXED_WORLD_SEED if DEBUG_FIXED_WORLD_SEED >= 0 else randi()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	noise.frequency = 0.1
 	
@@ -379,7 +389,12 @@ func generate_initial_world() -> void:
 			var cell = Vector2i(x, y)
 			
 			var block_type = 1
-			if y >= 0:
+			# Map boundary and protected surface cells are unmineable bedrock
+			if x == -width / 2 or x == width / 2 - 1 or y == -10 or y == depth - 1:
+				block_type = 16
+			elif y < 0 or (y <= 1 and x != 0):
+				block_type = 16
+			elif y >= 0:
 				var depth_factor = y / float(depth)
 				var n_val = noise.get_noise_2d(x, y)
 				var score = depth_factor + n_val * 0.5
@@ -393,7 +408,7 @@ func generate_initial_world() -> void:
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 				
-			if y >= 0 and randf() < _gem_chance_for_cell(cell, block_type):
+			if y >= 0 and block_type in [1, 2, 3] and randf() < _gem_chance_for_cell(cell, block_type):
 				_create_gem_block(cell)
 				
 	_seed_expedition_motherlodes()
@@ -403,6 +418,7 @@ func generate_initial_world() -> void:
 		for y in range(-10, depth):
 			update_fog_mask(Vector2i(x, y))
 			update_front_wall(Vector2i(x, y))
+			update_inside_corners(Vector2i(x, y))
 	
 
 	for x in range(-width / 2, width / 2):
@@ -433,24 +449,11 @@ func _carve_surface_breach_corridors() -> void:
 		on_cell_dug(Vector2i(x, -2))
 
 func _ensure_tutorial_gem() -> void:
-	if is_vs_mode or gem_blocks.has(TUTORIAL_GEM_CELL):
+	if is_vs_mode or block_layer.get_cell_source_id(TUTORIAL_GEM_CELL) == BLOCK_GEM:
 		return
-	block_layer.set_cell(TUTORIAL_GEM_CELL, 1, Vector2i(0, 0))
+	block_layer.set_cell(TUTORIAL_GEM_CELL, BLOCK_GEM, Vector2i.ZERO)
 	if astar.is_in_bounds(TUTORIAL_GEM_CELL.x, TUTORIAL_GEM_CELL.y):
 		astar.set_point_solid(TUTORIAL_GEM_CELL, true)
-	var sprite := Sprite2D.new()
-	sprite.texture = gem_top_texture
-	sprite.position = block_layer.map_to_local(TUTORIAL_GEM_CELL)
-	sprite.visible = false
-	edge_layer.add_child(sprite)
-	var front_sprite := Sprite2D.new()
-	front_sprite.texture = gem_front_texture
-	front_sprite.offset.y = -17
-	front_sprite.z_index = FRONT_GEM_Z_INDEX
-	front_sprite.visible = false
-	add_child(front_sprite)
-	_position_front_gem_sprite(front_sprite, TUTORIAL_GEM_CELL)
-	gem_blocks[TUTORIAL_GEM_CELL] = {"top": sprite, "front": front_sprite}
 
 func begin_run_from_preparation() -> void:
 	if not preparation_active:
@@ -655,7 +658,12 @@ func notify_tutorial_upgrade_purchased() -> void:
 func is_dig_cell_protected(cell: Vector2i) -> bool:
 	# Protect the original base foundation during standard runs. Specialized
 	# persistent-world subclasses can open deliberate routes through it.
-	return (cell.y <= 1 and cell.x != 0) or cell.y < 0
+	if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
+		return true
+	# Protect map boundary walls
+	if block_layer.get_cell_source_id(cell) == 16:
+		return true
+	return false
 
 func get_protected_dig_message(cell: Vector2i) -> String:
 	if cell.y < 0:
@@ -686,19 +694,7 @@ func spawn_blocked_dig_feedback(world_position: Vector2) -> void:
 	tween.chain().tween_callback(blocked_label.queue_free)
 
 func has_gem(cell: Vector2i) -> bool:
-	if gem_blocks.has(cell):
-		var sprites: Dictionary = gem_blocks[cell]
-		var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
-		var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
-		if is_instance_valid(top_sprite):
-			top_sprite.visible = false
-			top_sprite.queue_free()
-		if is_instance_valid(front_sprite):
-			front_sprite.visible = false
-			front_sprite.queue_free()
-		gem_blocks.erase(cell)
-		return true
-	return false
+	return block_layer.get_cell_source_id(cell) == BLOCK_GEM
 
 func try_spawn_cave_reward(cell: Vector2i) -> bool:
 	if is_vs_mode or cave_reward_spawned or cell.y < CAVE_REWARD_MIN_DEPTH:
@@ -1135,10 +1131,17 @@ func spawn_wave(wave_number: int) -> void:
 	set_meta("wave_spawning", false)
 
 
+func _front_variant_for(base_id: int, round_left: bool, round_right: bool) -> int:
+	if not FRONT_VARIANTS.has(base_id) or (not round_left and not round_right):
+		return base_id
+	var variants: Dictionary = FRONT_VARIANTS[base_id]
+	if round_left and round_right:
+		return int(variants["B"])
+	return int(variants["L"]) if round_left else int(variants["R"])
+
 func update_front_wall(cell: Vector2i) -> void:
 	var block_id = block_layer.get_cell_source_id(cell)
 	var below_cell = Vector2i(cell.x, cell.y + 1)
-	var has_front_wall = false
 	
 	if block_id != -1:
 		# If cell is solid, check if below is empty
@@ -1146,77 +1149,29 @@ func update_front_wall(cell: Vector2i) -> void:
 			var front_id = 10 # Easy Front
 			if block_id == 2: front_id = 11
 			elif block_id == 3: front_id = 12
-			
+			elif block_id == 16: front_id = 15
+			elif block_id == BLOCK_GEM: front_id = 24
+
+			# Round a bottom corner ONLY where the wall PROTRUDES outward: the owning
+			# block's SIDE neighbour is open, so the block juts into the tunnel and its
+			# front wraps a convex corner. Everything else stays square - straight runs,
+			# ledges ending into solid (inlaid), and a 1-wide shaft cap (solid sides).
+			var round_left := block_layer.get_cell_source_id(cell + Vector2i.LEFT) == -1
+			var round_right := block_layer.get_cell_source_id(cell + Vector2i.RIGHT) == -1
+			front_id = _front_variant_for(front_id, round_left, round_right)
+
 			front_layer.set_cell(below_cell, front_id, Vector2i(0, 0))
-			has_front_wall = true
 		else:
 			front_layer.erase_cell(below_cell)
 	else:
 		# If cell is empty, it can't have a front wall projecting down
 		front_layer.erase_cell(below_cell)
 		
-	if gem_blocks.has(cell):
-		_refresh_gem_indicator(cell)
+	if has_method("_refresh_gem_indicator"):
+		# gem indicator refresh is handled by the block logic, but we can call it if it exists.
+		pass
 
-func _normalize_gem_indicator_sprites() -> void:
-	for raw_cell: Variant in gem_blocks.keys():
-		var cell: Vector2i = raw_cell
-		var sprites: Dictionary = gem_blocks[cell]
-		var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
-		var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
-		if is_instance_valid(top_sprite):
-			if top_sprite.get_parent() != self:
-				top_sprite.reparent(self, true)
-			top_sprite.texture = gem_top_texture
-			top_sprite.region_enabled = false
-			top_sprite.offset = Vector2.ZERO
-			top_sprite.scale = GEM_INDICATOR_TOP_SCALE
-			top_sprite.z_index = FRONT_GEM_Z_INDEX
-			top_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		if is_instance_valid(front_sprite):
-			front_sprite.texture = gem_front_texture
-			front_sprite.region_enabled = false
-			front_sprite.offset = Vector2.ZERO
-			front_sprite.scale = GEM_INDICATOR_FRONT_SCALE
-			front_sprite.z_index = FRONT_GEM_Z_INDEX
-			front_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_refresh_gem_indicator(cell)
-
-func _refresh_gem_indicator(cell: Vector2i) -> void:
-	if not gem_blocks.has(cell):
-		return
-	var sprites: Dictionary = gem_blocks[cell]
-	var top_sprite: Sprite2D = sprites.get("top") as Sprite2D
-	var front_sprite: Sprite2D = sprites.get("front") as Sprite2D
-	var solid: bool = block_layer.get_cell_source_id(cell) != -1
-	var top_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) == -1
-	var right_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) == -1
-	var bottom_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) == -1
-	var left_open: bool = solid and block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
-	var show_front: bool = bottom_open
-	var show_edge: bool = solid and not show_front and (top_open or right_open or left_open)
-
-	if is_instance_valid(top_sprite):
-		top_sprite.visible = show_edge
-		if show_edge:
-			top_sprite.global_position = block_layer.to_global(block_layer.map_to_local(cell))
-			if top_open:
-				top_sprite.rotation_degrees = 0.0
-			elif left_open and not right_open:
-				top_sprite.rotation_degrees = -90.0
-			else:
-				top_sprite.rotation_degrees = 90.0
-
-	if is_instance_valid(front_sprite):
-		_position_front_gem_sprite(front_sprite, cell)
-		front_sprite.visible = show_front
-
-func _position_front_gem_sprite(sprite: Sprite2D, cell: Vector2i) -> void:
-	var below_cell = Vector2i(cell.x, cell.y + 1)
-	sprite.global_position = front_layer.to_global(front_layer.map_to_local(below_cell))
-	sprite.global_position.y += 1.0
-
-func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal := false) -> void:
+func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal := false, impact_direction := Vector2.ZERO) -> void:
 	var burst := CPUParticles2D.new()
 	burst.name = "MiningBreakFeedback" if strong else "MiningImpactFeedback"
 	burst.add_to_group("polish_feedback")
@@ -1235,6 +1190,12 @@ func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal 
 	burst.scale_amount_min = 2.0 if strong else 1.2
 	burst.scale_amount_max = 5.5 if strong else 2.8
 	burst.color = Color(0.95, 0.82, 0.56, 0.95) if strong else Color(0.72, 0.58, 0.42, 0.82)
+	if impact_direction.length_squared() > 0.01:
+		# Spawn from the edge of the block and throw chips away from the
+		# contact surface. This makes the dust read as a pick impact instead
+		# of a generic burst at the tile centre.
+		burst.direction = impact_direction.normalized()
+		burst.spread = 72.0 if not strong else 105.0
 	burst.global_position = world_position
 	burst.z_index = 8
 	add_child(burst)
@@ -1408,3 +1369,80 @@ func refresh_minecart_paths() -> void:
 	for cart in get_tree().get_nodes_in_group("minecarts"):
 		if is_instance_valid(cart) and cart.has_method("refresh_rail_path"):
 			cart.refresh_rail_path()
+
+func _is_solid(cell: Vector2i) -> bool:
+	return block_layer.get_cell_source_id(cell) != -1
+
+func _get_inside_corner_source(cell: Vector2i) -> int:
+	# The three ROCK tiers (Easy=1, Medium=2, Hard=3) have structurally identical
+	# corners - they differ only in decorative speckle - so they all share ONE corner
+	# sheet (25). That removes the per-tier elements at rock corners, killing the
+	# "50/50" seam where two rock tiers meet at a concave corner. Hardness still reads
+	# from each tier's own flat EdgeLayer interior; only the shared corner is unified.
+	# Unmineable (16) and Gems keep their OWN corner - those are genuine material
+	# boundaries you WANT to see, not seams to hide.
+	var id = block_layer.get_cell_source_id(cell)
+	if id == 16: return 28
+	# Gems now round with the shared rock rim (25), like Easy/Medium/Hard - the gem
+	# identity lives in the flat face/interior inclusion, not the corner. This drops
+	# the old bright gem corner (29) that flung neon crystals into the tunnel.
+	return 25
+
+func _inside_corner_source_for(diagonal: Vector2i, orth_a: Vector2i, orth_b: Vector2i) -> int:
+	# Each tier keeps its OWN corner sheet (Easy/Medium/Hard/Unmineable/Gem are all
+	# visually distinct - Unmineable has a heavier rim, Gems carry crystals - so they
+	# must NOT be unified). Pick the tier from the exposed orthogonal faces the wedge
+	# connects (the material the player digs INTO), not the diagonal behind them, so
+	# a boundary corner agrees with the flat border beside it and with the tile that
+	# appears when you dig further along.
+	var diag_id := block_layer.get_cell_source_id(diagonal)
+	var a_id := block_layer.get_cell_source_id(orth_a)
+	var b_id := block_layer.get_cell_source_id(orth_b)
+
+	# Both faces agree -> unambiguously the tier the player sees and digs.
+	if a_id == b_id:
+		return _get_inside_corner_source(orth_a)
+	# A material boundary runs through this corner. Prefer the exposed face that also
+	# backs onto the diagonal mass; otherwise fall back to a face, never the diagonal.
+	if diag_id == a_id:
+		return _get_inside_corner_source(orth_a)
+	if diag_id == b_id:
+		return _get_inside_corner_source(orth_b)
+	return _get_inside_corner_source(orth_a)
+
+func update_inside_corners(cell: Vector2i) -> void:
+	if _is_solid(cell):
+		inside_corner_tl.erase_cell(cell)
+		inside_corner_tr.erase_cell(cell)
+		inside_corner_bl.erase_cell(cell)
+		inside_corner_br.erase_cell(cell)
+		return
+
+	var tl_solid = _is_solid(cell + Vector2i(-1, -1))
+	var tr_solid = _is_solid(cell + Vector2i(1, -1))
+	var bl_solid = _is_solid(cell + Vector2i(-1, 1))
+	var br_solid = _is_solid(cell + Vector2i(1, 1))
+	var top_solid = _is_solid(cell + Vector2i(0, -1))
+	var bottom_solid = _is_solid(cell + Vector2i(0, 1))
+	var left_solid = _is_solid(cell + Vector2i(-1, 0))
+	var right_solid = _is_solid(cell + Vector2i(1, 0))
+
+	if tl_solid and top_solid and left_solid:
+		inside_corner_tl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, -1), cell + Vector2i(0, -1), cell + Vector2i(-1, 0)), Vector2i(0, 0))
+	else:
+		inside_corner_tl.erase_cell(cell)
+
+	if tr_solid and top_solid and right_solid:
+		inside_corner_tr.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, -1), cell + Vector2i(0, -1), cell + Vector2i(1, 0)), Vector2i(1, 0))
+	else:
+		inside_corner_tr.erase_cell(cell)
+
+	if bl_solid and bottom_solid and left_solid:
+		inside_corner_bl.set_cell(cell, _inside_corner_source_for(cell + Vector2i(-1, 1), cell + Vector2i(0, 1), cell + Vector2i(-1, 0)), Vector2i(1, 1))
+	else:
+		inside_corner_bl.erase_cell(cell)
+
+	if br_solid and bottom_solid and right_solid:
+		inside_corner_br.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, 1), cell + Vector2i(0, 1), cell + Vector2i(1, 0)), Vector2i(0, 1))
+	else:
+		inside_corner_br.erase_cell(cell)

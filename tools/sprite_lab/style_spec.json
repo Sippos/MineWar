@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "tile_size": 64,
+  "logical_size": 32,
+  "export_scale": 2,
+  "lighting_direction": "upper_left",
+  "outline_pixels_logical": 1,
+  "front_wall_depth_logical": 17,
+  "palette": {
+    "transparent": "00000000",
+    "cave": "171625ff",
+    "outline": "242035ff",
+    "deep_shadow": "312b49ff",
+    "easy_dark": "49415fff",
+    "easy_mid": "5b5279ff",
+    "easy_light": "746b99ff",
+    "easy_highlight": "958ab8ff",
+    "crack_dark": "1d192aff",
+    "crack_light": "aaa3c8ff",
+    "crystal_dark": "28195dff",
+    "crystal_mid": "743cddff",
+    "crystal_light": "cda6ffff",
+    "crystal_glint": "f5eeffff",
+    "preview_background": "405766ff",
+    "preview_grid": "25333dff",
+    "validation_ok": "52d273ff",
+    "validation_fail": "ee5253ff"
+  }
+}

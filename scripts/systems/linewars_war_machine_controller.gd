@@ -5,8 +5,8 @@ signal send_dispatched(payload: Dictionary)
 
 const MACHINE_CELL := Vector2i(3, 10)
 const INTERACT_RADIUS := 92.0
+const DISPATCH_INTERVAL := 7.0
 const MECH_TEXTURE := preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
-const ECONOMY := preload("res://scripts/systems/linewars_economy.gd")
 
 var world: Node2D
 var hero: CharacterBody2D
@@ -17,17 +17,10 @@ var prompt_label: Label
 var status_label: Label
 var menu_layer: CanvasLayer
 var queue_label: Label
-var rat_button: Button
-var trogg_button: Button
-var elite_button: Button
-var gamble_button: Button
 var machine_revealed := false
 var menu_open := false
-var forced_gamble_outcome := ""
-var rng := RandomNumberGenerator.new()
-
-# Kept as compatibility state for older tests/tools. Instant sending never leaves
-# anything waiting in this array; dispatched_sends is the useful send history.
+var auto_pressure := false
+var dispatch_timer := DISPATCH_INTERVAL
 var send_queue: Array[Dictionary] = []
 var dispatched_sends: Array[Dictionary] = []
 
@@ -36,13 +29,12 @@ func setup(p_world: Node2D, p_hero: CharacterBody2D, p_world_hud: CanvasLayer) -
 	hero = p_hero
 	world_hud = p_world_hud
 	block_layer = world.get_node_or_null("BlockLayer") as TileMapLayer
-	rng.randomize()
 	_build_machine_visual()
 	_build_menu()
 	set_process(true)
 	set_process_unhandled_input(true)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if world == null or hero == null or block_layer == null:
 		return
 	if not machine_revealed and block_layer.get_cell_source_id(MACHINE_CELL) == -1:
@@ -51,6 +43,15 @@ func _process(_delta: float) -> void:
 		return
 	var near := hero.global_position.distance_to(machine_root.global_position) <= INTERACT_RADIUS
 	prompt_label.visible = near and not menu_open
+	if auto_pressure and send_queue.is_empty() and _available_gems() >= 1:
+		_queue_send("RAT RAID", 5, "RAT", 1)
+	if send_queue.is_empty():
+		dispatch_timer = DISPATCH_INTERVAL
+		return
+	dispatch_timer = maxf(dispatch_timer - delta, 0.0)
+	if dispatch_timer <= 0.0:
+		_dispatch_next()
+		dispatch_timer = DISPATCH_INTERVAL
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not machine_revealed or hero == null:
@@ -142,9 +143,9 @@ func _build_menu() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
 	panel.offset_left = -330
-	panel.offset_top = -296
+	panel.offset_top = -235
 	panel.offset_right = 330
-	panel.offset_bottom = 296
+	panel.offset_bottom = 235
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.028, 0.02, 0.98)
 	style.border_width_left = 3
@@ -175,7 +176,7 @@ func _build_menu() -> void:
 	title.add_theme_font_size_override("font_size", 26)
 	column.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "Gold buys reliable pressure. Risk one rare gem for a volatile Goblin gamble."
+	subtitle.text = "Queue pressure for the enemy side. Networking will consume the same send payloads later."
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.add_theme_font_size_override("font_size", 15)
@@ -186,18 +187,9 @@ func _build_menu() -> void:
 	queue_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28, 1.0))
 	column.add_child(queue_label)
 
-	rat_button = _send_button("rat_raid", _choose_rat_raid)
-	trogg_button = _send_button("trogg_push", _choose_trogg_push)
-	elite_button = _send_button("elite_push", _choose_elite_push)
-	gamble_button = _choice_button(
-		"GOBLIN GAMBLE • %d GEM" % ECONOMY.GEM_GAMBLE_COST,
-		"Jackpot attack, rare fighter, gold cache... or malfunction",
-		_choose_goblin_gamble
-	)
-	column.add_child(rat_button)
-	column.add_child(trogg_button)
-	column.add_child(elite_button)
-	column.add_child(gamble_button)
+	column.add_child(_choice_button("RAT RAID • 1 GEM", "Queue 5 fast rats", _choose_rat_raid))
+	column.add_child(_choice_button("TROGG PUSH • 2 GEMS", "Queue 2 durable troggs", _choose_trogg_push))
+	column.add_child(_choice_button("AUTO PRESSURE", "Automatically queue Rat Raids whenever 1 gem is available", _toggle_auto_pressure))
 	var close := Button.new()
 	close.custom_minimum_size = Vector2(0, 52)
 	close.text = "RETURN TO MINE"
@@ -213,19 +205,11 @@ func _choice_button(title: String, description: String, callback: Callable) -> B
 	button.pressed.connect(callback)
 	return button
 
-func _send_button(send_id: String, callback: Callable) -> Button:
-	var definition: Dictionary = ECONOMY.send(send_id)
-	return _choice_button(
-		"%s • %d GOLD" % [str(definition.get("label", "SEND")), int(definition.get("gold_cost", 0))],
-		str(definition.get("description", "Send pressure now")),
-		callback
-	)
-
 func _reveal_machine() -> void:
 	machine_revealed = true
 	machine_root.visible = true
 	status_label.text = "GOBLIN WAR MACHINE • ONLINE"
-	_announce("WAR MACHINE UNCOVERED\nINSTANT SENDS AVAILABLE")
+	_announce("WAR MACHINE UNCOVERED\nPRESSURE OPTIONS AVAILABLE")
 
 func _open_menu() -> void:
 	if not machine_revealed:
@@ -242,105 +226,46 @@ func _close_menu() -> void:
 	get_tree().paused = false
 
 func _choose_rat_raid() -> void:
-	_queue_reliable_send("rat_raid")
+	_queue_send("RAT RAID", 5, "RAT", 1)
 
 func _choose_trogg_push() -> void:
-	_queue_reliable_send("trogg_push")
+	_queue_send("TROGG PUSH", 2, "TROGG", 2)
 
-func _choose_elite_push() -> void:
-	_queue_reliable_send("elite_push")
+func _toggle_auto_pressure() -> void:
+	auto_pressure = not auto_pressure
+	_refresh_menu()
 
-func _choose_goblin_gamble() -> void:
-	_execute_gem_gamble()
-
-func _queue_reliable_send(send_id: String) -> bool:
-	var definition: Dictionary = ECONOMY.send(send_id)
-	if definition.is_empty():
+func _queue_send(label: String, count: int, enemy_type: String, gem_cost: int) -> bool:
+	if _available_gems() < gem_cost:
+		_announce("WAR MACHINE NEEDS %d GEM%s" % [gem_cost, "S" if gem_cost != 1 else ""])
 		return false
-	return _queue_send(
-		str(definition.get("label", "SEND")),
-		int(definition.get("count", 1)),
-		str(definition.get("enemy_type", "RAT")),
-		int(definition.get("gold_cost", 0))
-	)
-
-func _queue_send(label: String, count: int, enemy_type: String, gold_cost: int) -> bool:
-	if _available_gold() < gold_cost:
-		_announce("WAR MACHINE NEEDS %d GOLD" % gold_cost)
-		return false
-	_spend_gold(gold_cost)
-	var send_data := {
+	_spend_gems(gem_cost)
+	var payload := {
 		"label": label,
 		"count": count,
 		"enemy_type": enemy_type,
-		"currency": "gold",
-		"gold_cost": gold_cost,
-		"sent_at_msec": Time.get_ticks_msec()
+		"gem_cost": gem_cost,
+		"queued_at_msec": Time.get_ticks_msec()
 	}
-	_dispatch_payload(send_data)
-	_announce("%s SENT\nENEMIES ENTERED THE OPPONENT TUNNEL" % label)
+	send_queue.append(payload)
+	send_queued.emit(payload)
+	_announce("%s QUEUED\nDISPATCH IN %ds" % [label, int(ceil(dispatch_timer))])
 	_refresh_menu()
-	if menu_open:
-		_close_menu()
 	return true
 
-func _execute_gem_gamble() -> Dictionary:
-	if _available_gems() < ECONOMY.GEM_GAMBLE_COST:
-		_announce("GOBLIN GAMBLE NEEDS %d GEM" % ECONOMY.GEM_GAMBLE_COST)
-		return {}
-	_spend_gems(ECONOMY.GEM_GAMBLE_COST)
-	var outcome: Dictionary = ECONOMY.roll_gamble(rng, forced_gamble_outcome)
-	forced_gamble_outcome = ""
-	var outcome_id := str(outcome.get("id", "malfunction"))
-	if outcome_id == "gold_bonus":
-		_add_gold(int(outcome.get("gold_bonus", 0)))
-	elif int(outcome.get("count", 0)) > 0:
-		var payload := {
-			"label": str(outcome.get("label", "GOBLIN GAMBLE")),
-			"count": int(outcome.get("count", 1)),
-			"enemy_type": str(outcome.get("enemy_type", "RAT")),
-			"currency": "gem_gamble",
-			"gem_cost": ECONOMY.GEM_GAMBLE_COST,
-			"gamble_outcome": outcome_id,
-			"sent_at_msec": Time.get_ticks_msec(),
-		}
-		_dispatch_payload(payload)
-	_announce("%s\n%s" % [str(outcome.get("label", "GOBLIN GAMBLE")), str(outcome.get("description", ""))])
-	_refresh_menu()
-	if menu_open:
-		_close_menu()
-	return outcome
-
-func _dispatch_payload(send_data: Dictionary) -> void:
-	# The signal is the small data boundary used by the mirrored and future
-	# network transports. Sends arrive in the opponent tunnel in the same tick.
-	send_queued.emit(send_data)
-	dispatched_sends.append(send_data)
-	send_dispatched.emit(send_data)
-
 func _dispatch_next() -> void:
-	# Compatibility helper for old tools. Instant sends leave no pending work.
 	if send_queue.is_empty():
 		return
-	var send_data: Dictionary = send_queue.pop_front()
-	dispatched_sends.append(send_data)
-	send_dispatched.emit(send_data)
+	var payload: Dictionary = send_queue.pop_front()
+	dispatched_sends.append(payload)
+	send_dispatched.emit(payload)
+	_announce("%s DISPATCHED\nENEMY PRESSURE SENT" % str(payload.get("label", "SEND")))
 	_refresh_menu()
 
 func _refresh_menu() -> void:
 	if queue_label == null:
 		return
-	var gold := _available_gold()
-	var gems := _available_gems()
-	queue_label.text = "GOLD %d • GEMS %d • SENDS ARRIVE IMMEDIATELY" % [gold, gems]
-	if rat_button:
-		rat_button.disabled = gold < int(ECONOMY.send("rat_raid").get("gold_cost", 0))
-	if trogg_button:
-		trogg_button.disabled = gold < int(ECONOMY.send("trogg_push").get("gold_cost", 0))
-	if elite_button:
-		elite_button.disabled = gold < int(ECONOMY.send("elite_push").get("gold_cost", 0))
-	if gamble_button:
-		gamble_button.disabled = gems < ECONOMY.GEM_GAMBLE_COST
+	queue_label.text = "QUEUE %d • GEMS %d • AUTO %s" % [send_queue.size(), _available_gems(), "ON" if auto_pressure else "OFF"]
 
 func _announce(text: String) -> void:
 	var controller := get_parent()
@@ -357,22 +282,9 @@ func _available_gems() -> int:
 	var value: Variant = world_hud.get("total_gems")
 	return int(value) if value != null else 0
 
-func _available_gold() -> int:
-	if world_hud == null:
-		return 0
-	var value: Variant = world_hud.get("total_gold")
-	return int(value) if value != null else 0
-
 func _spend_gems(amount: int) -> void:
 	if world_hud and world_hud.has_method("add_gems"):
 		world_hud.call("add_gems", -amount)
-
-func _spend_gold(amount: int) -> void:
-	_add_gold(-amount)
-
-func _add_gold(amount: int) -> void:
-	if world_hud and world_hud.has_method("add_gold"):
-		world_hud.call("add_gold", amount)
 
 func _cell_world_position(cell: Vector2i) -> Vector2:
 	return block_layer.to_global(block_layer.map_to_local(cell))

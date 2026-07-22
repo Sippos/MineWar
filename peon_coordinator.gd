@@ -30,7 +30,7 @@ func _find_single_player_world() -> Node:
 
 func _find_world_recursive(node: Node) -> Node:
 	if node.has_node("Base") and node.has_node("HUD") and node.get("current_wave_number") != null:
-		if not bool(node.get("is_vs_mode")):
+		if node.get("is_vs_mode") != true:
 			return node
 	for child in node.get_children():
 		var found := _find_world_recursive(child)

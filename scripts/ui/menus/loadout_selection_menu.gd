@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
+
 const BASE_ORDER: Array[String] = ["default_base", "shaman_base", "nerubian_base", "mech_base", "druid_base", "undead_king_base"]
 const BASE_TO_HERO := {
 	"default_base": "Dwarf",
@@ -32,6 +34,8 @@ var base_description_label: Label
 var match_label: Label
 var confirm_button: Button
 var base_buttons: Dictionary = {}
+var base_grid: GridContainer
+var closing := false
 
 func setup(world_node: Node, player_node: Node, base_node: Node) -> void:
 	world = world_node
@@ -75,7 +79,7 @@ func _build_interface() -> void:
 
 	shell = PanelContainer.new()
 	shell.name = "BaseSelectionShell"
-	shell.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.032, 0.045, 0.99), Color(0.3, 0.78, 1.0, 1.0), 3, 16))
+	shell.add_theme_stylebox_override("panel", _wood_panel_style())
 	overlay.add_child(shell)
 
 	var body := VBoxContainer.new()
@@ -114,7 +118,7 @@ func _build_interface() -> void:
 	var showcase := PanelContainer.new()
 	showcase.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	showcase.custom_minimum_size = Vector2(0, 292)
-	showcase.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.07, 0.96), Color(0.22, 0.48, 0.64, 0.88), 2, 12))
+	showcase.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.038, 0.02, 0.96), Color(0.72, 0.45, 0.16, 0.9), 2, 12))
 	body.add_child(showcase)
 
 	var showcase_box := VBoxContainer.new()
@@ -148,33 +152,23 @@ func _build_interface() -> void:
 	base_description_label.add_theme_color_override("font_color", Color(0.76, 0.82, 0.88, 1.0))
 	showcase_box.add_child(base_description_label)
 
-	var selector_row := HBoxContainer.new()
-	selector_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	selector_row.add_theme_constant_override("separation", 10)
-	body.add_child(selector_row)
-
-	var previous := Button.new()
-	previous.text = "◀"
-	previous.tooltip_text = "Previous base"
-	previous.custom_minimum_size = Vector2(54, 66)
-	previous.pressed.connect(_cycle_base.bind(-1))
-	selector_row.add_child(previous)
+	base_grid = GridContainer.new()
+	base_grid.name = "BaseChoices"
+	base_grid.columns = 3
+	base_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	base_grid.add_theme_constant_override("h_separation", 8)
+	base_grid.add_theme_constant_override("v_separation", 6)
+	body.add_child(base_grid)
 
 	for base_id in BASE_ORDER:
 		var button := Button.new()
 		button.name = base_id.capitalize().replace(" ", "")
-		button.custom_minimum_size = Vector2(92, 66)
+		button.custom_minimum_size = Vector2(210, 48)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.add_theme_font_size_override("font_size", 14)
 		button.pressed.connect(_select_base.bind(base_id))
-		selector_row.add_child(button)
+		base_grid.add_child(button)
 		base_buttons[base_id] = button
-
-	var next := Button.new()
-	next.text = "▶"
-	next.tooltip_text = "Next base"
-	next.custom_minimum_size = Vector2(54, 66)
-	next.pressed.connect(_cycle_base.bind(1))
-	selector_row.add_child(next)
 
 	var footer := HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -198,7 +192,7 @@ func _layout_for_screen() -> void:
 		return
 	var view_size: Vector2 = get_viewport().get_visible_rect().size
 	var width := clampf(view_size.x - 30.0, 620.0, 820.0)
-	var height := clampf(view_size.y - 24.0, 520.0, 680.0)
+	var height := clampf(view_size.y - 40.0, 520.0, 620.0)
 	shell.anchor_left = 0.5
 	shell.anchor_top = 0.5
 	shell.anchor_right = 0.5
@@ -207,6 +201,14 @@ func _layout_for_screen() -> void:
 	shell.offset_top = -height * 0.5
 	shell.offset_right = width * 0.5
 	shell.offset_bottom = height * 0.5
+	var compact := view_size.x < 720.0 or view_size.y < 590.0
+	base_grid.columns = 2 if compact else 3
+	var available_button_width := maxf(126.0, (width - 72.0 - float(base_grid.columns - 1) * 8.0) / float(base_grid.columns))
+	for button_value in base_buttons.values():
+		var button := button_value as Button
+		button.custom_minimum_size = Vector2(available_button_width, 40.0 if compact else 48.0)
+		button.add_theme_font_size_override("font_size", 12 if compact else 14)
+	base_texture.custom_minimum_size = Vector2(300, 150) if compact else Vector2(360, 205)
 
 func _refresh_interface() -> void:
 	var hero_name := Global.selected_hero_id
@@ -228,6 +230,8 @@ func _refresh_interface() -> void:
 	match_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.32, 1.0) if matches_current else Color(0.58, 0.78, 0.9, 1.0))
 	confirm_button.text = "Use %s" % base_name_label.text
 
+	var available_count := maxi(_available_bases().size(), 1)
+	var choice_width := clampf(552.0 / float(available_count), 92.0, 220.0)
 	for base_id in BASE_ORDER:
 		var button: Button = base_buttons[base_id]
 		var unlocked := _base_unlocked(base_id)
@@ -237,6 +241,9 @@ func _refresh_interface() -> void:
 		button.visible = unlocked
 		button.text = short_name
 		button.disabled = not unlocked
+		button.custom_minimum_size = Vector2(choice_width, 60)
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if available_count >= 4 else TextServer.AUTOWRAP_OFF
+		button.add_theme_font_size_override("font_size", 12 if available_count >= 4 else 15)
 		button.modulate = Color.WHITE
 		button.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48, 1.0) if is_selected else Color(0.86, 0.9, 0.95, 1.0))
 
@@ -281,9 +288,25 @@ func _focus_selected_base() -> void:
 	confirm_button.grab_focus()
 
 func _close_menu() -> void:
+	if closing:
+		return
+	closing = true
 	if player != null and player.get("can_move") != null:
 		player.set("can_move", true)
-	queue_free()
+	get_tree().create_timer(0.2, true).timeout.connect(queue_free)
+
+func _wood_panel_style() -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = MENU_PANEL_TEXTURE
+	style.texture_margin_left = 34.0
+	style.texture_margin_top = 34.0
+	style.texture_margin_right = 34.0
+	style.texture_margin_bottom = 34.0
+	style.content_margin_left = 20.0
+	style.content_margin_top = 18.0
+	style.content_margin_right = 20.0
+	style.content_margin_bottom = 18.0
+	return style
 
 func _panel_style(background: Color, border: Color, border_width: int, radius: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

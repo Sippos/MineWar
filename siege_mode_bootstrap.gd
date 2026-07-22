@@ -28,7 +28,7 @@ func _try_attach(node: Node) -> void:
 		return
 	if not node.has_node("BlockLayer") or not node.has_node("Base") or not node.has_node("Player"):
 		return
-	if bool(node.get("is_vs_mode")) or bool(node.get("preparation_mode")) or node.has_node("SiegeModeController"):
+	if node.get("is_vs_mode") == true or node.get("preparation_mode") == true or node.has_node("SiegeModeController"):
 		return
 	var controller := Node2D.new()
 	controller.name = "SiegeModeController"

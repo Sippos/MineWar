@@ -1,0 +1,15 @@
+{
+  "version": 4,
+  "purpose": "Hand-directed packed purple earth forms for deterministic hybrid terrain generation.",
+  "legend": {
+    ".": "transparent",
+    "O": "outline",
+    "S": "deep_shadow",
+    "D": "easy_dark",
+    "M": "easy_mid",
+    "L": "easy_light",
+    "H": "easy_highlight",
+    "C": "cave"
+  },
+  "stamps": {
+    "earth_mass_a": {"rows": ["...LLLLLL.....", ".LLLLMMMMLL...", "LLLMMMMMMMDD..", "LMMMMMMMMDDDD.", "MMMMMMMDDDDD..", ".MMMDDDDDSS...", "..DDD

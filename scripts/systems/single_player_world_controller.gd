@@ -2,12 +2,11 @@ extends Node
 
 const MODE_SIGNS_SCENE := preload("res://scenes/world/preparation/single_player_mode_signs.tscn")
 const HUB_HUD_SCENE := preload("res://scenes/ui/overlays/single_player_hub_hud.tscn")
-const LINE_WARS_CONTROLLER_SCRIPT: Script = preload("res://scripts/systems/continuous_line_wars_controller.gd")
+const LINE_WARS_CONTROLLER_SCRIPT := preload("res://scripts/systems/continuous_line_wars_controller.gd")
 const STRONGHOLD_AMBIENCE_SCRIPT := preload("res://scripts/systems/stronghold_ambience_controller.gd")
 const STRONGHOLD_PRACTICE_GEM_SCRIPT := preload("res://scripts/systems/stronghold_practice_gem_controller.gd")
 
 const LINE_WARS_ENTRY_Y := -6
-const MINE_WARS_ENTRY_Y := 7
 const ROUTE_X_MIN := -1
 const ROUTE_X_MAX := 1
 const ADVENTURE_ENTRY_X := 10
@@ -65,7 +64,7 @@ func _ready() -> void:
 
 	Global.apply_selected_loadout()
 	base.position = Vector2.ZERO
-	player.position = Vector2(0, 150)
+	player.position = Vector2(0, 48)
 	player.visible = true
 	player.process_mode = Node.PROCESS_MODE_INHERIT
 	player.velocity = Vector2.ZERO
@@ -74,7 +73,6 @@ func _ready() -> void:
 	if base.has_method("refresh_base_sprite"):
 		base.refresh_base_sprite()
 	_refresh_stronghold_ambience()
-	_create_practice_gem_station()
 
 	player_camera = player.get_node_or_null("Camera2D") as Camera2D
 	if player_camera:
@@ -90,17 +88,20 @@ func _ready() -> void:
 	add_child(hub_hud)
 	var hub_title := hub_hud.get_node("TopPanel/Margin/VBox/Title") as Label
 	var hub_subtitle := hub_hud.get_node("TopPanel/Margin/VBox/Subtitle") as Label
-	if not Global.first_level_beaten:
-		hub_title.text = "FIRST EXPEDITION • DWARF BASTION"
-		hub_subtitle.text = "One hero • one base • descend to begin"
-	else:
-		hub_title.text = "SINGLE PLAYER • STRONGHOLD"
-		hub_subtitle.text = "Expand the hall • Choose your path • Return stronger"
 	status_label = hub_hud.get_node("StatusPanel/Margin/Status") as Label
+	hub_title.text = "STRONGHOLD"
+	hub_subtitle.text = "One warm base  •  one expedition shaft"
+	var top_panel := hub_hud.get_node_or_null("TopPanel") as Control
+	if top_panel:
+		top_panel.visible = false
+	var status_panel := hub_hud.get_node_or_null("StatusPanel") as Control
+	if status_panel:
+		status_panel.visible = false
 	_configure_progression_signs()
 	_set_initial_status()
 	if Global.minewars_runs_completed == 0 and not Global.prototype_onboarding_completed:
 		_create_first_run_stronghold_cue()
+		_create_first_run_guide_panel()
 	if not pending_rewards.is_empty():
 		call_deferred("_play_unlock_ceremony", pending_rewards)
 
@@ -109,7 +110,7 @@ func _create_first_run_stronghold_cue() -> void:
 		return
 	first_run_route_marker = Node2D.new()
 	first_run_route_marker.name = "FirstRunMineWarsRoute"
-	first_run_route_marker.global_position = block_layer.to_global(block_layer.map_to_local(Vector2i(0, MINE_WARS_ENTRY_Y - 1)))
+	first_run_route_marker.global_position = block_layer.to_global(block_layer.map_to_local(world.get_minewars_entrance()))
 	first_run_route_marker.z_index = 35
 	world.add_child(first_run_route_marker)
 
@@ -164,11 +165,46 @@ func _create_first_run_stronghold_cue() -> void:
 	if sound_fx and sound_fx.has_method("play_mine_awaken"):
 		sound_fx.play_mine_awaken()
 
+func _create_first_run_guide_panel() -> void:
+	if first_run_guide_layer != null or hub_hud == null:
+		return
+	first_run_guide_layer = CanvasLayer.new()
+	first_run_guide_layer.name = "FirstRunStrongholdGuide"
+	first_run_guide_layer.layer = 44
+	add_child(first_run_guide_layer)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	panel.offset_left = 170.0
+	panel.offset_top = 82.0
+	panel.offset_right = -170.0
+	panel.offset_bottom = 164.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.015, 0.045, 0.065, 0.96)
+	style.border_color = Color(0.3, 0.88, 1.0, 0.94)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.shadow_color = Color(0, 0, 0, 0.62)
+	style.shadow_size = 7
+	panel.add_theme_stylebox_override("panel", style)
+	first_run_guide_layer.add_child(panel)
+	var label := Label.new()
+	label.text = "FIRST EXPEDITION  •  Walk into the entrance below\nThe assault clock stays paused until you learn to mine, carry, bank, and upgrade."
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_color_override("font_color", Color(0.86, 0.96, 1.0, 1.0))
+	panel.add_child(label)
+	panel.modulate = Color(1, 1, 1, 0)
+	panel.scale = Vector2(0.92, 0.92)
+	panel.pivot_offset = Vector2(400, 40)
+	var reveal := create_tween().set_parallel(true)
+	reveal.tween_property(panel, "modulate", Color.WHITE, 0.28)
+	reveal.tween_property(panel, "scale", Vector2.ONE, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
 func _create_practice_gem_station() -> void:
-	# The first run is intentionally quiet: the player sees only the base, the
-	# active hero, and the MineWars entrance. The practice vein, cart, and peon
-	# return after the first completed expedition when the hall expands.
-	if not Global.first_level_beaten or world == null or player == null:
+	if world == null or player == null:
 		return
 	var existing := world.get_node_or_null("StrongholdPracticeYard") as Node2D
 	if existing != null:
@@ -183,9 +219,8 @@ func _create_practice_gem_station() -> void:
 func _create_hub_camera() -> void:
 	hub_camera = Camera2D.new()
 	hub_camera.name = "HeroHallCamera"
-	hub_camera.position = Vector2(0, 20)
-	var zoom_value := 0.82 if Global.first_level_beaten else 1.14
-	hub_camera.zoom = Vector2(zoom_value, zoom_value)
+	hub_camera.position = world.get_hub_camera_pos()
+	hub_camera.zoom = world.get_hub_camera_zoom()
 	hub_camera.position_smoothing_enabled = false
 	world.add_child(hub_camera)
 	hub_camera.enabled = true
@@ -199,11 +234,7 @@ func _refresh_stronghold_ambience() -> void:
 		return
 	if stronghold_ambience != null and is_instance_valid(stronghold_ambience):
 		stronghold_ambience.queue_free()
-		stronghold_ambience = null
-	# Do not show a dormant railway on a fresh save. It is a reward object, not
-	# part of the first-run onboarding scene.
-	if selected_base == Global.DEFAULT_BASE_ID and not cart_unlocked:
-		return
+	stronghold_ambience = null
 	if world == null or base == null:
 		return
 	var ambience := Node2D.new()
@@ -222,26 +253,11 @@ func _process(_delta: float) -> void:
 	if Global.selected_base_id != _last_ambience_base_id:
 		_refresh_stronghold_ambience()
 	var cell := block_layer.local_to_map(block_layer.to_local(player.global_position))
-	var in_vertical_route := cell.x >= ROUTE_X_MIN and cell.x <= ROUTE_X_MAX
-
-	if in_vertical_route and cell.y <= LINE_WARS_ENTRY_Y:
-		if _advanced_modes_unlocked():
-			_activate_line_wars()
-		else:
-			_show_locked_message("LINEWARS LOCKED  •  Win MineWars once to awaken this doorway.")
-			player.position.y = -220
-		return
-
-	if cell.x >= ADVENTURE_ENTRY_X and cell.y >= ADVENTURE_MIN_Y and cell.y <= ADVENTURE_MAX_Y:
-		if _advanced_modes_unlocked():
-			_activate_standard_mode(GameMode.Mode.EXPLORATION, "Adventure active — explore the eastern mine for nests and artifacts.")
-		else:
-			_show_locked_message("ADVENTURE LOCKED  •  Win MineWars once to open the eastern doorway.")
-			player.position.x = 430
-		return
-
-	if in_vertical_route and cell.y >= MINE_WARS_ENTRY_Y:
+	if cell == world.get_minewars_entrance():
 		_activate_standard_mode(GameMode.Mode.SIEGE, "MineWars active — mine, return resources, and survive the assault.")
+	elif world.is_top_tunnel_unlocked() and cell == world.get_top_tunnel_entrance():
+		_activate_line_wars()
+
 
 func _advanced_modes_unlocked() -> bool:
 	return Global.first_level_beaten
@@ -252,25 +268,29 @@ func _configure_progression_signs() -> void:
 	var line_wars := signs.get_node_or_null("LineWars") as Label
 	var mine_wars := signs.get_node_or_null("MineWars") as Label
 	var adventure := signs.get_node_or_null("Adventure") as Label
-	if mine_wars:
-		mine_wars.text = "DESCEND TO MINEWARS"
-		mine_wars.modulate = Color.WHITE
+	var top_glow := signs.get_node_or_null("TopDoorGlow") as CanvasItem
+	var right_glow := signs.get_node_or_null("RightDoorGlow") as CanvasItem
+	if top_glow:
+		top_glow.visible = false
+	if right_glow:
+		right_glow.visible = false
 	if line_wars:
-		line_wars.visible = _advanced_modes_unlocked()
-		if line_wars.visible:
-			line_wars.text = "LINEWARS\nTOP TUNNEL"
-			line_wars.modulate = Color.WHITE
+		line_wars.visible = false
 	if adventure:
-		adventure.visible = _advanced_modes_unlocked()
-		if adventure.visible:
-			adventure.text = "ADVENTURE\nRIGHT TUNNEL"
-			adventure.modulate = Color.WHITE
+		adventure.visible = false
+	if mine_wars:
+		mine_wars.visible = false
+		mine_wars.text = "EXPEDITION SHAFT"
+		mine_wars.position = Vector2(-125, 220)
+		mine_wars.size = Vector2(250, 34)
+		mine_wars.modulate = Color.WHITE
+
 
 func _set_initial_status() -> void:
-	if not Global.first_level_beaten:
-		_set_status("Your first expedition starts here. One hero, one bastion, one mine.")
+	if Global.minewars_runs_completed == 0:
+		_set_status("The lower shaft is awake.")
 	elif _advanced_modes_unlocked():
-		_set_status("The stronghold has expanded. New heroes and routes can now awaken.")
+		_set_status("The stronghold is ready.")
 	else:
 		_set_status("The bastion endures.")
 
@@ -298,7 +318,7 @@ func _play_unlock_ceremony(rewards: Array) -> void:
 		stack.alignment = BoxContainer.ALIGNMENT_CENTER
 		margin.add_child(stack)
 		var title := Label.new()
-		title.text = str(reward.get("title", "STRONGHOLD EXPANDED"))
+		title.text = str(reward.get("title", "STRONGHOLD ENRICHED"))
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.add_theme_font_size_override("font_size", 24)
 		title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3, 1.0))
@@ -330,10 +350,11 @@ func _focus_unlock_target(reward: Dictionary) -> void:
 		var shrine := world.get_node_or_null("PhysicalHeroShrines/" + hero_name.replace(" ", "") + "Shrine") as Node2D
 		if shrine != null:
 			target_position = shrine.global_position
-	var home := Vector2(0, 20)
+	var home: Vector2 = world.get_hub_camera_pos()
 	var pan := create_tween().set_parallel(true)
 	pan.tween_property(hub_camera, "position", target_position if target_position != Vector2.ZERO else home, 0.42).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	pan.tween_property(hub_camera, "zoom", Vector2(1.02, 1.02), 0.42)
+	var base_zoom: float = world.get_hub_camera_zoom().x
+	pan.tween_property(hub_camera, "zoom", Vector2(base_zoom + 0.1, base_zoom + 0.1), 0.42)
 	_return_unlock_camera_later(home)
 
 func _return_unlock_camera_later(home: Vector2) -> void:
@@ -342,7 +363,7 @@ func _return_unlock_camera_later(home: Vector2) -> void:
 		return
 	var restore := create_tween().set_parallel(true)
 	restore.tween_property(hub_camera, "position", home, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	restore.tween_property(hub_camera, "zoom", Vector2(0.82, 0.82), 0.45)
+	restore.tween_property(hub_camera, "zoom", world.get_hub_camera_zoom(), 0.45)
 
 func _play_unlock_world_burst(reward: Dictionary) -> void:
 	if world == null:
@@ -386,6 +407,9 @@ func _activate_standard_mode(mode: GameMode.Mode, message: String) -> void:
 		return
 	_committing = true
 	GameMode.set_mode(mode)
+	# Carve the enemy tunnel before activating MineWars gameplay.
+	if mode == GameMode.Mode.SIEGE and world.has_method("activate_minewars_tunnel"):
+		world.activate_minewars_tunnel()
 	_prepare_world_for_run(message)
 	if mode == GameMode.Mode.EXPLORATION:
 		world.set_process(false)
@@ -412,6 +436,9 @@ func _prepare_world_for_run(message: String) -> void:
 	if first_run_route_marker != null and is_instance_valid(first_run_route_marker):
 		first_run_route_marker.queue_free()
 	first_run_route_marker = null
+	if first_run_guide_layer != null and is_instance_valid(first_run_guide_layer):
+		first_run_guide_layer.queue_free()
+	first_run_guide_layer = null
 	world.remove_meta("single_player_hub_active")
 	world.begin_run_from_preparation()
 	if hub_camera and is_instance_valid(hub_camera):

@@ -169,7 +169,7 @@ func _choose_dig_target() -> bool:
 				if path.size() == 0:
 					continue
 				var score = float(path.size()) + float(abs(cell.x - start_cell.x) + abs(cell.y - start_cell.y)) * 0.25
-				if world.gem_blocks.has(cell):
+				if world.block_layer.get_cell_source_id(cell) == 21:
 					score -= 4.0
 				if score < best_score:
 					best_score = score

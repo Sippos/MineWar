@@ -1,0 +1,16 @@
+{
+  "failures": [],
+  "files_saved": true,
+  "generated": {
+    "directional_damage_frames": 12,
+    "edge_masks": 16,
+    "fill_variants": 4,
+    "front_damage_frames": 3,
+    "front_wall_states": 4
+  },
+  "logical_size": 32,
+  "nearest_neighbor_scale": 2,
+  "passed": true,
+  "tile_size": 64,
+  "version": 1
+}

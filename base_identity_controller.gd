@@ -209,17 +209,13 @@ func _process_shaman(delta: float, phase: String) -> void:
 	_spawn_world_ring(base.global_position, 118.0, Color(0.28, 0.88, 1.0, 0.8), 0.55)
 
 func _pulse_prospecting() -> void:
-	var gem_value: Variant = world.get("gem_blocks")
 	var block_layer := world.get_node_or_null("BlockLayer") as TileMapLayer
-	if not gem_value is Dictionary or block_layer == null or player == null:
+	if block_layer == null or player == null:
 		return
-	var gem_map: Dictionary = gem_value
 	var player_cell := block_layer.local_to_map(block_layer.to_local(player.global_position))
 	var candidates: Array[Dictionary] = []
-	for raw_cell: Variant in gem_map.keys():
-		if not raw_cell is Vector2i:
-			continue
-		var cell: Vector2i = raw_cell
+	var gem_cells := block_layer.get_used_cells_by_id(21)
+	for cell in gem_cells:
 		var distance := Vector2(player_cell).distance_to(Vector2(cell))
 		if distance <= 9.5:
 			candidates.append({"cell": cell, "distance": distance})

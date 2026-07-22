@@ -28,7 +28,6 @@ var applied_hero := ""
 
 var nerubian_dig_cell = null
 var nerubian_dig_timer := 0.0
-var nerubian_feedback_timer := 0.0
 var venom_attack_counter := 0
 var last_attack_timer := 0.0
 var last_attack_enemy: Node
@@ -68,7 +67,6 @@ func _physics_process(delta: float) -> void:
 		_resolve_ability_controller()
 	_apply_profile_once()
 	_apply_visual_fit()
-	nerubian_feedback_timer = max(0.0, nerubian_feedback_timer - delta)
 	grave_might_cooldown = max(0.0, grave_might_cooldown - delta)
 	match _hero_name():
 		"Nerubian":
@@ -207,15 +205,22 @@ func _process_nerubian_claw_mining(delta: float) -> void:
 		_clear_nerubian_dig()
 		nerubian_dig_cell = cell
 		nerubian_dig_timer = 0.0
+		# Use the same action sheet contact frame as the other miners. The
+		# player owns the animation cue, so sound and dust cannot drift apart.
+		player.set("currently_digging_cell", cell)
+		player.set("dig_break_queued", false)
+		if player.has_method("_reset_action_animation"):
+			player.call("_reset_action_animation")
 	nerubian_dig_timer += delta
 	player.set("nerubian_cast_timer", max(0.16, float(player.get("nerubian_cast_timer"))))
 	var target_time := _nerubian_target_dig_time(source_id)
+	player.set("current_dig_target_time", target_time)
+	# Nerubian hardness is expressed as extra contact cycles, never a slower swing.
+	player.set("current_dig_swing_time", _nerubian_swing_dig_time())
 	_update_nerubian_damage_overlay(cell, nerubian_dig_timer / max(0.01, target_time))
-	if nerubian_feedback_timer <= 0.0 and world.has_method("spawn_mining_feedback"):
-		world.call("spawn_mining_feedback", block_layer.to_global(block_layer.map_to_local(cell)))
-		nerubian_feedback_timer = 0.30
 	if nerubian_dig_timer >= target_time:
-		_finish_nerubian_dig(cell)
+		nerubian_dig_timer = target_time
+		player.set("dig_break_queued", true)
 
 func _active_mining_ray():
 	if Input.is_action_pressed(_action("right")):
@@ -229,16 +234,20 @@ func _active_mining_ray():
 	return null
 
 func _nerubian_target_dig_time(source_id: int) -> float:
+	var target_time := _nerubian_swing_dig_time()
+	if source_id == 2:
+		target_time *= 2.0
+	elif source_id == 3:
+		target_time *= 4.0
+	return target_time
+
+func _nerubian_swing_dig_time() -> float:
 	var brood_rank := int(hero_abilities.get("brood_level")) if hero_abilities else 1
 	var target_time: float = float(player.get("base_dig_time")) * 1.15
 	var rpg: Node = _rpg_controller()
 	if rpg != null and rpg.has_method("get_dig_time_multiplier"):
 		target_time *= float(rpg.call("get_dig_time_multiplier"))
 	target_time *= max(0.80, 1.0 - float(max(0, brood_rank - 1)) * 0.07)
-	if source_id == 2:
-		target_time *= 2.0
-	elif source_id == 3:
-		target_time *= 4.0
 	return max(0.18, target_time)
 
 func _update_nerubian_damage_overlay(cell: Vector2i, ratio: float) -> void:
@@ -257,6 +266,8 @@ func _finish_nerubian_dig(cell: Vector2i) -> void:
 	var front_damage_layer := _front_damage_layer()
 	var below := Vector2i(cell.x, cell.y + 1)
 	var had_gem := bool(world.call("has_gem", cell)) if world.has_method("has_gem") else false
+	if player.has_method("_emit_dig_impact"):
+		player.call("_emit_dig_impact", true, cell, block_layer.get_cell_source_id(cell), had_gem)
 	block_layer.erase_cell(cell)
 	if damage_layer:
 		damage_layer.erase_cell(cell)
@@ -266,17 +277,20 @@ func _finish_nerubian_dig(cell: Vector2i) -> void:
 		world.call("notify_tutorial_cell_dug", cell, had_gem)
 	if world.has_method("try_spawn_cave_reward"):
 		world.call("try_spawn_cave_reward", cell)
-	if world.has_method("spawn_mining_feedback"):
-		world.call("spawn_mining_feedback", block_layer.to_global(block_layer.map_to_local(cell)), true, had_gem)
 	if world.has_method("on_cell_dug"):
 		world.call("on_cell_dug", cell)
 	if had_gem and player.has_method("_spawn_dug_gems"):
 		player.call("_spawn_dug_gems", cell, 1)
-	_spawn_burst(block_layer.to_global(block_layer.map_to_local(cell)), Color(0.58, 0.24, 0.82, 0.9), 20)
 	nerubian_dig_cell = null
 	nerubian_dig_timer = 0.0
+	player.set("current_dig_target_time", 0.0)
+	player.set("current_dig_swing_time", 0.0)
+	player.set("dig_break_queued", false)
+	player.set("currently_digging_cell", null)
 
 func _clear_nerubian_dig() -> void:
+	if nerubian_dig_cell == null:
+		return
 	if nerubian_dig_cell != null:
 		var damage_layer := _damage_layer()
 		var front_damage_layer := _front_damage_layer()
@@ -286,6 +300,10 @@ func _clear_nerubian_dig() -> void:
 			front_damage_layer.erase_cell(Vector2i(nerubian_dig_cell.x, nerubian_dig_cell.y + 1))
 	nerubian_dig_cell = null
 	nerubian_dig_timer = 0.0
+	player.set("current_dig_target_time", 0.0)
+	player.set("current_dig_swing_time", 0.0)
+	player.set("dig_break_queued", false)
+	player.set("currently_digging_cell", null)
 
 func _process_nerubian_venom() -> void:
 	var attack_timer := float(player.get("attack_timer"))

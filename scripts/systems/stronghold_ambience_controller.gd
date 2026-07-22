@@ -54,10 +54,10 @@ func _create_dwarf_ambience() -> void:
 		_create_rail_loop(track)
 		_add_walker("DwarfMinecart", MINECART_TEXTURE, track, Vector2(0.78, 0.78), 92.0, 8.0, Color.WHITE)
 	else:
+		# Before the railway unlocks, quiet forge sparks make the base feel alive
+		# without advertising a missing feature in the middle of the room.
 		_create_forge_marker(Vector2(74, -14))
 		_create_forge_marker(Vector2(-78, -18))
-		var caption := _create_caption("RAILWAY DORMANT", Vector2(-82, 78), Color(0.74, 0.58, 0.34, 0.72))
-		caption.add_theme_font_size_override("font_size", 10)
 
 func _create_shaman_ambience() -> void:
 	var totem_positions := [Vector2(-142, -58), Vector2(142, -58), Vector2(-112, 72), Vector2(112, 72)]
@@ -351,7 +351,8 @@ func _create_caption(text: String, position: Vector2, color: Color) -> Label:
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 3)
 	label.z_index = 7
-	add_child(label)
+	# Captions disabled by user request
+	# add_child(label)
 	return label
 
 func _circle_points(radius: float, segments: int, close_loop: bool = false) -> PackedVector2Array:

@@ -1,0 +1,29 @@
+{
+  "aesthetic_metrics": {
+    "average_front_lower_transparency": 1.0,
+    "palette_violations": 0,
+    "unique_fill_signatures": 4
+  },
+  "design_changes": [
+    "fewer isolated pebbles",
+    "larger packed-earth masses",
+    "thinner chipped exposure silhouettes",
+    "shallower wall lip with transparent cave depth",
+    "damage follows structural seams"
+  ],
+  "failures": [],
+  "files_saved": true,
+  "generated": {
+    "directional_damage_frames": 12,
+    "edge_masks": 16,
+    "fill_variants": 4,
+    "front_wall_states": 4,
+    "golden_reference_tiles": 10,
+    "stamp_count": 15
+  },
+  "logical_size": 32,
+  "nearest_neighbor_scale": 2,
+  "passed": true,
+  "tile_size": 64,
+  "version": 3
+}

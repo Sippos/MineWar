@@ -1,7 +1,61 @@
-[gd_scene format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menus/settings_menu.gd" id="1_script"]
 [ext_resource type="Theme" path="res://assets/themes/global/global_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/MenuPanel.png" id="3_panel"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/icon_settings.svg" id="4_settings"]
+[ext_resource type="Script" path="res://scripts/ui/menus/settings_row_icon.gd" id="5_row_icon"]
+
+[sub_resource type="StyleBoxTexture" id="PanelStyle"]
+texture = ExtResource("3_panel")
+texture_margin_left = 34.0
+texture_margin_top = 34.0
+texture_margin_right = 34.0
+texture_margin_bottom = 34.0
+content_margin_left = 48.0
+content_margin_top = 34.0
+content_margin_right = 48.0
+content_margin_bottom = 34.0
+
+[sub_resource type="StyleBoxFlat" id="RowStyle"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+border_color = Color(0, 0, 0, 0)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxFlat" id="SliderTrack"]
+bg_color = Color(0.075, 0.035, 0.018, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.35, 0.16, 0.95)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="SliderFill"]
+bg_color = Color(0.2, 0.72, 0.9, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.94, 1, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="SettingsMenu" type="Control"]
 layout_mode = 3
@@ -22,7 +76,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-color = Color(0.015, 0.01, 0.005, 0.88)
+color = Color(0.015, 0.01, 0.005, 0.9)
 
 [node name="Center" type="CenterContainer" parent="Dimmer"]
 layout_mode = 1
@@ -33,65 +87,200 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Dimmer/Center"]
-custom_minimum_size = Vector2(560, 390)
+custom_minimum_size = Vector2(660, 550)
 layout_mode = 2
+clip_contents = true
+theme_override_styles/panel = SubResource("PanelStyle")
 
 [node name="VBox" type="VBoxContainer" parent="Dimmer/Center/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(0, 56)
+[node name="Header" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderSpacerLeft" type="Control" parent="Dimmer/Center/Panel/VBox/Header"]
+custom_minimum_size = Vector2(38, 0)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Dimmer/Center/Panel/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 28
 text = "SETTINGS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="FullscreenCheck" type="CheckButton" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(420, 52)
+[node name="HeaderIcon" type="TextureRect" parent="Dimmer/Center/Panel/VBox/Header"]
+custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
-text = "Fullscreen"
+texture = ExtResource("4_settings")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
 
-[node name="VSyncCheck" type="CheckButton" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(420, 52)
+[node name="WindowModeRow" type="PanelContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
-text = "Vertical Sync"
+theme_override_styles/panel = SubResource("RowStyle")
 
-[node name="VolumeRow" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(420, 58)
+[node name="Content" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox/WindowModeRow"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
-[node name="VolumeLabel" type="Label" parent="Dimmer/Center/Panel/VBox/VolumeRow"]
-custom_minimum_size = Vector2(140, 0)
+[node name="Icon" type="Control" parent="Dimmer/Center/Panel/VBox/WindowModeRow/Content"]
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
-text = "Master Volume"
+script = ExtResource("5_row_icon")
+icon_type = 0
+
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBox/WindowModeRow/Content"]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+text = "WINDOW MODE"
 vertical_alignment = 1
 
-[node name="VolumeSlider" type="HSlider" parent="Dimmer/Center/Panel/VBox/VolumeRow"]
-custom_minimum_size = Vector2(220, 0)
+[node name="WindowModeOption" type="OptionButton" parent="Dimmer/Center/Panel/VBox/WindowModeRow/Content"]
+custom_minimum_size = Vector2(240, 38)
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="ResolutionRow" type="PanelContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_styles/panel = SubResource("RowStyle")
+
+[node name="Content" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox/ResolutionRow"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="Control" parent="Dimmer/Center/Panel/VBox/ResolutionRow/Content"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+script = ExtResource("5_row_icon")
+icon_type = 1
+
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBox/ResolutionRow/Content"]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+text = "RESOLUTION"
+vertical_alignment = 1
+
+[node name="ResolutionOption" type="OptionButton" parent="Dimmer/Center/Panel/VBox/ResolutionRow/Content"]
+custom_minimum_size = Vector2(240, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSyncRow" type="PanelContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_styles/panel = SubResource("RowStyle")
+
+[node name="Content" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox/VSyncRow"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="Control" parent="Dimmer/Center/Panel/VBox/VSyncRow/Content"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+script = ExtResource("5_row_icon")
+icon_type = 2
+
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBox/VSyncRow/Content"]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+text = "VERTICAL SYNC"
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="Dimmer/Center/Panel/VBox/VSyncRow/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSyncToggle" type="Button" parent="Dimmer/Center/Panel/VBox/VSyncRow/Content"]
+custom_minimum_size = Vector2(88, 38)
+layout_mode = 2
+toggle_mode = true
+text = "ON"
+
+[node name="FPSRow" type="PanelContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_styles/panel = SubResource("RowStyle")
+
+[node name="Content" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox/FPSRow"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="Control" parent="Dimmer/Center/Panel/VBox/FPSRow/Content"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+script = ExtResource("5_row_icon")
+icon_type = 3
+
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBox/FPSRow/Content"]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+text = "FRAME LIMIT"
+vertical_alignment = 1
+
+[node name="FPSOption" type="OptionButton" parent="Dimmer/Center/Panel/VBox/FPSRow/Content"]
+custom_minimum_size = Vector2(240, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VolumeRow" type="PanelContainer" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_styles/panel = SubResource("RowStyle")
+
+[node name="Content" type="HBoxContainer" parent="Dimmer/Center/Panel/VBox/VolumeRow"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="Control" parent="Dimmer/Center/Panel/VBox/VolumeRow/Content"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+script = ExtResource("5_row_icon")
+icon_type = 4
+
+[node name="Label" type="Label" parent="Dimmer/Center/Panel/VBox/VolumeRow/Content"]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+text = "MASTER VOLUME"
+vertical_alignment = 1
+
+[node name="VolumeSlider" type="HSlider" parent="Dimmer/Center/Panel/VBox/VolumeRow/Content"]
+custom_minimum_size = Vector2(150, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/slider = SubResource("SliderTrack")
+theme_override_styles/grabber_area = SubResource("SliderFill")
+theme_override_styles/grabber_area_highlight = SubResource("SliderFill")
 value = 100.0
 
-[node name="VolumeValue" type="Label" parent="Dimmer/Center/Panel/VBox/VolumeRow"]
-custom_minimum_size = Vector2(60, 0)
+[node name="VolumeValue" type="Label" parent="Dimmer/Center/Panel/VBox/VolumeRow/Content"]
+custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="Hint" type="Label" parent="Dimmer/Center/Panel/VBox"]
+custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.72, 0.68, 0.6, 1)
-text = "Settings are saved automatically."
+theme_override_colors/font_color = Color(0.84, 0.76, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "Changes are saved automatically."
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="BackButton" type="Button" parent="Dimmer/Center/Panel/VBox"]
-custom_minimum_size = Vector2(420, 52)
+custom_minimum_size = Vector2(340, 48)
 layout_mode = 2
+size_flags_horizontal = 4
 text = "Back"

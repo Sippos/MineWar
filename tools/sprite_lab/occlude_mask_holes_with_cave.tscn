@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/occlude_mask_holes_with_cave.gd" id="1"]
+
+[node name="OccludeMaskHolesWithCave" type="Node"]
+script = ExtResource("1")

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/sprite_lab/test_full_width_front_faces.gd" id="1"]
+
+[node name="TestFullWidthFrontFaces" type="Node"]
+script = ExtResource("1")

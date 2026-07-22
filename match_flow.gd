@@ -96,7 +96,7 @@ func _is_single_player_world(node: Node) -> bool:
 	var wave_number = node.get("current_wave_number")
 	if wave_number == null:
 		return false
-	return not bool(node.get("is_vs_mode"))
+	return node.get("is_vs_mode") != true
 
 func _show_match_intro() -> void:
 	if intro_shown or active_world == null or not is_instance_valid(active_world):

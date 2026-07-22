@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/apply_online_lobby_main_menu_typography.gd" id="1_script"]
+
+[node name="ApplyOnlineLobbyMainMenuTypography" type="Node"]
+script = ExtResource("1_script")

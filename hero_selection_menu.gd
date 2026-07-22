@@ -96,6 +96,7 @@ const HERO_ABILITY_PREVIEWS = {
 var compact_layout = false
 var minimal_layout = false
 var ability_icon_cache = {}
+var closing := false
 
 func setup(mode: int, context: String = "menu") -> void:
 	current_mode = mode as Mode
@@ -105,6 +106,7 @@ func setup(mode: int, context: String = "menu") -> void:
 		p1_index = selected_index
 
 func _ready() -> void:
+	z_index = 100
 	p1_prev.pressed.connect(func(): change_hero(1, -1))
 	p1_next.pressed.connect(func(): change_hero(1, 1))
 	p2_prev.pressed.connect(func(): change_hero(2, -1))
@@ -125,15 +127,23 @@ func _ready() -> void:
 	_configure_focus_navigation()
 	start_btn.grab_focus()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
+
 func _apply_context_labels() -> void:
 	if current_mode == Mode.SINGLE_PLAYER:
 		title_label.text = "Choose Hero & Matching Base" if current_context == "solo_retry" else "Select Hero & Matching Base"
 		p1_player_caption.text = "HERO"
+	elif current_mode == Mode.VS_ONLINE:
+		title_label.text = "CHOOSE ONLINE HERO"
+		p1_player_caption.text = "HERO"
 	else:
-		title_label.text = "Select Heroes"
+		title_label.text = "SELECT LOCAL HEROES"
 		p1_player_caption.text = "PLAYER 1"
 	p2_player_caption.text = "PLAYER 2"
-	start_btn.text = "Retry from Surface" if current_context == "solo_retry" else "Start"
+	start_btn.text = "Retry from Surface" if current_context == "solo_retry" else ("Continue to Room Code" if current_mode == Mode.VS_ONLINE else "Start")
 	back_btn.text = "Back"
 	p1_prev.text = "◀  Previous"
 	p1_next.text = "Next  ▶"
@@ -141,7 +151,11 @@ func _apply_context_labels() -> void:
 	p2_next.text = "Next  ▶"
 
 func _on_back_pressed() -> void:
-	queue_free()
+	if closing:
+		return
+	closing = true
+	# Keep the clicked controls alive through mouse release so it cannot activate the parent menu.
+	get_tree().create_timer(0.12, true).timeout.connect(queue_free)
 
 func _configure_ability_panels() -> void:
 	for ability_panel_value in [p1_ability_panel, p2_ability_panel]:
