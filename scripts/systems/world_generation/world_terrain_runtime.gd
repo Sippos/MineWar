@@ -250,12 +250,19 @@ func _add_full_collision(source: TileSetAtlasSource, atlas_coords: Vector2i) -> 
 func _load_runtime_texture(path: String) -> Texture2D:
 	if path.get_extension().to_lower() == "svg":
 		return TEXTURE_FACTORY.load_svg_texture(path)
-	if not FileAccess.file_exists(path):
+	if not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
 		push_warning("Runtime terrain texture is missing: %s" % path)
 		return null
-	var image := Image.load_from_file(ProjectSettings.globalize_path(path))
+	var tex = load(path)
+	if tex == null:
+		push_warning("Runtime terrain texture could not be loaded: %s" % path)
+		return null
+	var image: Image
+	if tex is Texture2D:
+		image = tex.get_image()
 	if image == null or image.is_empty():
 		push_warning("Runtime terrain texture could not be decoded: %s" % path)
 		return null
-	image.convert(Image.FORMAT_RGBA8)
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image.convert(Image.FORMAT_RGBA8)
 	return ImageTexture.create_from_image(image)
