@@ -1,13 +1,13 @@
-extends Node
+extends SceneTree
 
-func _ready() -> void:
+func _init() -> void:
 	var path := "res://scripts/systems/world_generation/world.gd"
 	var text := FileAccess.get_file_as_string(path)
 	var variable_marker := "@onready var front_layer: TileMapLayer = $FrontWallLayer\n@onready var canvas_modulate: CanvasModulate = $CanvasModulate\n"
 	var variable_replacement := "@onready var front_layer: TileMapLayer = $FrontWallLayer\n@onready var canvas_modulate: CanvasModulate = $CanvasModulate\n\nconst INSIDE_CORNER_ATLAS_PATHS := {\n\t1: \"res://assets/sprites/world/terrain/dome/Easy_Inside_Corners.png\",\n\t2: \"res://assets/sprites/world/terrain/dome/Medium_Inside_Corners.png\",\n\t3: \"res://assets/sprites/world/terrain/dome/Hard_Inside_Corners.png\",\n}\nconst INSIDE_CORNER_FRAME_SIZE := 64\nconst INSIDE_CORNER_Z_INDEX := 2\nvar inside_corner_textures: Dictionary = {}\nvar inside_corner_sprites: Dictionary = {}\nvar inside_corner_layer: Node2D\n"
 	if not text.contains(variable_marker):
 		push_error("Could not find world inside-corner variable marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(variable_marker, variable_replacement)
 
@@ -15,7 +15,7 @@ func _ready() -> void:
 	var ready_replacement := "\t_ensure_base_gem_indicator_textures()\n\t_setup_inside_corner_renderer()\n\t_configure_mine_lighting()\n"
 	if not text.contains(ready_marker):
 		push_error("Could not find world ready setup marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(ready_marker, ready_replacement)
 
@@ -23,7 +23,7 @@ func _ready() -> void:
 	var generation_replacement := "\tgenerate_initial_world()\n\t_rebuild_inside_corners()\n\t_normalize_gem_indicator_sprites()\n"
 	if not text.contains(generation_marker):
 		push_error("Could not find world generation marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(generation_marker, generation_replacement)
 
@@ -31,7 +31,7 @@ func _ready() -> void:
 	var empty_replacement := "\tif block_layer.get_cell_source_id(cell) == -1:\n\t\tfog_layer.erase_cell(cell)\n\t\t_refresh_inside_corners_around(cell)\n\t\treturn\n"
 	if not text.contains(empty_marker):
 		push_error("Could not find empty fog-mask marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(empty_marker, empty_replacement)
 
@@ -39,7 +39,7 @@ func _ready() -> void:
 	var end_replacement := "\tif gem_blocks.has(cell):\n\t\t_refresh_gem_indicator(cell)\n\t_refresh_inside_corners_around(cell)\n\nfunc _add_wasd_input() -> void:\n"
 	if not text.contains(end_marker):
 		push_error("Could not find fog-mask end marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(end_marker, end_replacement)
 
@@ -134,16 +134,16 @@ func _rebuild_inside_corners() -> void:
 """
 	if not text.contains(insertion_marker):
 		push_error("Could not find world corner function insertion marker")
-		get_tree().quit(1)
+		quit(1)
 		return
 	text = text.replace(insertion_marker, functions + insertion_marker)
 
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		push_error("Could not write runtime inside-corner patch")
-		get_tree().quit(1)
+		quit(1)
 		return
 	file.store_string(text)
 	file.close()
 	print("Runtime inside-corner renderer installed")
-	get_tree().quit()
+	quit()

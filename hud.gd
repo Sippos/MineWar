@@ -1032,15 +1032,10 @@ func _relayout_unlocked_hud() -> void:
 	# XP remains a strong bottom-center anchor and never occupies the future mana slot.
 	if xp_label and xp_bar:
 		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_bar.offset_left = -center_width * 0.5
-		xp_bar.offset_top = -42.0
-		xp_bar.offset_right = center_width * 0.5
-		xp_bar.offset_bottom = -20.0
+		xp_bar.position = Vector2(-105.0, -58.0)
 		xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_label.offset_left = -center_width * 0.5
-		xp_label.offset_top = -43.0
-		xp_label.offset_right = center_width * 0.5
-		xp_label.offset_bottom = -19.0
+		xp_label.position = Vector2(-105.0, -43.0)
+		xp_label.size = Vector2(210.0, 24.0)
 		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))
@@ -1057,18 +1052,13 @@ func _relayout_unlocked_hud() -> void:
 	# Purchased wave information sits between screen center and the base cluster.
 	if wave_label:
 		wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		wave_label.offset_left = 20.0
-		wave_label.offset_top = 18.0
-		wave_label.offset_right = 280.0
-		wave_label.offset_bottom = 46.0
+		wave_label.position = Vector2(-105.0, 18.0)
+		wave_label.size = Vector2(210.0, 28.0)
 		wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if get_node_or_null("WaveBar"):
 		var wave_bar := get_node("WaveBar") as TextureProgressBar
 		wave_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		wave_bar.offset_left = 20.0
-		wave_bar.offset_top = 48.0
-		wave_bar.offset_right = 280.0
-		wave_bar.offset_bottom = 62.0
+		wave_bar.position = Vector2(-105.0, 34.0)
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
 	if minimap and minimap.visible:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1231,18 +1221,15 @@ func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: f
 	var is_visible := (bar != null and bar.visible) or (value_label != null and value_label.visible)
 	if not is_visible:
 		return y
-	var x := get_viewport().get_visible_rect().size.x - edge - module_width if align_right else edge
+	var x := get_viewport().get_visible_rect().size.x - edge - 210.0 if align_right else edge
 	if bar:
-		bar.scale = Vector2.ONE
-		bar.nine_patch_stretch = true
 		bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		bar.position = Vector2(x, y)
-		bar.size = Vector2(module_width, 22.0)
+		bar.position = Vector2(x, y + 16.0)
 		_style_hud_progress_bar(bar, Color(0.35, 0.86, 0.38, 1.0) if align_right else Color(0.9, 0.16, 0.18, 1.0))
 	if value_label:
 		value_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		value_label.position = Vector2(x, y)
-		value_label.size = Vector2(module_width, 22.0)
+		value_label.size = Vector2(210.0, 22.0)
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		value_label.add_theme_font_size_override("font_size", 13)
@@ -1254,8 +1241,8 @@ func _style_hud_progress_bar(bar: TextureProgressBar, progress_color: Color) -> 
 	if not bar:
 		return
 	bar.tint_under = Color(0.025, 0.03, 0.04, 0.92)
-	bar.scale = Vector2.ONE
-	bar.nine_patch_stretch = true
+	bar.scale = Vector2(0.5, 0.5)
+	bar.nine_patch_stretch = false
 	bar.tint_progress = progress_color
 	bar.tint_over = Color(1, 1, 1, 0.78)
 

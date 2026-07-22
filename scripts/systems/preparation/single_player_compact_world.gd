@@ -9,9 +9,9 @@ extends "res://scripts/systems/preparation/preparation_fast_world.gd"
 enum HubTier { BURROW, CAVE, STRONGHOLD }
 
 const TIER_LAYOUTS := {
-	HubTier.BURROW:     { "half_w": 2, "half_h": 2, "entrance_y": 3, "zoom": 1.4, "cam_y": 32 },
-	HubTier.CAVE:       { "half_w": 3, "half_h": 3, "entrance_y": 4, "zoom": 1.1, "cam_y": 32 },
-	HubTier.STRONGHOLD: { "half_w": 4, "half_h": 4, "entrance_y": 5, "zoom": 0.9, "cam_y": 32 },
+	HubTier.BURROW:     { "half_w": 2, "half_h": 2, "entrance_y": 3, "zoom": 2.2, "cam_y": 32 },
+	HubTier.CAVE:       { "half_w": 3, "half_h": 3, "entrance_y": 4, "zoom": 1.7, "cam_y": 32 },
+	HubTier.STRONGHOLD: { "half_w": 4, "half_h": 4, "entrance_y": 5, "zoom": 1.3, "cam_y": 32 },
 }
 
 # World bounds — kept wide enough for the mine below the hub.

@@ -495,10 +495,12 @@ func _begin_player_journey() -> void:
 		if hud.has_method("unlock_xp"):
 			hud.unlock_xp()
 		var player := get_node_or_null("Player")
-		if player and hud.has_method("update_stats"):
-			hud.update_stats(int(player.strength), int(player.agility), int(player.intelligence))
-		if player and hud.has_method("update_xp"):
-			hud.update_xp(int(player.level), int(player.xp), int(player.max_xp))
+		# The Player node may be a builder peon (plain CharacterBody2D) that has no
+		# RPG stats, so read them defensively instead of accessing the properties.
+		if player and hud.has_method("update_stats") and player.get("strength") != null:
+			hud.update_stats(int(player.get("strength")), int(player.get("agility")), int(player.get("intelligence")))
+		if player and hud.has_method("update_xp") and player.get("level") != null:
+			hud.update_xp(int(player.get("level")), int(player.get("xp")), int(player.get("max_xp")))
 	if onboarding_active:
 		_create_entry_marker()
 		_set_onboarding_stage(OnboardingStage.DIG_DOWN)

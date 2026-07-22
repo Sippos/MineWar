@@ -96,7 +96,7 @@ const HERO_CARD_DATA := {
 
 const CARD_REVEAL_DISTANCE := 132.0
 const INTERACT_DISTANCE := 46.0
-const CARD_SIZE := Vector2(310, 330)
+const CARD_SIZE := Vector2(380, 450)
 const CARD_TOP_SAFE := 86.0
 const CARD_BOTTOM_SAFE := 78.0
 
@@ -142,6 +142,15 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if player == null or not is_instance_valid(player):
 		return
+	
+	if not GameMode.is_hub():
+		if shrine_root and shrine_root.visible:
+			shrine_root.visible = false
+			_hide_card()
+		return
+	elif shrine_root and not shrine_root.visible:
+		shrine_root.visible = true
+
 	var closest := ""
 	var closest_distance := CARD_REVEAL_DISTANCE
 	for hero_name in HERO_ORDER:
@@ -318,13 +327,13 @@ func _build_proximity_card() -> void:
 
 	var header := HBoxContainer.new()
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.custom_minimum_size = Vector2(0, 62)
+	header.custom_minimum_size = Vector2(0, 84)
 	header.add_theme_constant_override("separation", 10)
 	body.add_child(header)
 
 	var portrait_frame := PanelContainer.new()
 	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_frame.custom_minimum_size = Vector2(62, 62)
+	portrait_frame.custom_minimum_size = Vector2(84, 84)
 	portrait_frame.add_theme_stylebox_override("panel", _flat_style(Color(0.02, 0.025, 0.035, 0.98), Color(0.35, 0.48, 0.62, 0.9), 2, 8))
 	header.add_child(portrait_frame)
 
@@ -343,26 +352,26 @@ func _build_proximity_card() -> void:
 
 	card_title = Label.new()
 	card_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card_title.add_theme_font_size_override("font_size", 20)
+	card_title.add_theme_font_size_override("font_size", 26)
 	card_title.add_theme_color_override("font_outline_color", Color.BLACK)
 	card_title.add_theme_constant_override("outline_size", 3)
 	heading_box.add_child(card_title)
 
 	card_role = Label.new()
 	card_role.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card_role.add_theme_font_size_override("font_size", 11)
+	card_role.add_theme_font_size_override("font_size", 15)
 	heading_box.add_child(card_role)
 
 	card_state = Label.new()
 	card_state.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card_state.add_theme_font_size_override("font_size", 11)
+	card_state.add_theme_font_size_override("font_size", 15)
 	heading_box.add_child(card_state)
 
 	card_description = Label.new()
 	card_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_description.custom_minimum_size = Vector2(0, 34)
 	card_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	card_description.add_theme_font_size_override("font_size", 11)
+	card_description.add_theme_font_size_override("font_size", 15)
 	card_description.add_theme_color_override("font_color", Color(0.78, 0.83, 0.89, 1.0))
 	body.add_child(card_description)
 
@@ -373,7 +382,7 @@ func _build_proximity_card() -> void:
 	var abilities_heading := Label.new()
 	abilities_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	abilities_heading.text = "ABILITIES"
-	abilities_heading.add_theme_font_size_override("font_size", 11)
+	abilities_heading.add_theme_font_size_override("font_size", 14)
 	abilities_heading.add_theme_color_override("font_color", Color(0.68, 0.77, 0.86, 1.0))
 	body.add_child(abilities_heading)
 
@@ -392,7 +401,7 @@ func _build_proximity_card() -> void:
 	card_action.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_action.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card_action.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	card_action.add_theme_font_size_override("font_size", 12)
+	card_action.add_theme_font_size_override("font_size", 15)
 	card_action.add_theme_color_override("font_outline_color", Color.BLACK)
 	card_action.add_theme_constant_override("outline_size", 3)
 	card_action_panel.add_child(card_action)
@@ -431,10 +440,10 @@ func _set_card_hero(hero_name: String) -> void:
 	card.visible = true
 	card.pivot_offset = CARD_SIZE * 0.5
 	card.modulate = Color(1, 1, 1, 0)
-	card.scale = Vector2(0.66, 0.66)
+	card.scale = Vector2(0.85, 0.85)
 	card_tween = create_tween().set_parallel(true)
 	card_tween.tween_property(card, "modulate", Color.WHITE, 0.14)
-	card_tween.tween_property(card, "scale", Vector2(0.72, 0.72), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	card_tween.tween_property(card, "scale", Vector2(1.0, 1.0), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _hide_card() -> void:
 	card_visible_for = ""
@@ -444,7 +453,7 @@ func _hide_card() -> void:
 		card_tween.kill()
 	card_tween = create_tween().set_parallel(true)
 	card_tween.tween_property(card, "modulate:a", 0.0, 0.1)
-	card_tween.tween_property(card, "scale", Vector2(0.68, 0.68), 0.1)
+	card_tween.tween_property(card, "scale", Vector2(0.9, 0.9), 0.1)
 	card_tween.chain().tween_callback(func():
 		if card_visible_for.is_empty() and is_instance_valid(card):
 			card.visible = false
@@ -504,12 +513,12 @@ func _refresh_card(hero_name: String) -> void:
 func _make_ability_row(ability: Dictionary, unlocked: bool, accent: Color) -> Control:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.custom_minimum_size = Vector2(0, 30)
+	row.custom_minimum_size = Vector2(0, 42)
 	row.add_theme_constant_override("separation", 8)
 
 	var icon_frame := PanelContainer.new()
 	icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon_frame.custom_minimum_size = Vector2(28, 28)
+	icon_frame.custom_minimum_size = Vector2(40, 40)
 	icon_frame.add_theme_stylebox_override("panel", _flat_style(Color(0.02, 0.025, 0.035, 0.95), Color(accent.r, accent.g, accent.b, 0.72) if unlocked else Color(0.22, 0.24, 0.28, 0.8), 1, 6))
 	row.add_child(icon_frame)
 
@@ -531,7 +540,7 @@ func _make_ability_row(ability: Dictionary, unlocked: bool, accent: Color) -> Co
 	var title := Label.new()
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.text = str(ability.get("title", "Ability"))
-	title.add_theme_font_size_override("font_size", 11)
+	title.add_theme_font_size_override("font_size", 15)
 	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.58, 1.0) if unlocked else Color(0.46, 0.48, 0.52, 1.0))
 	text_box.add_child(title)
 
@@ -540,7 +549,7 @@ func _make_ability_row(ability: Dictionary, unlocked: bool, accent: Color) -> Co
 	description.text = str(ability.get("description", ""))
 	description.clip_text = true
 	description.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	description.add_theme_font_size_override("font_size", 9)
+	description.add_theme_font_size_override("font_size", 12)
 	description.visible = false
 	description.add_theme_color_override("font_color", Color(0.68, 0.74, 0.8, 1.0) if unlocked else Color(0.38, 0.4, 0.44, 1.0))
 	text_box.add_child(description)
