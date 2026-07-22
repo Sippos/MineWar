@@ -8,6 +8,8 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/dome/Unmineable_Border_Atlas.png" id="8_o6bh4"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png" id="8_sprite"]
 [ext_resource type="Script" path="res://map_bounds.gd" id="9_bounds"]
+[ext_resource type="Script" uid="uid://cm7nqbvu5qdwb" path="res://scripts/systems/world_generation/world_gem_visuals.gd" id="1_world"]
+[ext_resource type="Script" uid="uid://bwa3xg44g5nig" path="res://player.gd" id="2_h2yge"]
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/dome/Easy_Inside_Corners_CLEAN.png" id="10_vagr4"]
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/dome/Medium_Inside_Corners.png" id="11_25bmf"]
 [ext_resource type="Texture2D" path="res://assets/sprites/world/terrain/dome/Hard_Inside_Corners.png" id="12_b80ms"]
@@ -753,6 +755,7 @@ size = Vector2(40, 40)
 
 [node name="Level" type="Node2D" unique_id=1865611792]
 y_sort_enabled = true
+script = ExtResource("1_world")
 
 [node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=479574395]
 color = Color(0.44, 0.47, 0.55, 1)
@@ -834,6 +837,7 @@ tile_set = SubResource("TileSet_main")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=885445882 groups=["players"]]
 position = Vector2(0, -32)
+script = ExtResource("2_h2yge")
 
 [node name="Shadow" type="Sprite2D" parent="Player" unique_id=12173724]
 texture = SubResource("GradientTexture2D_shadow")
