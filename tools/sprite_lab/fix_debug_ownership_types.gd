@@ -12,4 +12,4 @@ func _ready() -> void:
 	var file := FileAccess.open(PATH, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
-	get_tree().quit(
+	get_tree().quit()
