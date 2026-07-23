@@ -182,6 +182,8 @@ var carried_gems = []
 var nearby_gems = []
 var cave_reward_ids: Array[String] = []
 var cave_reward_carry_bonus := 0
+var cave_reward_speed_bonus := 0.0
+var cave_reward_dig_mult := 1.0
 
 # Carrying stays permissive: Strength and cave rewards grant a small free
 # allowance before the existing overload slowdown starts. Every three Strength
@@ -189,6 +191,9 @@ var cave_reward_carry_bonus := 0
 # deposit rules.
 const BASE_FREE_CARRY_ALLOWANCE := 1
 const STRENGTH_CARRY_STEP := 2
+const BOOTS_SPEED_BONUS := 28.0
+const PICKAXE_DIG_MULT := 0.82
+const PICKAXE_ATTACK_MULT := 0.88
 
 @onready var tile_map: TileMapLayer = $"../BlockLayer"
 @onready var damage_layer: TileMapLayer = $"../DamageLayer"
@@ -302,9 +307,17 @@ func get_free_carry_allowance() -> int:
 func apply_cave_reward(reward_id: String) -> bool:
 	if cave_reward_ids.has(reward_id):
 		return false
+	var notice_text := ""
 	match reward_id:
 		"miners_satchel":
 			cave_reward_carry_bonus += 1
+			notice_text = "Miner's Bag equipped: +1 free gem carry"
+		"pickaxe":
+			cave_reward_dig_mult *= PICKAXE_DIG_MULT
+			notice_text = "Pickaxe equipped: faster mining & attacks"
+		"boots":
+			cave_reward_speed_bonus += BOOTS_SPEED_BONUS
+			notice_text = "Boots equipped: +movement speed"
 		_:
 			return false
 	cave_reward_ids.append(reward_id)
@@ -313,8 +326,8 @@ func apply_cave_reward(reward_id: String) -> bool:
 		var hud = parent_node.get_node_or_null("HUD") if parent_node else null
 		if hud and hud.has_method("add_cave_reward"):
 			hud.add_cave_reward(reward_id)
-		if hud and hud.has_method("show_notice"):
-			hud.show_notice("Miner's Satchel equipped: +1 free gem carry", 2.4)
+		if hud and hud.has_method("show_notice") and not notice_text.is_empty():
+			hud.show_notice(notice_text, 2.4)
 	return true
 
 func get_carry_load() -> int:
@@ -505,9 +518,9 @@ func _physics_process(delta: float) -> void:
 
 	var penalty: float = get_weight_penalty()
 	var rpg_movement: Node = _rpg_controller()
-	var current_speed: float = base_speed + float(agility - 1) * 3.0
+	var current_speed: float = base_speed + float(agility - 1) * 3.0 + cave_reward_speed_bonus
 	if rpg_movement != null and rpg_movement.has_method("get_move_speed"):
-		current_speed = float(rpg_movement.call("get_move_speed"))
+		current_speed = float(rpg_movement.call("get_move_speed")) + cave_reward_speed_bonus
 	current_speed *= 1.0 - penalty
 	var direction = Vector2.ZERO
 	if can_move:
@@ -555,9 +568,11 @@ func _physics_process(delta: float) -> void:
 			_reset_action_animation()
 		attack_timer += delta
 		var rpg_combat: Node = _rpg_controller()
-		var attack_interval: float = base_dig_time * pow(0.965, agility - 1)
+		var attack_interval: float = base_dig_time * pow(0.965, agility - 1) * PICKAXE_ATTACK_MULT if cave_reward_ids.has("pickaxe") else base_dig_time * pow(0.965, agility - 1)
 		if rpg_combat != null and rpg_combat.has_method("get_attack_interval"):
 			attack_interval = float(rpg_combat.call("get_attack_interval"))
+			if cave_reward_ids.has("pickaxe"):
+				attack_interval *= PICKAXE_ATTACK_MULT
 		if attack_timer >= attack_interval:
 			var damage: int = 10 * strength
 			if rpg_combat != null and rpg_combat.has_method("get_basic_attack_damage"):
@@ -778,6 +793,7 @@ func handle_digging(delta: float) -> void:
 					else:
 						calculated_dig_time *= pow(0.975, agility - 1)
 					calculated_dig_time *= _get_shaman_dig_time_multiplier()
+					calculated_dig_time *= cave_reward_dig_mult
 					if current_hero_name == "Druid" and druid_mole_active:
 						calculated_dig_time *= 0.55
 					# Keep the authored swing cadence independent from block hardness.

@@ -1,8 +1,7 @@
 extends Control
 
+const MenuTypography = preload("res://scripts/ui/menus/menu_typography.gd")
 const MENU_THEME = preload("res://assets/themes/global/global_theme.tres")
-const MENU_FONT: FontFile = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
-const DECORATIVE_FONT: FontFile = preload("res://assets/fonts/grenze_gotisch/GrenzeGotisch-Variable.ttf")
 const HEADER_LOGO: Texture2D = preload("res://HeaderLogo.png")
 const MULTIPLAYER_MENU = preload("res://scenes/menus/multiplayer_menu.tscn")
 const SETTINGS_MENU = preload("res://scenes/menus/settings_menu.tscn")
@@ -61,40 +60,17 @@ func _configure_release_menu() -> void:
 	tagline.visible = false
 
 func _apply_display_font() -> void:
-	var button_font := _make_font_variation(MENU_FONT, 900.0, 0.85)
-	var detail_font := _make_font_variation(MENU_FONT, 650.0, 0.15)
-	var decorative_heading := _make_font_variation(DECORATIVE_FONT, 760.0)
-	var decorative_detail := _make_font_variation(DECORATIVE_FONT, 600.0)
-
 	for button in [single_player_button, local_multiplayer_button, online_multiplayer_button]:
-		button.add_theme_font_override("font", button_font)
-		button.add_theme_font_size_override("font_size", 20)
-		button.add_theme_color_override("font_color", Color(1.0, 0.94, 0.8, 1.0))
-		button.add_theme_color_override("font_hover_color", Color(1.0, 0.98, 0.82, 1.0))
-		button.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.32, 1.0))
-		button.add_theme_color_override("font_focus_color", Color(0.73, 0.93, 1.0, 1.0))
-		button.add_theme_color_override("font_outline_color", Color(0.03, 0.012, 0.006, 0.98))
-		button.add_theme_constant_override("outline_size", 3)
-		button.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.82))
-		button.add_theme_constant_override("shadow_offset_x", 1)
-		button.add_theme_constant_override("shadow_offset_y", 2)
-		button.add_theme_constant_override("shadow_outline_size", 1)
+		MenuTypography.apply_primary_button_style(button, 18)
 
 	var tagline := get_node_or_null("ReleaseTagline") as Label
 	if tagline:
-		tagline.add_theme_font_override("font", detail_font)
+		tagline.add_theme_font_override("font", MenuTypography.detail_font())
 
 	var lexicon_caption := _ensure_lexicon_caption()
-	lexicon_caption.add_theme_font_override("font", decorative_heading)
+	lexicon_caption.add_theme_font_override("font", MenuTypography.decorative_heading_font())
 	var lexicon_hint := _ensure_lexicon_hint()
-	lexicon_hint.add_theme_font_override("font", decorative_detail)
-
-func _make_font_variation(base_font: Font, weight: float, embolden: float = 0.0) -> FontVariation:
-	var font := FontVariation.new()
-	font.base_font = base_font
-	font.variation_opentype = {"wght": weight}
-	font.variation_embolden = embolden
-	return font
+	lexicon_hint.add_theme_font_override("font", MenuTypography.decorative_detail_font())
 
 func _ensure_logo_header() -> TextureRect:
 	var existing := get_node_or_null("LogoHeader") as TextureRect
@@ -268,7 +244,6 @@ func _layout_for_screen(screen_size_override: Vector2 = Vector2.ZERO) -> void:
 	logo.offset_right = center_x + logo_width * 0.5
 	logo.offset_bottom = title_top + logo_height
 
-	# Keep the legacy title node as a hidden layout anchor for existing tests/tools.
 	$Label.visible = false
 	$Label.offset_left = logo.offset_left
 	$Label.offset_top = logo.offset_top
@@ -377,7 +352,7 @@ func _main_button_layout(screen_size: Vector2) -> Dictionary:
 	var logo_height := logo_width / maxf(logo_aspect, 1.0)
 	var title_width := logo_width
 	var button_width := clampf(screen_size.x * 0.40, 218.0, 252.0)
-	var button_height := 50.0 if compact else 58.0
+	var button_height := 56.0 if compact else 68.0
 	var gap := 9.0 if compact else 12.0
 	var minimum_top := title_top + logo_height + (8.0 if compact else 12.0)
 	var available_height := screen_size.y - minimum_top - 18.0
@@ -418,8 +393,6 @@ func _layout_button(button: Control, center_x: float, top: float, width: float, 
 	button.custom_minimum_size = Vector2(width, height)
 
 func _on_single_player_pressed() -> void:
-	# Start Expedition always opens the overworld first. The player chooses the
-	# actual expedition destination from there.
 	GameMode.set_mode(GameMode.Mode.SIEGE)
 	Global.apply_selected_loadout()
 	get_tree().change_scene_to_file("res://scenes/world/preparation/preparation_hub.tscn")
@@ -437,14 +410,11 @@ func _open_multiplayer_menu(use_online_mode: bool) -> void:
 	)
 
 func _on_local_multiplayer_pressed() -> void:
-	# Local multiplayer begins inside the shared physical stronghold.
 	GameMode.set_mode(GameMode.Mode.HUB)
 	Global.apply_selected_loadout()
 	get_tree().change_scene_to_file("res://scenes/world/preparation/local_multiplayer_hub.tscn")
 
 func _on_online_multiplayer_pressed() -> void:
-	# Online multiplayer now begins with a private hosted stronghold instead of
-	# choosing a mode in a disconnected menu first.
 	GameMode.set_mode(GameMode.Mode.HUB)
 	Global.apply_selected_loadout()
 	get_tree().change_scene_to_file("res://online_lobby.tscn")

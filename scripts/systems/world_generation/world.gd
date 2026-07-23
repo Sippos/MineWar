@@ -36,10 +36,15 @@ var preparation_active: bool = false
 @onready var player_light: PointLight2D = $Player/PointLight2D
 
 var crack_overlay_manager: Node2D
+var light_occluder_manager: Node2D
+var _border_rim_material: ShaderMaterial
 
 var astar: AStarGrid2D
 const ENEMY_SCENE = preload("res://enemy.tscn")
 const MINERS_SATCHEL_SCENE = preload("res://scenes/entities/collectibles/rewards/miners_satchel.tscn")
+const PICKAXE_SCENE = preload("res://scenes/entities/collectibles/rewards/pickaxe.tscn")
+const BOOTS_SCENE = preload("res://scenes/entities/collectibles/rewards/boots.tscn")
+const CAVE_REWARD_SCENES := [MINERS_SATCHEL_SCENE, PICKAXE_SCENE, BOOTS_SCENE]
 const CAVE_REWARD_MIN_DEPTH := 8
 const BLOCK_GEM = 21
 const TUTORIAL_GEM_CELL := Vector2i(0, 2)
@@ -158,6 +163,11 @@ func _ready() -> void:
 	crack_overlay_manager = preload("res://scripts/systems/world_generation/crack_overlay_manager.gd").new()
 	crack_overlay_manager.name = "CrackOverlayManager"
 	add_child(crack_overlay_manager)
+
+	light_occluder_manager = preload("res://scripts/systems/world_generation/mine_light_occluder_manager.gd").new()
+	light_occluder_manager.name = "MineLightOccluderManager"
+	add_child(light_occluder_manager)
+	light_occluder_manager.setup(block_layer)
 	
 	astar = AStarGrid2D.new()
 	astar.region = Rect2i(-30, -15, 60, 60)
@@ -172,6 +182,8 @@ func _ready() -> void:
 	
 	generate_initial_world()
 	world_generation_in_progress = false
+	if light_occluder_manager:
+		light_occluder_manager.build_from_solid_cells()
 	preparation_active = preparation_mode and not is_vs_mode
 	if not preparation_active:
 		call_deferred("_begin_player_journey")
@@ -189,9 +201,35 @@ func _configure_mine_lighting() -> void:
 		radial_texture.fill = GradientTexture2D.FILL_RADIAL
 		radial_texture.fill_from = Vector2(0.5, 0.5)
 		radial_texture.fill_to = Vector2(1.0, 0.5)
-	# Tile occluder shadows caused hard seams around the 64 px terrain cells.
-	# The broad radial light gives the mine atmosphere without those artifacts.
-	player_light.shadow_enabled = false
+	# Runtime overlapping occluders (MineLightOccluderManager) seal tunnel walls.
+	player_light.shadow_enabled = true
+	player_light.shadow_filter = Light2D.SHADOW_FILTER_PCF5
+	player_light.shadow_color = Color(0, 0, 0, 0.72)
+	_setup_border_rim_shader()
+
+func _setup_border_rim_shader() -> void:
+	# Border atlas sits on solid cells, so PointLight occluders block real light.
+	# Proximity rim fakes Dome Keeper-style warm edges on Edge/Front layers.
+	var shader := load("res://assets/environment/lighting/border_rim.gdshader") as Shader
+	if shader == null:
+		return
+	_border_rim_material = ShaderMaterial.new()
+	_border_rim_material.shader = shader
+	_border_rim_material.set_shader_parameter("rim_radius", 240.0)
+	_border_rim_material.set_shader_parameter("rim_strength", 1.1)
+	_border_rim_material.set_shader_parameter("rim_tint", Color(1.0, 0.84, 0.55, 1.0))
+	if edge_layer:
+		edge_layer.material = _border_rim_material
+	if front_layer:
+		front_layer.material = _border_rim_material
+
+func _update_border_rim_player_pos() -> void:
+	if _border_rim_material == null:
+		return
+	var player := get_node_or_null("Player") as Node2D
+	if player == null:
+		return
+	_border_rim_material.set_shader_parameter("player_world_pos", player.global_position)
 
 func on_cell_dug(cell: Vector2i) -> void:
 	if not world_generation_in_progress:
@@ -210,6 +248,8 @@ func on_cell_dug(cell: Vector2i) -> void:
 	if crack_overlay_manager:
 		crack_overlay_manager.clear_damage(cell, false)
 		crack_overlay_manager.clear_damage(Vector2i(cell.x, cell.y + 1), true)
+	if light_occluder_manager:
+		light_occluder_manager.on_cell_dug(cell)
 	
 	update_fog_mask(cell)
 	update_front_wall(cell)
@@ -744,7 +784,8 @@ func try_spawn_cave_reward(cell: Vector2i) -> bool:
 	if is_vs_mode or cave_reward_spawned or cell.y < CAVE_REWARD_MIN_DEPTH:
 		return false
 	cave_reward_spawned = true
-	var reward := MINERS_SATCHEL_SCENE.instantiate()
+	var reward_scene: PackedScene = CAVE_REWARD_SCENES[randi() % CAVE_REWARD_SCENES.size()]
+	var reward := reward_scene.instantiate()
 	var reward_world_position := block_layer.to_global(block_layer.map_to_local(cell))
 	reward.position = to_local(reward_world_position)
 	call_deferred("add_child", reward)
@@ -754,6 +795,7 @@ func try_spawn_cave_reward(cell: Vector2i) -> bool:
 var current_wave_number = 1
 
 func _process(delta: float) -> void:
+	_update_border_rim_player_pos()
 	if preparation_active:
 		return
 	if is_vs_mode:
@@ -1285,9 +1327,17 @@ func spawn_cave_reward_reveal_feedback(world_position: Vector2) -> void:
 	_spawn_resource_burst(world_position, Color(1.0, 0.62, 0.16, 0.98), "CaveRewardRevealFeedback", 28)
 	_spawn_feedback_label(world_position + Vector2(0, -30), "SATCHEL FOUND", Color(1.0, 0.78, 0.3), 1.2)
 
-func spawn_cave_reward_pickup_feedback(world_position: Vector2) -> void:
+func spawn_cave_reward_pickup_feedback(world_position: Vector2, reward_id: String = "miners_satchel") -> void:
 	_spawn_resource_burst(world_position, Color(1.0, 0.82, 0.32, 0.98), "CaveRewardPickupFeedback", 24)
-	_spawn_feedback_label(world_position + Vector2(0, -24), "+1 FREE CARRY", Color(1.0, 0.9, 0.48), 1.0)
+	var label_text := "+1 FREE CARRY"
+	match reward_id:
+		"pickaxe":
+			label_text = "FASTER MINE"
+		"boots":
+			label_text = "+MOVE SPEED"
+		"miners_satchel":
+			label_text = "+1 FREE CARRY"
+	_spawn_feedback_label(world_position + Vector2(0, -24), label_text, Color(1.0, 0.9, 0.48), 1.0)
 
 func _spawn_resource_burst(world_position: Vector2, burst_color: Color, effect_name: String, particle_count := 18) -> void:
 	var burst := CPUParticles2D.new()

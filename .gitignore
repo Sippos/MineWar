@@ -1,57 +1,21 @@
 # Godot 4+ specific ignores
 .godot/
 *.translation
-# export_presets.cfg
+export.cfg
+export_presets.cfg
+*.tmp
 
-# Local Godot editor tooling
-/addons/godot_ai/
-godot-ai-LICENSE.txt
+# Local experiment / backup noise that should never hit main
+tools/sprite_lab/source/dome_material/backups/
+_quarantine/
+**/upgrade_tree_lab*
+**/sprite_lab/**/backups/
 
-# Local environment files and secrets
-.env
-.env.*
-!.env.example
-
-# Mac
+# OS / editor
 .DS_Store
+Thumbs.db
+*.swp
+*~
 
-# Python scripts generated
-__pycache__/
-*.py[cod]
-
-# Generated/local development output
-pixel_sprite_output/
-build/
-/.ai_transfer/
-/.noop.gd
-/.noop.gd.uid
-
-# Temporary local probes and upload payloads
-/ability_icons/generated/.upload_*.b64
-/background_generator.tscn
-/tools/icon_workspace_probe.*
-
-# Local inspection, invalid experiments, and sprite render comparisons
-/.mcp_*
-/upgrade_tree_lab.*
-/character_sprites/_*_backup*/
-/character_sprites/*_test.png*
-/character_sprites/*_compare.png*
-/character_sprites/*camera_*.png*
-/character_sprites/*_aligned_bright.png*
-/character_sprites/*_same_walk_rotation_bright.png*
-/character_sprites/Druid_Humanoid_*.png*
-/character_sprites/Dwarf_*.png*
-/character_sprites/Mech_*.png*
-/character_sprites/Nerubian_*.png*
-/character_sprites/Shaman_*.png*
-/character_sprites/UndeadKing_*.png*
-/character_sprites/UndeadMinion_*.png*
-.godot-mcp/
-
-# MineWars generated/local release files
-/.godot/
-/.godot-mcp/
-/build/
-/_quarantine/
-/shaman_hand_review_temp/
+# Build artifacts (keep build/web if you want local preview, otherwise ignore)
+# build/

@@ -1,7 +1,6 @@
 extends CanvasLayer
 
-const MENU_FONT: FontFile = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
-
+const MenuTypography = preload("res://scripts/ui/menus/menu_typography.gd")
 const CONTROLS_ICON: Texture2D = preload("res://assets/sprites/ui/common/icon_controls.svg")
 
 const GOLD := Color(1.0, 0.82, 0.31, 1.0)
@@ -17,9 +16,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_apply_menu_typography()
 	$Panel/VBoxContainer/Title.text = "CONTROLS"
-	$Panel/VBoxContainer/Title.add_theme_color_override("font_color", GOLD)
-	$Panel/VBoxContainer/Title.add_theme_color_override("font_outline_color", Color.BLACK)
-	$Panel/VBoxContainer/Title.add_theme_constant_override("outline_size", 4)
 	_build_control_rows()
 	_ensure_header_controller_icon()
 	get_tree().root.size_changed.connect(_layout_for_screen)
@@ -28,8 +24,12 @@ func _ready() -> void:
 
 
 func _apply_menu_typography() -> void:
-	for node in get_tree().get_nodes_in_group("ui_text"):
-		node.add_theme_font_override("font", MENU_FONT)
+	var title: Label = $Panel/VBoxContainer/Title as Label
+	MenuTypography.apply_title_style(title, 25)
+	var back_button: Button = $Panel/VBoxContainer/BackButton as Button
+	MenuTypography.apply_primary_button_style(back_button, 18)
+	back_button.custom_minimum_size.y = 68
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -42,8 +42,6 @@ func _build_control_rows() -> void:
 	for child: Node in list.get_children():
 		child.queue_free()
 
-	# The old generic "Stomp" action is the first hero ability slot. Present the
-	# player-facing meaning instead of leaking the legacy input-map name.
 	list.add_child(_make_control_row("MOVE", ["W", "A", "S", "D"], ["L", "+"]))
 	list.add_child(_make_control_row("INTERACT / USE", ["E"], ["Y"]))
 	list.add_child(_make_control_row("GEM: GRAB / DROP", ["SPACE", "Q"], ["A", "B"]))
@@ -59,7 +57,6 @@ func _make_control_row(action_text: String, keyboard_tokens: Array[String], cont
 	row_panel.set_meta("control_row", true)
 
 	var row_style := StyleBoxFlat.new()
-	# Let the wood panel act as the background; rows only provide spacing.
 	row_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 	row_style.border_color = Color(0.0, 0.0, 0.0, 0.0)
 	row_style.set_border_width_all(0)
@@ -81,10 +78,11 @@ func _make_control_row(action_text: String, keyboard_tokens: Array[String], cont
 	action.custom_minimum_size = Vector2(160.0, 0.0)
 	action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	action.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	action.add_theme_font_override("font", MenuTypography.primary_button_font())
+	action.add_theme_font_size_override("font_size", 15)
 	action.add_theme_color_override("font_color", PALE_GOLD)
 	action.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.0, 1.0))
-	action.add_theme_constant_override("outline_size", 2)
-	action.add_theme_font_size_override("font_size", 15)
+	action.add_theme_constant_override("outline_size", 3)
 	row.add_child(action)
 
 	var keyboard_group := HBoxContainer.new()
@@ -140,10 +138,11 @@ func _make_keycap(token: String) -> PanelContainer:
 	label.text = token
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", MenuTypography.primary_button_font())
+	label.add_theme_font_size_override("font_size", 13 if token.length() <= 2 else 11)
 	label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62, 1.0))
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 1)
-	label.add_theme_font_size_override("font_size", 13 if token.length() <= 2 else 11)
+	label.add_theme_constant_override("outline_size", 2)
 	key.add_child(label)
 	return key
 
@@ -220,8 +219,6 @@ func _layout_for_screen() -> void:
 	panel.offset_right = panel_width * 0.5
 	panel.offset_bottom = panel_height * 0.5
 
-	# The texture has a thick metal frame. These larger insets keep every row on
-	# the wooden center instead of drawing across the decorative border.
 	var content: VBoxContainer = $Panel/VBoxContainer as VBoxContainer
 	var horizontal_margin: float = 40.0 if compact else 72.0
 	var vertical_margin: float = 26.0 if compact else 50.0
@@ -233,7 +230,7 @@ func _layout_for_screen() -> void:
 
 	var title: Label = $Panel/VBoxContainer/Title as Label
 	title.custom_minimum_size = Vector2(title.custom_minimum_size.x, 32.0 if compact else 40.0)
-	title.add_theme_font_size_override("font_size", 21 if compact else 25)
+	MenuTypography.apply_title_style(title, 21 if compact else 25)
 
 	var list: VBoxContainer = $Panel/VBoxContainer/ScrollContainer/ControlsList as VBoxContainer
 	list.add_theme_constant_override("separation", 3 if compact else 7)
@@ -252,7 +249,11 @@ func _layout_for_screen() -> void:
 		var controller := columns.get_node_or_null("ControllerGroup") as HBoxContainer
 		if action != null:
 			action.custom_minimum_size = Vector2(108.0 if compact else 160.0, 0.0)
+			action.add_theme_font_override("font", MenuTypography.primary_button_font())
 			action.add_theme_font_size_override("font_size", 13 if compact else 15)
+			action.add_theme_color_override("font_color", PALE_GOLD)
+			action.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.0, 1.0))
+			action.add_theme_constant_override("outline_size", 3)
 		if keyboard != null:
 			keyboard.custom_minimum_size = Vector2(138.0 if compact else 170.0, 0.0)
 			keyboard.add_theme_constant_override("separation", 3 if compact else 4)
@@ -277,12 +278,12 @@ func _layout_for_screen() -> void:
 	header_icon.offset_bottom = header_icon.offset_top + icon_size
 
 	var back_button: Button = $Panel/VBoxContainer/BackButton as Button
-	back_button.custom_minimum_size = Vector2(minf(260.0, panel_width - horizontal_margin * 2.0), 42.0 if compact else 50.0)
+	back_button.custom_minimum_size = Vector2(minf(260.0, panel_width - horizontal_margin * 2.0), 56.0 if compact else 68.0)
+	MenuTypography.apply_primary_button_style(back_button, 16 if compact else 18)
 
 
 func _on_back_pressed() -> void:
 	if _closing:
 		return
 	_closing = true
-	# Keep the clicked button alive through mouse release so the event cannot hit the menu below.
 	get_tree().create_timer(0.12, true).timeout.connect(queue_free)

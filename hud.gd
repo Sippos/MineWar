@@ -131,6 +131,11 @@ const BASE_WARNING_COLORS = {
 	"critical": Color(1.0, 0.2, 0.16, 1.0)
 }
 
+# Compact bar dimensions used by every progress module so unlocked combinations never overlap.
+const BAR_HEIGHT := 22.0
+const BAR_LABEL_HEIGHT := 18.0
+const MODULE_GAP := 6.0
+
 func _is_mobile_hud() -> bool:
 	# Web touch detection is owned by WebIOSLightingFallback. Reuse its root meta
 	# so HUD and controls can never disagree on landscape iPads.
@@ -480,29 +485,10 @@ func _setup_objective_ui() -> void:
 	add_child(objective_panel)
 
 func _setup_carry_status_ui() -> void:
-	carry_status_panel = PanelContainer.new()
-	carry_status_panel.name = "CarryStatus"
-	carry_status_panel.visible = false
-	carry_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	carry_status_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	carry_status_panel.offset_left = 92
-	carry_status_panel.offset_top = 62
-	carry_status_panel.offset_right = 430
-	carry_status_panel.offset_bottom = 91
-	var carry_style := StyleBoxFlat.new()
-	carry_style.bg_color = Color(0.02, 0.07, 0.09, 0.92)
-	carry_style.border_color = Color(0.2, 0.9, 1.0, 0.82)
-	carry_style.set_border_width_all(1)
-	carry_style.set_corner_radius_all(7)
-	carry_style.content_margin_left = 10
-	carry_style.content_margin_right = 10
-	carry_status_panel.add_theme_stylebox_override("panel", carry_style)
-	carry_status_label = Label.new()
-	carry_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	carry_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	carry_status_label.add_theme_font_size_override("font_size", 12)
-	carry_status_panel.add_child(carry_status_label)
-	add_child(carry_status_panel)
+	# Gem carry load is shown by the held gem sprite on the hero — the old teal
+	# HUD bar was redundant and cluttered the portrait/resource cluster.
+	carry_status_panel = null
+	carry_status_label = null
 
 func _setup_return_cue_ui() -> void:
 	return_cue = Control.new()
@@ -572,21 +558,8 @@ func hide_objective() -> void:
 		objective_panel.visible = false
 
 func _update_carry_status() -> void:
-	if not carry_status_panel or not carry_status_label:
-		return
-	var player := _get_player_node()
-	var carry_load := int(player.get_carry_load()) if player and player.has_method("get_carry_load") else 0
-	if carry_load == last_carry_load:
-		return
-	last_carry_load = carry_load
-	carry_status_panel.visible = carry_load > 0
-	if carry_load <= 0:
-		return
-	var allowance := int(player.get_free_carry_allowance()) if player.has_method("get_free_carry_allowance") else 0
-	var overload: int = maxi(carry_load - allowance, 0)
-	var penalty_percent: int = int(round(float(player.get_weight_penalty()) * 100.0)) if player.has_method("get_weight_penalty") else 0
-	carry_status_label.text = "◇ %d   -%d%%" % [carry_load, penalty_percent] if overload > 0 else "◇ %d" % carry_load
-	carry_status_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.3, 1.0) if overload > 0 else Color(0.55, 1.0, 1.0, 1.0))
+	# Carry HUD indicator removed — held gems are visible on the hero sprite.
+	return
 
 func _update_return_cue() -> void:
 	if not return_cue or not return_cue_arrow:
@@ -806,7 +779,13 @@ func _setup_cave_reward_ui() -> void:
 	cave_reward_container.offset_bottom = 88
 	add_child(cave_reward_container)
 
-func _create_cave_reward_slot(title_text: String, effect_text: String) -> PanelContainer:
+const CAVE_REWARD_ICONS := {
+	"miners_satchel": preload("res://assets/sprites/items/Bag.png"),
+	"pickaxe": preload("res://assets/sprites/items/Pickaxe.png"),
+	"boots": preload("res://assets/sprites/items/Boots.png")
+}
+
+func _create_cave_reward_slot(title_text: String, effect_text: String, icon_texture: Texture2D = null) -> PanelContainer:
 	var slot := PanelContainer.new()
 	slot.custom_minimum_size = Vector2(176, 76)
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -837,15 +816,25 @@ func _create_cave_reward_slot(title_text: String, effect_text: String) -> PanelC
 	icon_frame.add_theme_stylebox_override("panel", icon_style)
 	content.add_child(icon_frame)
 
-	var icon_label := Label.new()
-	icon_label.text = "BAG"
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon_label.add_theme_font_size_override("font_size", 12)
-	icon_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48, 1.0))
-	icon_label.add_theme_color_override("font_outline_color", Color(0.08, 0.03, 0.01, 0.95))
-	icon_label.add_theme_constant_override("outline_size", 2)
-	icon_frame.add_child(icon_label)
+	if icon_texture:
+		var icon := TextureRect.new()
+		icon.texture = icon_texture
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.custom_minimum_size = Vector2(36, 44)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_frame.add_child(icon)
+	else:
+		var icon_label := Label.new()
+		icon_label.text = "ITEM"
+		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon_label.add_theme_font_size_override("font_size", 12)
+		icon_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48, 1.0))
+		icon_label.add_theme_color_override("font_outline_color", Color(0.08, 0.03, 0.01, 0.95))
+		icon_label.add_theme_constant_override("outline_size", 2)
+		icon_frame.add_child(icon_label)
 
 	var text_box := VBoxContainer.new()
 	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -872,9 +861,14 @@ func add_cave_reward(reward_id: String) -> bool:
 	if not cave_reward_container:
 		_setup_cave_reward_ui()
 	var slot: PanelContainer
+	var icon: Texture2D = CAVE_REWARD_ICONS.get(reward_id, null) as Texture2D
 	match reward_id:
 		"miners_satchel":
-			slot = _create_cave_reward_slot("MINER'S SATCHEL", "+1 FREE CARRY")
+			slot = _create_cave_reward_slot("MINER'S BAG", "+1 FREE CARRY", icon)
+		"pickaxe":
+			slot = _create_cave_reward_slot("PICKAXE", "FASTER MINE/ATK", icon)
+		"boots":
+			slot = _create_cave_reward_slot("BOOTS", "+MOVE SPEED", icon)
 		_:
 			return false
 	slot.name = reward_id.to_pascal_case()
@@ -1003,23 +997,23 @@ func _relayout_unlocked_hud() -> void:
 		return
 	var compact := viewport_size.x < 760.0
 	var edge := 12.0 if compact else 16.0
-	var player_width := 230.0 if compact else 280.0
-	var base_width := 190.0 if compact else 220.0
-	var center_width := 300.0 if compact else 420.0
+	var player_width := 210.0 if compact else 240.0
+	var base_width := 180.0 if compact else 210.0
 
 	# Player cluster: portrait/resources, optional health, then purchased stats.
-	_layout_health_hud_module("PlayerLabel", player_health_bar, 82.0, false, edge, player_width)
+	var player_y := 82.0
+	player_y = _layout_health_hud_module("PlayerLabel", player_health_bar, player_y, false, edge, player_width)
 	var stats_container := get_node_or_null("StatsContainer") as Control
 	if stats_backdrop:
 		stats_backdrop.visible = stats_container != null and stats_container.visible
 		stats_backdrop.offset_left = edge
-		stats_backdrop.offset_top = 114.0
-		stats_backdrop.offset_right = edge + (222.0 if compact else 244.0)
-		stats_backdrop.offset_bottom = 154.0
+		stats_backdrop.offset_top = player_y
+		stats_backdrop.offset_right = edge + (player_width + 12.0)
+		stats_backdrop.offset_bottom = player_y + 36.0
 	if stats_container and stats_container.visible:
 		stats_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		stats_container.position = Vector2(edge + 8.0, 120.0)
-		stats_container.size = Vector2(206.0 if compact else 228.0, 30.0)
+		stats_container.position = Vector2(edge + 8.0, player_y + 4.0)
+		stats_container.size = Vector2(player_width - 4.0, 28.0)
 
 	# Large run rewards stay out of the player cluster until compact item icons exist.
 	if cave_reward_container:
@@ -1030,12 +1024,14 @@ func _relayout_unlocked_hud() -> void:
 		cave_reward_container.offset_bottom = -16.0
 
 	# XP remains a strong bottom-center anchor and never occupies the future mana slot.
-	if xp_label and xp_bar:
+	if xp_label and xp_bar and (xp_label.visible or xp_bar.visible):
+		var xp_w := 220.0 if compact else 260.0
 		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_bar.position = Vector2(-105.0, -58.0)
+		xp_bar.position = Vector2(-xp_w * 0.5, -52.0)
+		xp_bar.size = Vector2(xp_w, BAR_HEIGHT)
 		xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_label.position = Vector2(-105.0, -43.0)
-		xp_label.size = Vector2(210.0, 24.0)
+		xp_label.position = Vector2(-xp_w * 0.5, -52.0)
+		xp_label.size = Vector2(xp_w, BAR_HEIGHT)
 		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))
@@ -1053,12 +1049,13 @@ func _relayout_unlocked_hud() -> void:
 	if wave_label:
 		wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 		wave_label.position = Vector2(-105.0, 18.0)
-		wave_label.size = Vector2(210.0, 28.0)
+		wave_label.size = Vector2(210.0, 24.0)
 		wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if get_node_or_null("WaveBar"):
 		var wave_bar := get_node("WaveBar") as TextureProgressBar
 		wave_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		wave_bar.position = Vector2(-105.0, 34.0)
+		wave_bar.position = Vector2(-105.0, 42.0)
+		wave_bar.size = Vector2(210.0, BAR_HEIGHT)
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
 	if minimap and minimap.visible:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1158,14 +1155,14 @@ func _relayout_mobile_hud(canvas_size: Vector2, _physical_size: Vector2) -> void
 		wave_bar.offset_left = -logical.call(78.0)
 		wave_bar.offset_top = logical.call(83.0)
 		wave_bar.offset_right = logical.call(78.0)
-		wave_bar.offset_bottom = logical.call(89.0)
+		wave_bar.offset_bottom = logical.call(83.0) + BAR_HEIGHT
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
 
 	# XP is one centered, self-contained module. The label occupies the bar rather
 	# than floating below it, and only appears after the XP HUD upgrade is owned.
 	if xp_label and xp_bar and (xp_label.visible or xp_bar.visible):
 		var xp_width: float = float(logical.call(230.0))
-		var xp_height: float = float(logical.call(18.0))
+		var xp_height: float = BAR_HEIGHT
 		xp_bar.visible = true
 		xp_label.visible = true
 		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -1221,30 +1218,40 @@ func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: f
 	var is_visible := (bar != null and bar.visible) or (value_label != null and value_label.visible)
 	if not is_visible:
 		return y
-	var x := get_viewport().get_visible_rect().size.x - edge - 210.0 if align_right else edge
+	var viewport_w := get_viewport().get_visible_rect().size.x
+	var x := viewport_w - edge - module_width if align_right else edge
 	if bar:
 		bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		bar.position = Vector2(x, y + 16.0)
+		bar.position = Vector2(x, y)
+		bar.size = Vector2(module_width, BAR_HEIGHT)
 		_style_hud_progress_bar(bar, Color(0.35, 0.86, 0.38, 1.0) if align_right else Color(0.9, 0.16, 0.18, 1.0))
 	if value_label:
 		value_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		# Sit the value directly on the bar so the module is one compact unit.
 		value_label.position = Vector2(x, y)
-		value_label.size = Vector2(210.0, 22.0)
+		value_label.size = Vector2(module_width, BAR_HEIGHT)
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		value_label.add_theme_font_size_override("font_size", 13)
+		value_label.add_theme_font_size_override("font_size", 12)
 		value_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
 		value_label.add_theme_constant_override("outline_size", 3)
-	return y + 30.0
+		value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return y + BAR_HEIGHT + MODULE_GAP
 
 func _style_hud_progress_bar(bar: TextureProgressBar, progress_color: Color) -> void:
 	if not bar:
 		return
-	bar.tint_under = Color(0.025, 0.03, 0.04, 0.92)
-	bar.scale = Vector2(0.5, 0.5)
+	# Kill the old scale-hack. Bars now live at their real size.
+	bar.scale = Vector2.ONE
 	bar.nine_patch_stretch = false
+	# Real under-bar: dark background that stays full width while progress fills.
+	bar.tint_under = Color(0.02, 0.025, 0.035, 0.95)
 	bar.tint_progress = progress_color
-	bar.tint_over = Color(1, 1, 1, 0.78)
+	bar.tint_over = Color(1.0, 1.0, 1.0, 0.85)
+	# Ensure the progress texture is used if present; otherwise tint does the work.
+	if bar.texture_progress == null and bar.texture_under == null:
+		# Fallback solid look when textures are missing.
+		pass
 
 func _make_texture_style(texture: Texture2D) -> StyleBoxTexture:
 	var stylebox = StyleBoxTexture.new()

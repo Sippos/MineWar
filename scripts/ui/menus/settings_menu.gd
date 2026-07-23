@@ -1,7 +1,6 @@
 extends Control
 
-const MENU_FONT: FontFile = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
-
+const MenuTypography = preload("res://scripts/ui/menus/menu_typography.gd")
 const MENU_THEME: Theme = preload("res://assets/themes/global/global_theme.tres")
 const SETTINGS_PATH := "user://minewars_settings.cfg"
 
@@ -66,10 +65,11 @@ func _ready() -> void:
 
 
 func _apply_menu_typography() -> void:
-	for node in [title_label, hint_label, back_button]:
-		node.add_theme_font_override("font", MENU_FONT)
-		node.add_theme_color_override("font_outline_color", Color.BLACK)
-		node.add_theme_constant_override("outline_size", 3)
+	MenuTypography.apply_title_style(title_label, 28)
+	MenuTypography.apply_detail_style(hint_label, 14)
+	MenuTypography.apply_primary_button_style(back_button, 18)
+	back_button.custom_minimum_size.y = 68
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -140,10 +140,13 @@ func _configure_toggle_style() -> void:
 	vsync_toggle.add_theme_stylebox_override("focus", hover_style)
 	vsync_toggle.add_theme_stylebox_override("pressed", pressed_style)
 	vsync_toggle.add_theme_stylebox_override("hover_pressed", pressed_style)
+	vsync_toggle.add_theme_font_override("font", MenuTypography.primary_button_font())
 	vsync_toggle.add_theme_font_size_override("font_size", 15)
 	vsync_toggle.add_theme_color_override("font_color", Color(0.92, 0.68, 0.4, 1.0))
 	vsync_toggle.add_theme_color_override("font_pressed_color", Color(0.62, 0.94, 1.0, 1.0))
 	vsync_toggle.add_theme_color_override("font_hover_pressed_color", Color(0.75, 0.97, 1.0, 1.0))
+	vsync_toggle.add_theme_color_override("font_outline_color", Color(0.03, 0.012, 0.006, 0.98))
+	vsync_toggle.add_theme_constant_override("outline_size", 2)
 
 
 func _layout_for_screen() -> void:
@@ -166,13 +169,13 @@ func _layout_for_screen() -> void:
 
 	vbox.add_theme_constant_override("separation", 4 if compact else 8)
 	header.custom_minimum_size.y = 34.0 if compact else 48.0
-	title_label.add_theme_font_size_override("font_size", 22 if compact else 28)
+	MenuTypography.apply_title_style(title_label, 22 if compact else 28)
 	var icon_size: float = 26.0 if compact else 32.0
 	header_icon.custom_minimum_size = Vector2(icon_size, icon_size)
 	header_spacer.custom_minimum_size = Vector2(icon_size, 0.0)
 
 	var rows: Array[PanelContainer] = [window_mode_row, resolution_row, vsync_row, fps_row, volume_row]
-	var row_height: float = 38.0 if compact else 52.0
+	var row_height: float = 44.0 if compact else 56.0
 	for row: PanelContainer in rows:
 		row.custom_minimum_size.y = row_height
 		var row_content := row.get_node("Content") as HBoxContainer
@@ -181,19 +184,33 @@ func _layout_for_screen() -> void:
 		row_icon.custom_minimum_size = Vector2(24.0 if compact else 32.0, 24.0 if compact else 32.0)
 		var row_label := row_content.get_node("Label") as Label
 		row_label.custom_minimum_size.x = 102.0 if compact else 165.0
-		row_label.add_theme_font_size_override("font_size", 12 if compact else 16)
+		# Same heavy Cinzel as Main Menu buttons so labels stay readable
+		row_label.add_theme_font_override("font", MenuTypography.primary_button_font())
+		row_label.add_theme_font_size_override("font_size", 13 if compact else 16)
+		row_label.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72, 1.0))
+		row_label.add_theme_color_override("font_outline_color", Color(0.03, 0.012, 0.006, 0.98))
+		row_label.add_theme_constant_override("outline_size", 3)
 
-	window_mode_option.custom_minimum_size = Vector2(132.0 if compact else 240.0, 30.0 if compact else 38.0)
+	var opt_h := 40.0 if compact else 48.0
+	window_mode_option.custom_minimum_size = Vector2(132.0 if compact else 240.0, opt_h)
 	resolution_option.custom_minimum_size = window_mode_option.custom_minimum_size
 	fps_option.custom_minimum_size = window_mode_option.custom_minimum_size
-	vsync_toggle.custom_minimum_size = Vector2(68.0 if compact else 88.0, 30.0 if compact else 38.0)
+	vsync_toggle.custom_minimum_size = Vector2(68.0 if compact else 88.0, opt_h)
+	var opt_font := 13 if compact else 15
+	for opt in [window_mode_option, resolution_option, fps_option]:
+		MenuTypography.apply_option_style(opt, opt_font)
 	volume_slider.custom_minimum_size = Vector2(92.0 if compact else 150.0, 28.0 if compact else 34.0)
 	volume_value.custom_minimum_size.x = 42.0 if compact else 54.0
-	volume_value.add_theme_font_size_override("font_size", 12 if compact else 16)
+	volume_value.add_theme_font_override("font", MenuTypography.primary_button_font())
+	volume_value.add_theme_font_size_override("font_size", 13 if compact else 16)
+	volume_value.add_theme_color_override("font_color", Color(1.0, 0.94, 0.8, 1.0))
+	volume_value.add_theme_color_override("font_outline_color", Color(0.03, 0.012, 0.006, 0.98))
+	volume_value.add_theme_constant_override("outline_size", 2)
 	hint_label.visible = not compact or viewport_size.y >= 430.0
 	hint_label.custom_minimum_size.y = 18.0 if compact else 22.0
-	hint_label.add_theme_font_size_override("font_size", 11 if compact else 14)
-	back_button.custom_minimum_size = Vector2(minf(340.0, panel_width - 90.0), 38.0 if compact else 48.0)
+	MenuTypography.apply_detail_style(hint_label, 11 if compact else 14)
+	back_button.custom_minimum_size = Vector2(minf(340.0, panel_width - 90.0), 56.0 if compact else 68.0)
+	MenuTypography.apply_primary_button_style(back_button, 16 if compact else 18)
 
 
 func _load_settings() -> void:
@@ -403,5 +420,4 @@ func _on_back_pressed() -> void:
 	if _closing:
 		return
 	_closing = true
-	# Keep the clicked button alive through mouse release so the event cannot hit the menu below.
 	get_tree().create_timer(0.12, true).timeout.connect(queue_free)
