@@ -108,8 +108,46 @@ func _unhandled_input(event: InputEvent) -> void:
 			var pause_menu = preload("res://scenes/ui/overlays/pause/pause_menu.tscn").instantiate()
 			get_tree().root.add_child(pause_menu)
 
+## Border/fog atlas sources that MUST be full 4x4 grids (16 blob frames each).
+## Easy=4, Medium=5, Hard=6, Fog=9, Unmineable=17, Gem=22.
+const _FULL_GRID_ATLAS_SOURCES := [4, 5, 6, 9, 17, 22]
+
+## Cold-loading level.tscn on the single-threaded Web export hits a texture-not-
+## ready race: the late-declared Easy/Medium/Hard border atlases report size 0
+## while their TileSetAtlasSource is being deserialized, so create_tile silently
+## drops every frame except (0,0). Exposed mineable rock then renders with no rim
+## ("borders missing"), while the early-declared Unmineable/Gem atlases load in
+## time and work. Desktop's threaded loader recovers; Web does not. By _ready all
+## ext_resource textures are fully loaded, so we recreate any dropped frames here.
+## Idempotent and safe on desktop (has_tile guard makes it a no-op).
+func _repair_atlas_tiles() -> void:
+	var ts: TileSet = null
+	if edge_layer and edge_layer.tile_set:
+		ts = edge_layer.tile_set
+	elif block_layer and block_layer.tile_set:
+		ts = block_layer.tile_set
+	if ts == null:
+		return
+	for sid in _FULL_GRID_ATLAS_SOURCES:
+		if not ts.has_source(sid):
+			continue
+		var src := ts.get_source(sid) as TileSetAtlasSource
+		if src == null or src.texture == null:
+			continue
+		var region := src.texture_region_size
+		if region.x <= 0 or region.y <= 0:
+			continue
+		var cols := src.texture.get_width() / region.x
+		var rows := src.texture.get_height() / region.y
+		for y in range(rows):
+			for x in range(cols):
+				var coord := Vector2i(x, y)
+				if not src.has_tile(coord):
+					src.create_tile(coord)
+
 func _ready() -> void:
 	$Player.player_id = player_id
+	_repair_atlas_tiles()
 	_add_wasd_input()
 	_configure_mine_lighting()
 	if DEBUG_FIXED_WORLD_SEED >= 0:
