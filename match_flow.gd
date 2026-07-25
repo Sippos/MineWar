@@ -12,6 +12,8 @@ const AGILITY_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats
 const INTELLIGENCE_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats/Int.png")
 const GEM_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/stats/StatRessources.png")
 const GOLD_TEXTURE: Texture2D = preload("res://GoldCoin.png")
+const MENU_FONT: FontFile = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
+const DECORATIVE_FONT: FontFile = preload("res://assets/fonts/grenze_gotisch/GrenzeGotisch-Variable.ttf")
 const HERO_PORTRAIT_TEXTURES := {
 	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
 	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
@@ -180,10 +182,10 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	var content := VBoxContainer.new()
 	content.name = "Content"
 	content.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content.offset_left = 50 if compact else 62
-	content.offset_top = 34 if compact else 38
-	content.offset_right = -50 if compact else -62
-	content.offset_bottom = -34 if compact else -38
+	content.offset_left = 60 if compact else 70
+	content.offset_top = 40 if compact else 55
+	content.offset_right = -60 if compact else -70
+	content.offset_bottom = -40 if compact else -55
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 7 if compact else 9)
 	panel.add_child(content)
@@ -191,7 +193,8 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	var title := Label.new()
 	title.text = "VICTORY" if victory else "DEFEAT"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 36 if compact else 42)
+	title.add_theme_font_override("font", DECORATIVE_FONT)
+	title.add_theme_font_size_override("font_size", 32 if compact else 38)
 	title.add_theme_color_override(
 		"font_color",
 		Color(0.96, 0.76, 0.22, 1.0) if victory else Color(1.0, 0.18, 0.12, 1.0)
@@ -201,7 +204,8 @@ func _build_result_overlay(victory: bool, hud: Node) -> Control:
 	var subtitle := Label.new()
 	subtitle.text = "The final assault has been broken." if victory else "The bastion fell, but your legacy remains."
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 18 if compact else 21)
+	subtitle.add_theme_font_override("font", MENU_FONT)
+	subtitle.add_theme_font_size_override("font_size", 16 if compact else 19)
 	subtitle.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72, 1.0))
 	content.add_child(subtitle)
 
@@ -256,7 +260,7 @@ func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
 	var hero_level := int(player.get("level")) if player else 1
 	var card := PanelContainer.new()
 	card.name = "HeroCard"
-	card.custom_minimum_size = Vector2(210 if compact else 238, 285)
+	card.custom_minimum_size = Vector2(210 if compact else 238, 230)
 	card.add_theme_stylebox_override(
 		"panel",
 		_make_flat_panel_style(Color(0.035, 0.028, 0.025, 0.88), Color(0.58, 0.38, 0.18, 0.9))
@@ -270,12 +274,13 @@ func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
 	var status := Label.new()
 	status.text = "EXPEDITION COMPLETE" if victory else "EXPEDITION LOST"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.add_theme_font_override("font", MENU_FONT)
 	status.add_theme_font_size_override("font_size", 11)
 	status.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28) if victory else Color(1.0, 0.32, 0.24))
 	box.add_child(status)
 
 	var portrait_frame := PanelContainer.new()
-	portrait_frame.custom_minimum_size = Vector2(128 if compact else 146, 128 if compact else 146)
+	portrait_frame.custom_minimum_size = Vector2(96 if compact else 114, 96 if compact else 114)
 	portrait_frame.add_theme_stylebox_override(
 		"panel",
 		_make_flat_panel_style(Color(0.02, 0.024, 0.03, 0.96), Color(0.82, 0.66, 0.28, 0.92) if victory else Color(0.72, 0.18, 0.14, 0.92))
@@ -299,14 +304,16 @@ func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
 	var name_label := Label.new()
 	name_label.text = hero_name
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 20 if compact else 23)
+	name_label.add_theme_font_override("font", MENU_FONT)
+	name_label.add_theme_font_size_override("font_size", 18 if compact else 21)
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.78, 1.0))
 	box.add_child(name_label)
 
 	var level_label := Label.new()
 	level_label.text = "LEVEL %d" % hero_level
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_label.add_theme_font_size_override("font_size", 12)
+	level_label.add_theme_font_override("font", MENU_FONT)
+	level_label.add_theme_font_size_override("font_size", 11)
 	level_label.add_theme_color_override("font_color", Color(0.76, 0.72, 0.66, 1.0))
 	box.add_child(level_label)
 
@@ -323,7 +330,7 @@ func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
 func _build_run_summary_card(victory: bool, hud: Node, compact: bool) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.name = "RunSummaryCard"
-	card.custom_minimum_size = Vector2(430 if compact else 485, 285)
+	card.custom_minimum_size = Vector2(430 if compact else 485, 230)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.add_theme_stylebox_override(
 		"panel",
@@ -337,7 +344,8 @@ func _build_run_summary_card(victory: bool, hud: Node, compact: bool) -> PanelCo
 	var heading := Label.new()
 	heading.text = "RUN SUMMARY"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_size_override("font_size", 15)
+	heading.add_theme_font_override("font", MENU_FONT)
+	heading.add_theme_font_size_override("font_size", 14)
 	heading.add_theme_color_override("font_color", Color(0.96, 0.79, 0.46, 1.0))
 	box.add_child(heading)
 
@@ -363,6 +371,7 @@ func _build_unlock_reward_banner(compact: bool) -> PanelContainer:
 	label.text = "STRONGHOLD REWARD  •  %s" % str(reward.get("title", "NEW POWER AWAKENED"))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", MENU_FONT)
 	label.add_theme_font_size_override("font_size", 14 if compact else 16)
 	label.add_theme_color_override("font_color", Color(0.72, 0.94, 1.0, 1.0))
 	banner.add_child(label)
@@ -380,6 +389,7 @@ func _build_legacy_reward_banner(compact: bool) -> PanelContainer:
 	label.text = "LEGACY ORE  +%d     TOTAL  %d" % [Global.last_run_legacy_ore_earned, Global.legacy_ore]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", MENU_FONT)
 	label.add_theme_font_size_override("font_size", 16 if compact else 18)
 	label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.4, 1.0))
 	banner.add_child(label)
@@ -424,6 +434,7 @@ func _add_result_row(stats: GridContainer, texture: Texture2D, marker: String, s
 		marker_label.text = marker
 		marker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		marker_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		marker_label.add_theme_font_override("font", MENU_FONT)
 		marker_label.add_theme_font_size_override("font_size", 8 if marker.length() > 3 else 10)
 		marker_label.add_theme_color_override("font_color", Color(0.95, 0.66, 0.28, 1.0))
 		marker_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -434,7 +445,8 @@ func _add_result_row(stats: GridContainer, texture: Texture2D, marker: String, s
 	name_label.text = stat_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 16)
+	name_label.add_theme_font_override("font", MENU_FONT)
+	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.add_theme_color_override("font_color", Color(0.78, 0.7, 0.58, 1.0))
 	stats.add_child(name_label)
 
@@ -442,7 +454,8 @@ func _add_result_row(stats: GridContainer, texture: Texture2D, marker: String, s
 	value_label.text = stat_value
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_size_override("font_size", 17)
+	value_label.add_theme_font_override("font", MENU_FONT)
+	value_label.add_theme_font_size_override("font_size", 16)
 	value_label.add_theme_color_override("font_color", value_color)
 	stats.add_child(value_label)
 
@@ -467,7 +480,8 @@ func _make_hero_stat_chip(texture: Texture2D, tooltip: String, value: int, accen
 	var value_label := Label.new()
 	value_label.text = str(value)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_size_override("font_size", 17)
+	value_label.add_theme_font_override("font", MENU_FONT)
+	value_label.add_theme_font_size_override("font_size", 15)
 	value_label.add_theme_color_override("font_color", accent)
 	box.add_child(value_label)
 	return chip
@@ -508,8 +522,9 @@ func _make_result_button(text_value: String, callback: Callable, width: float) -
 	var button := Button.new()
 	button.text = text_value
 	button.process_mode = Node.PROCESS_MODE_ALWAYS
-	button.custom_minimum_size = Vector2(width, 50)
-	button.add_theme_font_size_override("font_size", 19)
+	button.custom_minimum_size = Vector2(width, 42)
+	button.add_theme_font_override("font", MENU_FONT)
+	button.add_theme_font_size_override("font_size", 17)
 	button.add_theme_stylebox_override("normal", _make_texture_style(MENU_BUTTON_TEXTURE))
 	button.add_theme_stylebox_override("hover", _make_texture_style(MENU_BUTTON_TEXTURE))
 	button.add_theme_stylebox_override("pressed", _make_texture_style(MENU_BUTTON_TEXTURE))

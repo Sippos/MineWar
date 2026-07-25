@@ -3,6 +3,7 @@ extends RefCounted
 
 # One balance source for the competitive loop. Gold is predictable war
 # currency; gems stay rare and pay for hero identity or the Goblin gamble.
+# Send pressure is gated primarily by cooldowns (classic WC3 HLW feel).
 const STARTING_GOLD := 50
 const STARTING_GEMS := 1
 const PASSIVE_GOLD_INTERVAL := 5.0
@@ -11,27 +12,35 @@ const INCOME_STEP_SECONDS := 180.0
 const INCOME_STEP_GOLD := 2
 const GEM_GAMBLE_COST := 1
 
+# Per-send cooldowns (seconds). These are the main anti-spam tool.
+# Early game stays long so both players can finish their peon opening maze.
 const SENDS := {
 	"rat_raid": {
 		"label": "RAT RAID",
-		"gold_cost": 50,
+		"gold_cost": 0,
+		"gem_cost": 1,
 		"count": 5,
 		"enemy_type": "RAT",
-		"description": "Send 5 fast rats now",
+		"cooldown": 22.0,
+		"description": "Send 5 fast rats (long early cooldown)",
 	},
 	"trogg_push": {
 		"label": "TROGG PUSH",
-		"gold_cost": 120,
+		"gold_cost": 0,
+		"gem_cost": 2,
 		"count": 2,
 		"enemy_type": "TROGG",
-		"description": "Send 2 durable troggs now",
+		"cooldown": 32.0,
+		"description": "Send 2 durable troggs",
 	},
 	"elite_push": {
 		"label": "ELITE PUSH",
-		"gold_cost": 250,
+		"gold_cost": 0,
+		"gem_cost": 3,
 		"count": 3,
 		"enemy_type": "ORC",
-		"description": "Send 3 elite orcs now",
+		"cooldown": 45.0,
+		"description": "Send 3 elite orcs",
 	},
 }
 
@@ -69,6 +78,10 @@ const GAMBLE_OUTCOMES := [
 
 static func send(send_id: String) -> Dictionary:
 	return (SENDS.get(send_id, {}) as Dictionary).duplicate(true)
+
+static func send_cooldown(send_id: String) -> float:
+	var definition := send(send_id)
+	return float(definition.get("cooldown", 20.0))
 
 static func passive_gold_for_elapsed(elapsed_seconds: float) -> int:
 	var steps := int(floor(maxf(elapsed_seconds, 0.0) / INCOME_STEP_SECONDS))

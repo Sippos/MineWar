@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bgxx5dwfh1xn4"]
+
+[ext_resource type="Script" path="res://scripts/tools/generate_main_menu_background.gd" id="1_a2xqc"]
+
+[node name="BackgroundGenerator" type="Node" unique_id=727445763]
+script = ExtResource("1_a2xqc")

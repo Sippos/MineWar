@@ -37,6 +37,18 @@ func _ready() -> void:
 	process_priority = 230
 	call_deferred("_late_setup")
 
+func _owner_base_id() -> String:
+	if base != null and is_instance_valid(base) and base.has_method("get_base_owner_id"):
+		return str(Global.get_base_for_player(int(base.call("get_base_owner_id"))))
+	return str(Global.selected_base_id)
+
+func _is_primary_base() -> bool:
+	# Multiplayer hubs show a second stronghold next to the real one. Only the
+	# world's own Base drives world-level identity metadata and run effects.
+	if world == null or not is_instance_valid(world):
+		return false
+	return world.get_node_or_null("Base") == base
+
 func _late_setup() -> void:
 	_resolve_nodes()
 	_refresh_identity(true)
@@ -46,7 +58,7 @@ func _process(delta: float) -> void:
 		_resolve_nodes()
 		if base == null or world == null:
 			return
-	var desired_id := str(Global.selected_base_id)
+	var desired_id := _owner_base_id()
 	var desired_run_state := _is_run_active()
 	if desired_id != base_id or desired_run_state != active_run:
 		_refresh_identity(true)
@@ -81,6 +93,8 @@ func _resolve_nodes() -> void:
 func _is_run_active() -> bool:
 	if world == null or bool(world.get_meta("single_player_hub_active", false)):
 		return false
+	if not _is_primary_base():
+		return false
 	var preparation_value: Variant = world.get("preparation_active")
 	if preparation_value != null and bool(preparation_value):
 		return false
@@ -90,7 +104,7 @@ func _refresh_identity(force: bool = false) -> void:
 	_resolve_nodes()
 	if base == null or world == null:
 		return
-	var desired_id := str(Global.selected_base_id)
+	var desired_id := _owner_base_id()
 	var desired_run_state := _is_run_active()
 	if not force and desired_id == base_id and desired_run_state == active_run:
 		return
@@ -107,9 +121,10 @@ func _refresh_identity(force: bool = false) -> void:
 	nerubian_webbed_count = 0
 	soul_charges = 0
 	observed_enemies.clear()
-	world.set_meta("active_base_id", base_id)
+	if _is_primary_base():
+		world.set_meta("active_base_id", base_id)
 	_apply_base_visual_tint()
-	if not active_run:
+	if not active_run or not _is_primary_base():
 		return
 
 	match base_id:
@@ -130,7 +145,7 @@ func _refresh_identity(force: bool = false) -> void:
 	_announce_base_identity()
 
 func _clear_runtime_effects() -> void:
-	if player != null and is_instance_valid(player):
+	if player != null and is_instance_valid(player) and _is_primary_base():
 		player.set_meta("base_carry_bonus", 0)
 	if base != null and is_instance_valid(base):
 		base.remove_meta("mech_rebuild_multiplier")
@@ -139,7 +154,7 @@ func _clear_runtime_effects() -> void:
 			base.set("max_health", maximum)
 			base.set("health", mini(int(base.get("health")), maximum))
 			applied_health_bonus = 0
-	if world != null and is_instance_valid(world):
+	if world != null and is_instance_valid(world) and _is_primary_base():
 		world.remove_meta("base_identity_passive")
 
 func _apply_mech_base_bonus() -> void:

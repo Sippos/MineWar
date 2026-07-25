@@ -1,0 +1,3 @@
+# Exclude the entire sprite_lab tooling tree from EditorFileSystem scan.
+# These are offline authoring tools + backups; scanning them produces UID
+# duplicates and parse-error spam that slows every editor boot.

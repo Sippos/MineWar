@@ -29,6 +29,24 @@ func _run_test() -> void:
 	if controller_a == null or controller_b == null or world_a == null or world_b == null or machine_a == null:
 		return
 
+	var peon_a := world_a.get_node_or_null("BuilderPeon") as CharacterBody2D
+	var peon_b := world_b.get_node_or_null("BuilderPeon") as CharacterBody2D
+	var hero_a := world_a.get_node("Player") as CharacterBody2D
+	_expect(peon_a != null and peon_b != null, "Each VS side should spawn its own opening builder peon")
+	_expect(peon_a != null and bool(peon_a.get("controlled")), "The VS run should begin under direct peon control")
+	_expect(peon_a != null and int(peon_a.get("player_id")) == 1 and peon_b != null and int(peon_b.get("player_id")) == 2, "Each peon should answer only its own split-screen bindings")
+	_expect(peon_a != null and not bool(peon_a.get("allow_ui_movement_fallback")), "Split-screen peons must ignore the shared arrow-key fallback")
+	_expect(hero_a.process_mode == Node.PROCESS_MODE_DISABLED, "The hero waits in the mine while the peon digs the opening")
+
+	# The switch button hands control between the digging peon and the hero.
+	mirror.call("_toggle_side_front", "A")
+	await _wait_frames(3)
+	_expect(not bool(peon_a.get("controlled")) and hero_a.process_mode == Node.PROCESS_MODE_INHERIT, "Switching should give player A the hero in the mine")
+	_expect(bool(controller_a.get("opening_build_active")), "Switching to the hero must not complete the opening route")
+	mirror.call("_toggle_side_front", "A")
+	await _wait_frames(3)
+	_expect(bool(peon_a.get("controlled")), "Switching back should return direct control to the peon")
+
 	mirror.call("_complete_both_openings")
 	await _wait_until(func() -> bool: return bool(mirror.get("side_a_ready")) and bool(mirror.get("side_b_ready")), 240)
 	_expect(bool(mirror.get("side_a_ready")) and bool(mirror.get("side_b_ready")), "Both sides should independently complete the protected five-tile opening")
@@ -40,7 +58,7 @@ func _run_test() -> void:
 
 	var hud_a := world_a.get_node("HUD")
 	var gems_before := int(hud_a.get("total_gems"))
-	var queued := bool(machine_a.call("_queue_send", "RAT RAID", 5, "RAT", 1))
+	var queued := bool(machine_a.call("_queue_reliable_send", "rat_raid"))
 	_expect(queued, "Player A should be able to spend one gem on a Rat Raid")
 	_expect(int(hud_a.get("total_gems")) == gems_before - 1, "The sending side should pay the War Machine cost")
 	machine_a.call("_dispatch_next")

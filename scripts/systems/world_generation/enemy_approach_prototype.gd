@@ -127,25 +127,41 @@ func _ensure_front_for_wave(wave_number: int) -> void:
 		hud.show_notice("Wave %d threat detected in distant dirt. The contact point updates while you dig." % wave_number, 4.5)
 
 func _choose_available_origin(start_index: int) -> Vector2i:
-	for offset in range(THREAT_ORIGINS.size()):
-		var candidate := THREAT_ORIGINS[posmod(start_index + offset, THREAT_ORIGINS.size())]
+	var valid_origins := THREAT_ORIGINS.duplicate()
+	if world.get("is_vs_mode"):
+		valid_origins = valid_origins.filter(func(v): return v.x == 0)
+		
+	if valid_origins.is_empty():
+		valid_origins = THREAT_ORIGINS.duplicate()
+		
+	for offset in range(valid_origins.size()):
+		# Fix 1: Explicitly type 'candidate' as Vector2i
+		var candidate: Vector2i = valid_origins[posmod(start_index + offset, valid_origins.size())]
 		if _is_solid(candidate):
 			return candidate
+			
 	# If the player has eventually opened all authored origins, find a remaining
 	# dirt cell near the next authored position instead of failing the wave.
-	var desired := THREAT_ORIGINS[posmod(start_index, THREAT_ORIGINS.size())]
+	
+	# Fix 2: Explicitly type 'desired' as Vector2i
+	var desired: Vector2i = valid_origins[posmod(start_index, valid_origins.size())]
+	
 	for radius in range(1, 9):
+		# Check horizontal edges
 		for x in range(desired.x - radius, desired.x + radius + 1):
 			for y in [desired.y - radius, desired.y + radius]:
 				var cell := Vector2i(x, y)
 				if _inside_map(cell) and _is_solid(cell):
 					return cell
+					
+		# Check vertical edges
 		for y in range(desired.y - radius + 1, desired.y + radius):
 			for x in [desired.x - radius, desired.x + radius]:
 				var cell := Vector2i(x, y)
 				if _inside_map(cell) and _is_solid(cell):
 					return cell
-	return desired
+					
+	return valid_origins[0]
 
 func _refresh_plan() -> void:
 	if wave_spawning or block_layer == null:

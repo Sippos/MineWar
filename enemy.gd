@@ -178,7 +178,11 @@ func _physics_process(delta: float):
 
 	path_timer += delta
 	var world_revision := int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
-	if path_timer > PATH_REFRESH_INTERVAL or world_revision != last_topology_revision:
+	if world_revision != last_topology_revision:
+		last_topology_revision = world_revision
+		path_timer = maxf(path_timer, PATH_REFRESH_INTERVAL - randf_range(0.0, 0.5))
+	
+	if path_timer > PATH_REFRESH_INTERVAL:
 		recalculate_path()
 		path_timer = 0.0
 	

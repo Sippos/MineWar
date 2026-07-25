@@ -60,6 +60,14 @@ const FRONT_VARIANTS := {
 	15: {"L": 39, "R": 40, "B": 41}, # Unmineable
 	24: {"L": 42, "R": 43, "B": 44}, # Gem
 }
+const MAZE_FRONT_SWITCHER := preload("res://scripts/systems/vs_maze_front_switcher.gd")
+
+# Peon maze (Line Wars) surface layout, in tile cells.
+const MAZE_POCKET_TOP_ROW := -4       # highest open row of the base pocket
+const MAZE_POCKET_HALF_WIDTH := 5     # pocket spans x = -5..5, like every mode
+const MAZE_CEILING_ROW := -5          # bedrock cap, open only at x = 0
+const MAZE_FIELD_HALF_WIDTH := 9      # peon field spans x = -8..8
+
 const FIRST_WAVE_DELAY := 32.0
 const STANDARD_WAVE_INTERVAL := 36.0
 
@@ -151,10 +159,21 @@ func _repair_atlas_tiles() -> void:
 					src.create_tile(coord)
 
 func _ready() -> void:
+	var _t0 := Time.get_ticks_usec()
+	var _tp := _t0
+	# Player 2's mine used to wait 0.15 s here so the two mines would not build in
+	# the same frame. Combined with the per-column `await process_frame` yields that
+	# generate_initial_world() used to run in VS mode, that turned VS loading into
+	# tens of seconds: every yield let the engine flush and re-bake ten half-filled
+	# TileMapLayers, and a single such frame cost well over a second. Both mines now
+	# build straight through in one frame (~0.3 s each), so the whole load is one
+	# short hitch instead of a multi-second stall.
 	$Player.player_id = player_id
 	_repair_atlas_tiles()
+	print("[PROF p%d] repair_atlas %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
 	_add_wasd_input()
 	_configure_mine_lighting()
+	print("[PROF p%d] input+lighting %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
 	if DEBUG_FIXED_WORLD_SEED >= 0:
 		breach_rng.seed = DEBUG_FIXED_WORLD_SEED
 	else:
@@ -180,10 +199,14 @@ func _ready() -> void:
 	
 	
 	
-	generate_initial_world()
+	print("[PROF p%d] managers+astar %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
+	await generate_initial_world()
+	print("[PROF p%d] generate_initial_world %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
 	world_generation_in_progress = false
 	if light_occluder_manager:
 		light_occluder_manager.build_from_solid_cells()
+	print("[PROF p%d] occluders %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0])
+	print("[PROF %s p%d vs=%s] TOTAL %.1f ms" % [name, player_id, is_vs_mode, (Time.get_ticks_usec() - _t0) / 1000.0])
 	preparation_active = preparation_mode and not is_vs_mode
 	if not preparation_active:
 		call_deferred("_begin_player_journey")
@@ -208,20 +231,42 @@ func _configure_mine_lighting() -> void:
 	_setup_border_rim_shader()
 
 func _setup_border_rim_shader() -> void:
-	# Border atlas sits on solid cells, so PointLight occluders block real light.
-	# Proximity rim fakes Dome Keeper-style warm edges on Edge/Front layers.
+	# Split lighting model:
+	# - Open space / floor: PointLight2D + occluder shadows (tunnel cone)
+	# - Wall faces (EdgeLayer): UNSHADED dual-atlas proximity
+	#   dark atlas far away → lit atlas near the player (borders + stones)
 	var shader := load("res://assets/environment/lighting/border_rim.gdshader") as Shader
 	if shader == null:
 		return
 	_border_rim_material = ShaderMaterial.new()
 	_border_rim_material.shader = shader
-	_border_rim_material.set_shader_parameter("rim_radius", 240.0)
+	_border_rim_material.set_shader_parameter("rim_radius", 360.0)
 	_border_rim_material.set_shader_parameter("rim_strength", 1.1)
-	_border_rim_material.set_shader_parameter("rim_tint", Color(1.0, 0.84, 0.55, 1.0))
+	_border_rim_material.set_shader_parameter("rim_tint", Color(1.0, 0.90, 0.65, 1.0))
+	_border_rim_material.set_shader_parameter("ambient_compensate", 1.18)
+	_border_rim_material.set_shader_parameter("base_ambient", ambient_tint)
+
+	# Restore Easy source to the dark atlas (in case a debug swap left Lighted on it)
+	var dark_path := "res://assets/sprites/world/terrain/dome/Easy_Border_Atlas.png"
+	var dark_tex: Texture2D = load(dark_path) as Texture2D
+	if dark_tex and edge_layer and edge_layer.tile_set and edge_layer.tile_set.has_source(4):
+		var src := edge_layer.tile_set.get_source(4) as TileSetAtlasSource
+		if src:
+			src.texture = dark_tex
+
+
+
+	# Wall faces + ledges + concave rims: unshaded dual atlas
 	if edge_layer:
 		edge_layer.material = _border_rim_material
+		edge_layer.modulate = Color.WHITE
 	if front_layer:
 		front_layer.material = _border_rim_material
+		front_layer.modulate = Color.WHITE
+	for corner in [inside_corner_tl, inside_corner_tr, inside_corner_bl, inside_corner_br]:
+		if corner:
+			corner.material = _border_rim_material
+			corner.modulate = Color.WHITE
 
 func _update_border_rim_player_pos() -> void:
 	if _border_rim_material == null:
@@ -460,6 +505,7 @@ func generate_initial_world() -> void:
 		seed(DEBUG_FIXED_WORLD_SEED)
 	var width = 40
 	var depth = 30
+	var _tg := Time.get_ticks_usec()
 
 	var noise = FastNoiseLite.new()
 	noise.seed = DEBUG_FIXED_WORLD_SEED if DEBUG_FIXED_WORLD_SEED >= 0 else randi()
@@ -474,8 +520,17 @@ func generate_initial_world() -> void:
 			# Map boundary and protected surface cells are unmineable bedrock
 			if x == -width / 2 or x == width / 2 - 1 or y == -10 or y == depth - 1:
 				block_type = 16
-			elif y < 0 or (y <= 1 and x != 0):
+			elif is_vs_mode and GameMode.is_line_wars() and _is_maze_bedrock(x, y):
 				block_type = 16
+			elif not is_vs_mode and (y < 0 or (y <= 1 and x != 0)):
+				block_type = 16
+			# Only the peon maze (Line Wars) mode has a diggable surface. In the
+			# standard VS mine the whole area above ground is bedrock, so the
+			# only route between the two sides is what the player digs.
+			elif is_vs_mode and not GameMode.is_line_wars() and (y < 0 or (y <= 1 and x != 0)):
+				block_type = 16
+			elif is_vs_mode and y < 0:
+				block_type = 1
 			elif y >= 0:
 				var depth_factor = y / float(depth)
 				var n_val = noise.get_noise_2d(x, y)
@@ -492,22 +547,31 @@ func generate_initial_world() -> void:
 				
 			if y >= 0 and block_type in [1, 2, 3] and randf() < _gem_chance_for_cell(cell, block_type):
 				_create_gem_block(cell)
-				
+
+	print("  [PROF p%d]   fill loop %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 	_seed_expedition_motherlodes()
 	_ensure_tutorial_gem()
+	print("  [PROF p%d]   motherlodes %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 	# Now that all blocks are placed, calculate masks and front walls
 	for x in range(-width / 2, width / 2):
 		for y in range(-10, depth):
 			update_fog_mask(Vector2i(x, y))
 			update_front_wall(Vector2i(x, y))
 			update_inside_corners(Vector2i(x, y))
-	
+	print("  [PROF p%d]   terrain refresh pass %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 
 	for x in range(-width / 2, width / 2):
 		for y in range(-10, depth):
 			update_astar_weight(Vector2i(x, y))
-			
-	# Area around the base
+	print("  [PROF p%d]   astar weights %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
+
+	# Area around the base -- identical in every mode. The standard VS mine used
+	# to clear x -15..15 instead, which left long open surface tunnels running
+	# left and right of the base. Those were always the farthest open cells, so
+	# invasions spawned in them instead of at the end of the mine the player
+	# actually dug. Standard VS now has exactly one entrance, below the base,
+	# like single player; the peon maze mode is what adds a second entrance on
+	# top of the base for the peon's surface tunnel.
 	for x in range(-5, 6):
 		for y in range(-4, 0):
 			var cell = Vector2i(x, y)
@@ -520,7 +584,23 @@ func generate_initial_world() -> void:
 			var cell = Vector2i(x, y)
 			if astar.is_in_bounds(cell.x, cell.y):
 				on_cell_dug(cell)
-	_carve_surface_breach_corridors()
+	if not is_vs_mode:
+		_carve_surface_breach_corridors()
+	print("  [PROF p%d]   clearing digs %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0])
+
+func _is_maze_bedrock(x: int, y: int) -> bool:
+	# Peon maze layout: the base sits in the same sealed bedrock pocket as every
+	# other mode, but it has two entrances instead of one, both at x = 0 -- down
+	# into the hero's mine and up into the peon's tunnel field. Everything else
+	# around the pocket is unmineable, so the only route an invasion can take is
+	# the tunnel the peon actually digs.
+	if y >= 0:
+		return y <= 1 and x != 0
+	if y >= MAZE_POCKET_TOP_ROW:
+		return absi(x) > MAZE_POCKET_HALF_WIDTH
+	if y == MAZE_CEILING_ROW:
+		return x != 0
+	return absi(x) >= MAZE_FIELD_HALF_WIDTH
 
 func _carve_surface_breach_corridors() -> void:
 	# These narrow exterior tunnels guarantee a fair fallback entrance even when
@@ -553,7 +633,50 @@ func begin_run_from_preparation() -> void:
 	call_deferred("_begin_player_journey")
 
 func _begin_player_journey() -> void:
+	var _tj := Time.get_ticks_usec()
+	_begin_player_journey_impl()
+	print("[PROF p%d] _begin_player_journey %.1f ms" % [player_id, (Time.get_ticks_usec() - _tj) / 1000.0])
+
+func _begin_player_journey_impl() -> void:
 	if is_vs_mode:
+		# Standard VS keeps the single centred base from level.tscn, sitting on
+		# top of the one mine entrance. It used to push that base out to
+		# x = -9 and instantiate a decorative second one at x = +9, which only
+		# made sense together with the old full-width surface clearing.
+		if GameMode.is_line_wars():
+			# Both fronts stay alive: the hero mines below the base, the peon
+			# digs the invasion tunnel above it, and MazeFrontSwitcher hands
+			# control between them. The hero used to be hidden and frozen here.
+			var peon_scene = preload("res://scenes/entities/workers/peon/builder_peon_player.tscn")
+			var peon = peon_scene.instantiate()
+			peon.name = "BuilderPeon"
+			peon.player_id = player_id
+			# Split screen: without this the peon also reads ui_left/right/up/down,
+			# which the arrow keys fire -- so player two's arrows steered player
+			# one's peon as well whenever player one's own keys were idle.
+			peon.allow_ui_movement_fallback = false
+			
+			var peon_light := PointLight2D.new()
+			peon_light.texture = preload("res://assets/environment/lighting/player_light_gradient.tres")
+			peon_light.color = Color(1.0, 0.84, 0.66, 1.0)
+			peon_light.energy = 1.0
+			peon_light.texture_scale = 1.15
+			peon_light.shadow_enabled = true
+			peon_light.shadow_color = Color.BLACK
+			peon_light.position = Vector2(0, -24)
+			peon.add_child(peon_light)
+			
+			peon.global_position = block_layer.map_to_local(Vector2i(0, -1))
+			add_child(peon)
+			peon.configure_world_digging(self, Vector2i(-20, -10), Vector2i(19, -1))
+
+			var hero := get_node_or_null("Player") as CharacterBody2D
+			if hero:
+				var switcher := MAZE_FRONT_SWITCHER.new()
+				switcher.name = "MazeFrontSwitcher"
+				switcher.player_id = player_id
+				add_child(switcher)
+				switcher.setup(hero, peon)
 		return
 	onboarding_active = not Global.prototype_onboarding_completed
 	var hud := get_node_or_null("HUD")
@@ -742,7 +865,15 @@ func notify_tutorial_upgrade_purchased() -> void:
 func is_dig_cell_protected(cell: Vector2i) -> bool:
 	# Protect the original base foundation during standard runs. Specialized
 	# persistent-world subclasses can open deliberate routes through it.
-	if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
+	if not is_vs_mode and ((cell.y <= 1 and cell.x != 0) or cell.y < 0):
+		return true
+	if is_vs_mode and not GameMode.is_line_wars() and cell.y <= 1 and cell.y >= 0 and cell.x != 0:
+		return true
+	# Peon maze: the two fronts own opposite halves. The hero mines downward
+	# from the base pocket; everything above it is the peon's tunnel field and
+	# only the peon may open it. (The peon has its own bounds and never digs
+	# below y = -1.)
+	if is_vs_mode and GameMode.is_line_wars() and cell.y < 0:
 		return true
 	# Protect map boundary walls
 	if block_layer.get_cell_source_id(cell) == 16:
@@ -750,6 +881,8 @@ func is_dig_cell_protected(cell: Vector2i) -> bool:
 	return false
 
 func get_protected_dig_message(cell: Vector2i) -> String:
+	if is_vs_mode and GameMode.is_line_wars() and cell.y < 0:
+		return "The tunnel field above the base belongs to the peon. Switch to the peon to dig up; the hero mines downward."
 	if cell.y < 0:
 		return "You cannot mine upward into the base floor. Continue deeper or return through the shaft."
 	return "The surface supports are protected. Dig down through the central shaft."
@@ -794,8 +927,10 @@ func try_spawn_cave_reward(cell: Vector2i) -> bool:
 
 var current_wave_number = 1
 
-func _process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	_update_border_rim_player_pos()
+
+func _process(delta: float) -> void:
 	if preparation_active:
 		return
 	if is_vs_mode:
@@ -1078,13 +1213,21 @@ func get_farthest_open_cell() -> Vector2i:
 	var visited = {start_cell: 0}
 	var farthest_cell = start_cell
 	var max_dist = 0
-	
+
+	# Where an invasion is allowed to appear. In the peon maze the enemies come
+	# out of the tunnel the peon dug above the base, so only the surface field
+	# counts; in every other mode they come out of the mine below it. The search
+	# itself still walks the whole map -- only candidacy is restricted.
+	var maze_mode := is_vs_mode and GameMode.is_line_wars()
+	var min_y := -10 if maze_mode else 0
+	var max_y := -1 if maze_mode else 29
+
 	while queue.size() > 0:
 		var curr = queue.pop_front()
 		var dist = visited[curr]
-		
-		# Update farthest if it's underground and inside the map bounds
-		if curr.y >= 0 and curr.y < 30 and curr.x >= -20 and curr.x < 20:
+
+		# Update farthest if it's inside the spawn band and the map bounds
+		if curr.y >= min_y and curr.y <= max_y and curr.x >= -20 and curr.x < 20:
 			if dist > max_dist:
 				max_dist = dist
 				farthest_cell = curr

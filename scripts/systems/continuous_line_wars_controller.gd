@@ -73,6 +73,11 @@ var order_line: Line2D
 var war_machine_controller: Node
 
 var opening_build_active := true
+# The opening build is played, not commissioned: the run starts on the peon
+# digging the tunnel upward while the hero waits in the mine below. The switch
+# button, Tab (player one) and slash (player two) hand direct control back and
+# forth between the two.
+var peon_front_active := true
 var command_view_active := false
 var command_mode := "DIG"
 var command_message := ""
@@ -93,6 +98,7 @@ var current_telegraph_duration := TELEGRAPH_DURATION
 var alert_timer := 0.0
 var opening_topology_start := 0
 var opening_dig_count := 0
+var last_topology_revision := 0
 var opening_overlay_cells: Array[Vector2i] = []
 var first_wave_warning_shown := false
 var touch_command_mode := false
@@ -105,6 +111,7 @@ var last_gate_eruption_msec := -10000
 var vs_match_gate_enabled := false
 var vs_match_started := true
 var vs_side_label := "SIDE"
+var player_id := 1
 var vs_incoming_queue: Array[Dictionary] = []
 var vs_active_payload: Dictionary = {}
 var vs_incoming_warning_timer := 0.0
@@ -124,6 +131,12 @@ func _ready() -> void:
 		queue_free()
 		return
 
+	# The peon, the hero and the switch shortcut must all answer the same pad or
+	# keyboard half, so the side identity comes from the hero the hub configured.
+	var hero_player_id: Variant = hero.get("player_id")
+	if hero_player_id != null:
+		player_id = clampi(int(hero_player_id), 1, 2)
+
 	touch_command_mode = DisplayServer.is_touchscreen_available() or bool(world.get_meta("force_touch_commands", false))
 	world.set_meta("continuous_line_wars_active", true)
 	_ensure_switch_action()
@@ -134,10 +147,11 @@ func _ready() -> void:
 	_build_command_visuals()
 	_build_war_machine()
 	opening_topology_start = _world_topology_revision()
+	last_topology_revision = opening_topology_start
 	opening_dig_count = 0
 	_update_opening_route_marker(opening_dig_count)
 	_apply_control()
-	command_message = "Dig the marked dirt blocks to shape the opening tunnel. The overlay follows the peon; waves stay paused until 5/5."
+	command_message = "You start as the peon: dig the marked dirt upward to open the tunnel. %s switches down to the hero in the mine; waves stay paused until 5/5." % _switch_key_hint()
 	_update_interface()
 
 func _resolve_layer_portals() -> void:
@@ -160,6 +174,7 @@ func _spawn_peon() -> void:
 	peon.name = "BuilderPeon"
 	world.add_child(peon)
 	peon.global_position = _cell_world_position(tunnel_exit_cell)
+	peon.set("player_id", player_id)
 	peon.set("movement_bounds", _surface_movement_bounds())
 	peon.call("configure_world_digging", world, SURFACE_MIN_CELL, SURFACE_MAX_CELL)
 	peon.call("set_controlled", false)
@@ -206,7 +221,7 @@ func _process(delta: float) -> void:
 	_animate_world_markers(delta)
 	_update_order_visual()
 
-	if Input.is_action_just_pressed("switch_front"):
+	if _switch_front_just_pressed():
 		_toggle_front()
 
 	if run_finished:
@@ -223,9 +238,7 @@ func _process(delta: float) -> void:
 		_show_alert("FIRST WAVE IN 10\nRETURN TO THE BLUE GATE", 1.8)
 		_play_sound("play_error")
 	if opening_build_active:
-		var newly_dug_tiles := _opening_new_tiles_dug()
-		if newly_dug_tiles != opening_dig_count:
-			opening_dig_count = newly_dug_tiles
+		_accumulate_opening_progress()
 		_update_opening_route_marker(opening_dig_count)
 		if opening_dig_count >= OPENING_REQUIRED_NEW_TILES:
 			_complete_opening_build()
@@ -251,7 +264,7 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if run_finished:
 		return
-	if opening_build_active and touch_command_mode:
+	if opening_build_active and peon_front_active and touch_command_mode:
 		if _handle_touch_opening_input(event):
 			get_viewport().set_input_as_handled()
 		return
@@ -385,12 +398,20 @@ func _spawn_enemy_at_endpoint(wave_number: int, is_boss: bool, index: int, count
 	if enemy.has_method("begin_breach_emergence"):
 		enemy.call("begin_breach_emergence", 0.65 if not is_boss else 0.9)
 
-func configure_vs_match(side_label: String) -> void:
+func configure_vs_match(side_label: String, side_player_id: int = 0) -> void:
 	vs_match_gate_enabled = true
 	vs_match_started = false
 	vs_side_label = side_label
+	if side_player_id > 0:
+		player_id = clampi(side_player_id, 1, 2)
+		if peon:
+			peon.set("player_id", player_id)
+	# Split-screen shares one keyboard, so each peon must ignore the ui_* arrows
+	# and answer only its own half of the bindings.
+	if peon:
+		peon.set("allow_ui_movement_fallback", false)
 	world.set_meta("linewars_vs_mirror_active", true)
-	command_message = "Build the five-tile opening route. Your side becomes READY when it is complete."
+	command_message = "You start as the peon: dig five tiles upward to open the route. %s switches to your hero. Your side becomes READY when the route is complete." % _switch_key_hint()
 	_update_interface()
 
 func start_vs_match() -> void:
@@ -637,13 +658,24 @@ func _toggle_front() -> void:
 	if run_finished:
 		return
 	if opening_build_active:
-		command_message = "Dig the minimum opening route first. Waves remain paused until the meter is full."
-		_update_interface()
+		_set_opening_front(not peon_front_active)
 		return
 	if command_view_active:
 		_exit_command_view()
 		return
 	_begin_command_view("DIG")
+
+func _set_opening_front(peon_active: bool) -> void:
+	if not opening_build_active or peon_front_active == peon_active:
+		return
+	peon_front_active = peon_active
+	if peon_front_active:
+		command_message = "Peon control. Dig upward from the mine roof to open the tunnel; %s drops back to the hero." % _switch_key_hint()
+	else:
+		command_message = "Hero control. Mine downward for gems while the tunnel waits; %s returns to the peon." % _switch_key_hint()
+	_apply_control()
+	_play_sound("play_upgrade")
+	_update_interface()
 
 func _begin_radar_command() -> void:
 	if run_finished:
@@ -705,15 +737,16 @@ func _exit_command_view() -> void:
 func _apply_control() -> void:
 	if peon == null or hero == null:
 		return
-	# Only the opening build uses direct peon control. After the safe minimum route
-	# exists, the hero owns continuous play and later peon work is commissioned.
-	var peon_direct_control := opening_build_active
-	var peon_camera_active := opening_build_active or command_view_active
+	# Only the opening build uses direct peon control, and the player may hand it
+	# back to the hero at any time. After the safe minimum route exists, the hero
+	# owns continuous play and later peon work is commissioned.
+	var peon_direct_control := opening_build_active and peon_front_active
+	var peon_camera_active := peon_direct_control or command_view_active
 	peon.call("set_controlled", peon_direct_control)
 	peon.call("set_command_camera_enabled", peon_camera_active)
 	var peon_camera := peon.get_node_or_null("Camera2D") as Camera2D
 	if peon_camera:
-		if opening_build_active:
+		if peon_direct_control:
 			peon_camera.zoom = OPENING_CAMERA_ZOOM
 		elif command_view_active:
 			peon_camera.zoom = TOUCH_COMMAND_CAMERA_ZOOM if touch_command_mode else DESKTOP_COMMAND_CAMERA_ZOOM
@@ -732,6 +765,7 @@ func _complete_opening_build() -> void:
 	if not opening_build_active:
 		return
 	opening_build_active = false
+	peon_front_active = false
 	command_view_active = false
 	invasion_timer = FIRST_INVASION_DELAY
 	command_message = (
@@ -884,8 +918,17 @@ func _world_topology_revision() -> int:
 	var revision = world.get("topology_revision") if world else null
 	return int(revision) if revision != null else 0
 
+func _accumulate_opening_progress() -> void:
+	# Only tiles removed while the peon owns the controls extend the opening
+	# route. Without this the hero could finish the peon's job by mining down.
+	var revision := _world_topology_revision()
+	var newly_dug_tiles := maxi(revision - last_topology_revision, 0)
+	last_topology_revision = revision
+	if peon_front_active:
+		opening_dig_count += newly_dug_tiles
+
 func _opening_new_tiles_dug() -> int:
-	return maxi(_world_topology_revision() - opening_topology_start, 0)
+	return opening_dig_count
 
 func _show_alert(text: String, duration: float) -> void:
 	if alert_banner == null or alert_label == null:
@@ -1186,12 +1229,12 @@ func _update_interface() -> void:
 			opening_progress.visible = true
 			opening_progress.max_value = OPENING_REQUIRED_NEW_TILES
 			opening_progress.value = mini(newly_dug_tiles, OPENING_REQUIRED_NEW_TILES)
-		mode_label.text = "OPENING PEON • BUILD SAFE ROUTE"
-		switch_button.text = "TUNNEL %d/%d" % [mini(newly_dug_tiles, OPENING_REQUIRED_NEW_TILES), OPENING_REQUIRED_NEW_TILES]
-		switch_button.disabled = true
-		radar_button.text = "RADAR LOCKED"
+		mode_label.text = "OPENING PEON • DIG UPWARD" if peon_front_active else "HERO • MINE BELOW"
+		switch_button.text = "SWITCH TO HERO" if peon_front_active else "SWITCH TO PEON"
+		switch_button.disabled = false
+		radar_button.text = "TUNNEL %d/%d" % [mini(newly_dug_tiles, OPENING_REQUIRED_NEW_TILES), OPENING_REQUIRED_NEW_TILES]
 		radar_button.disabled = true
-		threat_label.text = "WAVES PAUSED • DIG %d MORE" % maxi(OPENING_REQUIRED_NEW_TILES - newly_dug_tiles, 0)
+		threat_label.text = "WAVES PAUSED • PEON DIGS %d MORE" % maxi(OPENING_REQUIRED_NEW_TILES - newly_dug_tiles, 0)
 		hint_label.text = command_message
 	else:
 		if opening_progress:
@@ -1224,7 +1267,7 @@ func _update_interface() -> void:
 			hint_label.text += "  •  Orange-gate survivors emerge at the blue mine gate. Stop them before they reach the base."
 
 	if touch_action_panel:
-		touch_action_panel.visible = touch_command_mode and (opening_build_active or command_view_active)
+		touch_action_panel.visible = touch_command_mode and ((opening_build_active and peon_front_active) or command_view_active)
 	var selection_label := hud.get_node_or_null("TouchCommandPanel/Margin/Row/Selection") as Label
 	if selection_label:
 		selection_label.text = "TARGET %s" % _format_cell(touch_selected_cell) if touch_selected_cell != INVALID_CELL else ("PEON WORKING…" if peon_busy else "TAP A VALID TILE")
@@ -1294,20 +1337,41 @@ func _surface_movement_bounds() -> Rect2:
 	return Rect2(top_left, bottom_right - top_left)
 
 func _ensure_switch_action() -> void:
-	if not InputMap.has_action("switch_front"):
-		InputMap.add_action("switch_front")
-	var has_tab := false
+	# Shared solo binding plus one per split-screen half. Player one keeps Tab so
+	# nothing changes for a single-player run; player two uses the key next to its
+	# arrow cluster and the second pad.
+	_ensure_switch_binding("switch_front", KEY_TAB, -1)
+	_ensure_switch_binding("p1_switch_front", KEY_TAB, 0)
+	_ensure_switch_binding("p2_switch_front", KEY_SLASH, 1)
+
+func _ensure_switch_binding(action_name: String, keycode: Key, device: int) -> void:
+	if not InputMap.has_action(action_name):
+		InputMap.add_action(action_name)
+	var has_key := false
 	var has_shoulder := false
-	for existing in InputMap.action_get_events("switch_front"):
-		if existing is InputEventKey and existing.physical_keycode == KEY_TAB:
-			has_tab = true
-		elif existing is InputEventJoypadButton and existing.button_index == JOY_BUTTON_RIGHT_SHOULDER:
+	for existing in InputMap.action_get_events(action_name):
+		if existing is InputEventKey and existing.physical_keycode == keycode:
+			has_key = true
+		elif existing is InputEventJoypadButton and existing.button_index == JOY_BUTTON_RIGHT_SHOULDER and existing.device == device:
 			has_shoulder = true
-	if not has_tab:
+	if not has_key:
 		var key_event := InputEventKey.new()
-		key_event.physical_keycode = KEY_TAB
-		InputMap.action_add_event("switch_front", key_event)
+		key_event.physical_keycode = keycode
+		InputMap.action_add_event(action_name, key_event)
 	if not has_shoulder:
 		var joy_event := InputEventJoypadButton.new()
+		joy_event.device = device
 		joy_event.button_index = JOY_BUTTON_RIGHT_SHOULDER
-		InputMap.action_add_event("switch_front", joy_event)
+		InputMap.action_add_event(action_name, joy_event)
+
+func _switch_action() -> String:
+	return "p%d_switch_front" % player_id
+
+func _switch_key_hint() -> String:
+	return "Tab / RB" if player_id == 1 else "/ (slash) / RB"
+
+func _switch_front_just_pressed() -> bool:
+	if InputMap.has_action(_switch_action()) and Input.is_action_just_pressed(_switch_action()):
+		return true
+	# Split-screen must not let one shared key flip both sides at once.
+	return player_id == 1 and not vs_match_gate_enabled and Input.is_action_just_pressed("switch_front")

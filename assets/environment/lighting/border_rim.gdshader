@@ -1,14 +1,20 @@
 shader_type canvas_item;
 
-// Warm rim on border / front-face tiles near the player.
-// Independent of PointLight2D occluders (those block real light on solid cells).
-// Only lifts non-dark border pixels so the dark mass interior stays dark.
+// Wall faces ignore PointLight2D / occluder shadows (unshaded).
+// Tunnel floor still gets real light + shadow.
+// Near the player: dark atlas → lit atlas (borders + stones).
+// CanvasModulate still multiplies the whole canvas, so near the player we
+// boost slightly to fight the ambient darken.
+
+render_mode unshaded;
 
 uniform vec2 player_world_pos = vec2(0.0);
-uniform float rim_radius = 220.0;
-uniform float rim_strength = 1.25;
-uniform vec4 rim_tint : source_color = vec4(1.0, 0.84, 0.55, 1.0);
-uniform float dark_cutoff = 0.12; // pixels darker than this stay untouched
+uniform float rim_radius = 160.0;
+uniform float rim_strength = 0.85;
+uniform vec4 rim_tint : source_color = vec4(1.0, 0.90, 0.65, 1.0);
+// Inverse of typical ambient_tint so lit faces don't stay muddy
+uniform float ambient_compensate = 1.18;
+uniform vec4 base_ambient : source_color = vec4(0.12, 0.1, 0.15, 1.0);
 
 varying vec2 v_world_pos;
 
@@ -17,20 +23,26 @@ void vertex() {
 }
 
 void fragment() {
-	vec4 col = texture(TEXTURE, UV);
-	if (col.a < 0.01) {
+	vec4 dark = texture(TEXTURE, UV);
+	if (dark.a < 0.01) {
 		discard;
 	}
 
-	float luma = dot(col.rgb, vec3(0.299, 0.587, 0.114));
-	// Skip pure dark mass pixels — only rim/speckle/edge art gets the warm lift.
-	float edge_mask = smoothstep(dark_cutoff, dark_cutoff + 0.18, luma);
-
 	float d = distance(v_world_pos, player_world_pos);
-	float falloff = 1.0 - smoothstep(rim_radius * 0.15, rim_radius, d);
-	float boost = falloff * rim_strength * edge_mask * col.a;
+	float falloff = 1.0 - smoothstep(rim_radius * 0.1, rim_radius, d);
+	falloff = clamp(falloff * rim_strength, 0.0, 1.0);
 
-	col.rgb = mix(col.rgb, col.rgb * rim_tint.rgb * 1.6, boost * 0.7);
-	col.rgb += rim_tint.rgb * boost * 0.28;
-	COLOR = col;
+	// Compute edge mask based on the artist's drawn border brightness (luma).
+	float luma = dot(dark.rgb, vec3(0.299, 0.587, 0.114));
+	float is_edge = smoothstep(0.12, 0.28, luma);
+
+	// Apply a gentle warm glow to the drawn border rim, avoiding blowout
+	float edge_boost = falloff * is_edge * dark.a;
+	dark.rgb = mix(dark.rgb, dark.rgb * rim_tint.rgb * 1.5, edge_boost * 0.6);
+	dark.rgb += rim_tint.rgb * edge_boost * 0.15; 
+
+	vec3 light_color = mix(base_ambient.rgb, vec3(ambient_compensate), falloff);
+	dark.rgb *= light_color;
+
+	COLOR = dark;
 }

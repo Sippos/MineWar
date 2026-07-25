@@ -31,6 +31,7 @@ SoundFX="*res://sound_fx.gd"
 ExplorationModeBootstrap="*res://exploration_mode_bootstrap.gd"
 EnemyApproachBootstrap="*res://enemy_approach_bootstrap.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+UpgradeMenuSignalBootstrap="*res://upgrade_menu_signal_bootstrap.gd"
 
 [display]
 
@@ -60,10 +61,10 @@ pointing/emulate_touch_from_mouse=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-textures/lossless_compression/force_png=true
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/lossless_compression/force_png=true
 environment/defaults/default_clear_color=Color(0.004, 0.006, 0.01, 1)
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true

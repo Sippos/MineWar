@@ -167,6 +167,16 @@ var hero_p1 = DEFAULT_HERO_ID
 var hero_p2 = DEFAULT_HERO_ID
 var selected_hero_id := DEFAULT_HERO_ID
 var selected_base_id := DEFAULT_BASE_ID
+# Multiplayer keeps one stronghold per player. Player one is always the single
+# player selection itself - an alias rather than a copy, so the two can never
+# drift apart - while base_p2 belongs to the second local player or the peer.
+var base_p1: String:
+	get:
+		return selected_base_id
+	set(value):
+		if base_data.has(value):
+			selected_base_id = value
+var base_p2 := DEFAULT_BASE_ID
 var prototype_onboarding_completed := false
 var legacy_ore := 0
 var last_run_legacy_ore_earned := 0
@@ -210,27 +220,57 @@ var hero_data = {
 var base_data = {
 	"default_base": {
 		"name": "Dwarf Bastion",
-		"texture": preload("res://DwarfBase.png")
+		"texture": preload("res://DwarfBase.png"),
+		"upgrades": [
+			["PASSIVE", "+1 free gem carry"],
+			["DEFENCE", "Repairs 8 HP after every assault"],
+			["WORLD", "Railway and minecart"],
+		]
 	},
 	"shaman_base": {
 		"name": "Shaman Lodge",
-		"texture": preload("res://ShamanBase.png")
+		"texture": preload("res://ShamanBase.png"),
+		"upgrades": [
+			["PASSIVE", "Pulses reveal nearby crystals"],
+			["DEFENCE", "Healing totem near the lodge"],
+			["WORLD", "Peon patrol"],
+		]
 	},
 	"nerubian_base": {
 		"name": "Nerubian Nest",
-		"texture": preload("res://NerubianBase.png")
+		"texture": preload("res://NerubianBase.png"),
+		"upgrades": [
+			["PASSIVE", "+3 seconds assault warning"],
+			["DEFENCE", "Webs the first three attackers"],
+			["WORLD", "Crawling brood"],
+		]
 	},
 	"druid_base": {
 		"name": "Druid Grove",
-		"texture": preload("res://DruidBase.png")
+		"texture": preload("res://DruidBase.png"),
+		"upgrades": [
+			["PASSIVE", "Regenerates while safe"],
+			["DEFENCE", "Roots entangle nearby enemies"],
+			["WORLD", "Wisps and living roots"],
+		]
 	},
 	"undead_king_base": {
 		"name": "Undead Citadel",
-		"texture": preload("res://UndeadKingBase.png")
+		"texture": preload("res://UndeadKingBase.png"),
+		"upgrades": [
+			["PASSIVE", "Enemy deaths charge souls"],
+			["DEFENCE", "Soul nova or bastion mend"],
+			["WORLD", "Orbiting spirits"],
+		]
 	},
 	"mech_base": {
 		"name": "Goblin Mech Workshop",
-		"texture": preload("res://DwarfBase.png")
+		"texture": preload("res://DwarfBase.png"),
+		"upgrades": [
+			["PASSIVE", "+15 base health, fast rebuilds"],
+			["DEFENCE", "Automatic turret"],
+			["WORLD", "Crane and repair bay"],
+		]
 	}
 }
 
@@ -256,9 +296,38 @@ func apply_selected_loadout() -> void:
 		selected_hero_id = DEFAULT_HERO_ID
 	if not base_data.has(selected_base_id):
 		selected_base_id = DEFAULT_BASE_ID
+	# A fortress borrowed in a multiplayer hub never leaks into the campaign:
+	# single player re-applies its loadout on every entry and clamps back here.
+	if not is_base_unlocked(selected_base_id):
+		selected_base_id = DEFAULT_BASE_ID
 	current_hero = selected_hero_id
 	hero_p1 = selected_hero_id
 	hero_p2 = selected_hero_id
+	# Player two's stronghold is deliberately sticky: it survives loadout resets
+	# so a returning co-op partner keeps the base they picked last session.
+	if not base_data.has(base_p2):
+		base_p2 = selected_base_id
+
+func get_base_for_player(player_id: int) -> String:
+	var base_id := str(base_p2) if player_id == 2 else str(selected_base_id)
+	# No unlock check here: selections are validated in set_base_for_player, and
+	# an online opponent may legitimately field a base this save has not unlocked.
+	if not base_data.has(base_id):
+		base_id = selected_base_id if base_data.has(selected_base_id) else DEFAULT_BASE_ID
+	return base_id
+
+func set_base_for_player(player_id: int, base_id: String, allow_locked: bool = false) -> void:
+	# Multiplayer hubs pass allow_locked: every hero fortress is on the table
+	# there, because a versus or co-op session should not be gated by whatever
+	# the host happens to have unlocked in their own campaign.
+	if not base_data.has(base_id):
+		return
+	if not allow_locked and not is_base_unlocked(base_id):
+		return
+	if player_id == 2:
+		base_p2 = base_id
+	else:
+		selected_base_id = base_id
 
 func reset_to_default_loadout() -> void:
 	set_run_loadout(DEFAULT_HERO_ID, DEFAULT_BASE_ID)
@@ -442,6 +511,7 @@ func save_game() -> void:
 			"unlocked_stronghold_ambience": unlocked_stronghold_ambience,
 			"selected_hero_id": selected_hero_id,
 			"selected_base_id": selected_base_id,
+			"base_p2": base_p2,
 			"prototype_onboarding_completed": prototype_onboarding_completed,
 			"legacy_ore": legacy_ore,
 			"permanent_upgrade_levels": permanent_upgrade_levels,
@@ -475,6 +545,7 @@ func load_game() -> void:
 					selected_hero_id = str(loaded["selected_hero_id"])
 				if loaded.has("selected_base_id"):
 					selected_base_id = str(loaded["selected_base_id"])
+				base_p2 = str(loaded.get("base_p2", selected_base_id))
 				if loaded.has("prototype_onboarding_completed"):
 					prototype_onboarding_completed = bool(loaded["prototype_onboarding_completed"])
 				if loaded.has("legacy_ore"):
@@ -527,6 +598,8 @@ func _sanitize_unlock_progress() -> void:
 		selected_hero_id = DEFAULT_HERO_ID
 	if not unlocked_bases.has(selected_base_id):
 		selected_base_id = DEFAULT_BASE_ID
+	if not unlocked_bases.has(base_p2):
+		base_p2 = DEFAULT_BASE_ID
 	if previous_heroes != unlocked_heroes or previous_bases != unlocked_bases or previous_hero_victories != hero_victories or previous_ambience != unlocked_stronghold_ambience:
 		save_game()
 

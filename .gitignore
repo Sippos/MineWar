@@ -17,5 +17,21 @@ Thumbs.db
 *.swp
 *~
 
-# Build artifacts (keep build/web if you want local preview, otherwise ignore)
-# build/
+# Build artifacts
+build/
+
+# Local toolchain: the CI Godot download (75 MB zip + extracted binary) and the
+# godot-ai MCP server's per-session script backups. The addons/godot_ai plugin
+# itself IS tracked -- project.godot enables it and autoloads its runtime.
+.ci/godot/
+.ci/godot.zip
+.godot-mcp/
+
+# Godot engine class-reference XML, extracted locally for editor tooling.
+# These are engine sources, not part of this game.
+doc/classes/
+modules/*/doc_classes/
+platform/*/doc_classes/
+
+# Scratch upload payloads
+*.b64

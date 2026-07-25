@@ -9,9 +9,9 @@ const ECONOMY := preload("res://scripts/systems/linewars_economy.gd")
 @onready var status_label: Label = $Layout/TopBar/Margin/Row/Status
 @onready var side_a_status: Label = $Layout/Sides/SideA/Header/Status
 @onready var side_b_status: Label = $Layout/Sides/SideB/Header/Status
-@onready var build_a_button: Button = $Layout/TopBar/Margin/Row/BuildA
-@onready var build_b_button: Button = $Layout/TopBar/Margin/Row/BuildB
-@onready var build_both_button: Button = $Layout/TopBar/Margin/Row/BuildBoth
+@onready var switch_a_button: Button = $Layout/TopBar/Margin/Row/SwitchA
+@onready var switch_b_button: Button = $Layout/TopBar/Margin/Row/SwitchB
+@onready var auto_opening_button: Button = $Layout/TopBar/Margin/Row/AutoOpening
 @onready var start_button: Button = $Layout/TopBar/Margin/Row/Start
 @onready var gems_button: Button = $Layout/TopBar/Margin/Row/Gems
 @onready var send_a_rat_button: Button = $Layout/SendBar/Margin/Row/SendARat
@@ -44,17 +44,19 @@ func _ready() -> void:
 	await _create_side(viewport_a, "PLAYER A", 1)
 	await _create_side(viewport_b, "PLAYER B", 2)
 	_wire_cross_sends()
-	status_label.text = "BUILD BOTH OPENING ROUTES • WAVES WAIT FOR BOTH PLAYERS"
+	status_label.text = "BOTH START AS PEON • P1 WASD + TAB • P2 ARROWS + SLASH • DIG 5 TILES UPWARD"
 	_update_status_labels()
+	_update_switch_buttons()
 
 func _process(_delta: float) -> void:
 	_update_status_labels()
 	_update_send_buttons()
+	_update_switch_buttons()
 
 func _wire_buttons() -> void:
-	build_a_button.pressed.connect(_complete_opening_for_side.bind("A"))
-	build_b_button.pressed.connect(_complete_opening_for_side.bind("B"))
-	build_both_button.pressed.connect(_complete_both_openings)
+	switch_a_button.pressed.connect(_toggle_side_front.bind("A"))
+	switch_b_button.pressed.connect(_toggle_side_front.bind("B"))
+	auto_opening_button.pressed.connect(_complete_both_openings)
 	start_button.pressed.connect(_start_match)
 	gems_button.pressed.connect(_grant_test_resources)
 	send_a_rat_button.pressed.connect(_queue_send.bind("A", "rat_raid"))
@@ -76,7 +78,8 @@ func _create_side(viewport: SubViewport, side_label: String, player_id: int) -> 
 	selector.call("_activate_line_wars")
 	await _wait_frames(10)
 	var controller := world.get_node("ContinuousLineWarsController")
-	controller.call("configure_vs_match", side_label)
+	controller.call("configure_vs_match", side_label, player_id)
+	_apply_starting_economy(world)
 	controller.vs_opening_ready.connect(_on_side_ready)
 	controller.vs_run_finished.connect(_on_side_finished)
 	var machine: Node = controller.get("war_machine_controller")
@@ -91,6 +94,19 @@ func _create_side(viewport: SubViewport, side_label: String, player_id: int) -> 
 		controller_b = controller
 		machine_b = machine
 
+func _apply_starting_economy(world: Node2D) -> void:
+	# linewars_economy defines the VS opening bankroll but nothing applied it, so
+	# a side started on zero gems and the War Machine could never afford a send.
+	var hud := world.get_node_or_null("HUD")
+	if hud == null:
+		return
+	var gold: Variant = hud.get("total_gold")
+	if gold != null and int(gold) < ECONOMY.STARTING_GOLD and hud.has_method("add_gold"):
+		hud.call("add_gold", ECONOMY.STARTING_GOLD - int(gold))
+	var gems: Variant = hud.get("total_gems")
+	if gems != null and int(gems) < ECONOMY.STARTING_GEMS and hud.has_method("add_gems"):
+		hud.call("add_gems", ECONOMY.STARTING_GEMS - int(gems))
+
 func _wire_cross_sends() -> void:
 	if machine_a != null:
 		machine_a.send_dispatched.connect(_route_send.bind("PLAYER A", controller_b))
@@ -101,7 +117,32 @@ func _route_send(payload: Dictionary, sender_label: String, receiver: Node) -> v
 	if match_finished or receiver == null:
 		return
 	receiver.call("receive_vs_send", payload, sender_label)
-	status_label.text = "%s DISPATCHED %s TO THE OPPONENT" % [sender_label, str(payload.get("label", "PRESSURE"))]
+	status_label.text = "%s DISPATCHED %s (HLW CD)" % [sender_label, str(payload.get("label", "PRESSURE"))]
+
+func _toggle_side_front(side: String) -> void:
+	var controller: Node = controller_a if side == "A" else controller_b
+	if controller == null:
+		return
+	controller.call("_toggle_front")
+	_update_switch_buttons()
+
+func _update_switch_buttons() -> void:
+	_apply_switch_button(switch_a_button, controller_a, "A")
+	_apply_switch_button(switch_b_button, controller_b, "B")
+
+func _apply_switch_button(button: Button, controller: Node, side: String) -> void:
+	if button == null:
+		return
+	if controller == null:
+		button.disabled = true
+		button.text = "%s • LOADING" % side
+		return
+	if not bool(controller.get("opening_build_active")):
+		button.disabled = true
+		button.text = "%s • HERO" % side
+		return
+	button.disabled = false
+	button.text = "%s → HERO" % side if bool(controller.get("peon_front_active")) else "%s → PEON" % side
 
 func _complete_both_openings() -> void:
 	await _complete_opening_for_side("A")
@@ -112,30 +153,35 @@ func _complete_opening_for_side(side: String) -> void:
 	var world: Node2D = world_a if side == "A" else world_b
 	if controller == null or world == null or not bool(controller.get("opening_build_active")):
 		return
+	# The shortcut still credits the peon front, so the carved tiles count toward
+	# this side's opening exactly like hand-dug ones.
+	controller.call("_set_opening_front", true)
 	var block_layer := world.get_node("BlockLayer") as TileMapLayer
 	var peon := world.get_node("BuilderPeon") as CharacterBody2D
 	var tunnel_exit: Vector2i = controller.get("tunnel_exit_cell")
+	# Carving through the world rather than driving the peon's dig timer: a
+	# player-controlled peon clears any queued dig on the next input-free frame,
+	# so a simulated swing never lands.
 	for step in range(1, 6):
-		var previous_cell := tunnel_exit + Vector2i.UP * (step - 1)
 		var target_cell := tunnel_exit + Vector2i.UP * step
 		_force_solid(world, block_layer, target_cell)
-		peon.global_position = block_layer.to_global(block_layer.map_to_local(previous_cell))
-		peon.call("_process_surface_dig", Vector2.UP, 0.6)
+		if world.has_method("on_cell_dug"):
+			world.call("on_cell_dug", target_cell)
+		peon.global_position = block_layer.to_global(block_layer.map_to_local(target_cell))
 		await _wait_frames(3)
 	await _wait_frames(6)
 
 func _on_side_ready(side_label: String) -> void:
 	if side_label == "PLAYER A":
 		side_a_ready = true
-		build_a_button.disabled = true
 	else:
 		side_b_ready = true
-		build_b_button.disabled = true
+	_update_switch_buttons()
 	start_button.disabled = not (side_a_ready and side_b_ready)
 	if side_a_ready and side_b_ready:
-		status_label.text = "BOTH SIDES READY • START THE MIRRORED VS MATCH"
+		status_label.text = "BOTH PEON OPENINGS DONE • START THE VS MATCH"
 	else:
-		status_label.text = "%s READY • WAITING FOR THE OTHER OPENING ROUTE" % side_label
+		status_label.text = "%s PEON READY • WAITING FOR THE OTHER OPENING" % side_label
 
 func _start_match() -> void:
 	if match_started or not side_a_ready or not side_b_ready:
@@ -147,8 +193,8 @@ func _start_match() -> void:
 	_reveal_war_machine(world_b, machine_b)
 	_set_send_buttons_enabled(true)
 	start_button.disabled = true
-	build_both_button.disabled = true
-	status_label.text = "VS MATCH LIVE • SENDS CROSS TO THE OPPONENT'S FARTHEST TUNNEL"
+	auto_opening_button.disabled = true
+	status_label.text = "VS LIVE • BOTH STARTED AS PEON • SENDS USE HLW COOLDOWNS"
 
 func _reveal_war_machine(world: Node2D, machine: Node) -> void:
 	if world == null or machine == null:
@@ -168,8 +214,8 @@ func _grant_test_resources() -> void:
 		if hud.has_method("add_gold"):
 			hud.call("add_gold", 100)
 		if hud.has_method("add_gems"):
-			hud.call("add_gems", 2)
-	status_label.text = "PLAYTEST BOOST • BOTH SIDES RECEIVED 100 GOLD + 2 GEMS"
+			hud.call("add_gems", 4)
+	status_label.text = "PLAYTEST BOOST • BOTH SIDES RECEIVED 100 GOLD + 4 GEMS"
 
 func _queue_send(side: String, send_id: String) -> void:
 	if not match_started or match_finished:
@@ -180,7 +226,7 @@ func _queue_send(side: String, send_id: String) -> void:
 	var queued := bool(machine.call("_queue_reliable_send", send_id))
 	if queued:
 		var definition: Dictionary = ECONOMY.send(send_id)
-		status_label.text = "PLAYER %s SENT %s • ARRIVED IN THE OPPONENT TUNNEL" % [side, str(definition.get("label", "PRESSURE"))]
+		status_label.text = "PLAYER %s SENT %s • CD %.0fs" % [side, str(definition.get("label", "PRESSURE")), float(definition.get("cooldown", 20.0))]
 
 func _on_side_finished(side_label: String, victory: bool, base_health: int) -> void:
 	if match_finished:
@@ -215,17 +261,30 @@ func _set_send_buttons_enabled(enabled: bool) -> void:
 
 func _update_send_buttons() -> void:
 	var live := match_started and not match_finished
-	var rat_cost := int(ECONOMY.send("rat_raid").get("gold_cost", 0))
-	var trogg_cost := int(ECONOMY.send("trogg_push").get("gold_cost", 0))
-	send_a_rat_button.disabled = not live or _side_gold(world_a) < rat_cost
-	send_a_trogg_button.disabled = not live or _side_gold(world_a) < trogg_cost
-	send_b_rat_button.disabled = not live or _side_gold(world_b) < rat_cost
-	send_b_trogg_button.disabled = not live or _side_gold(world_b) < trogg_cost
+	_apply_send_button(send_a_rat_button, machine_a, "rat_raid", live)
+	_apply_send_button(send_a_trogg_button, machine_a, "trogg_push", live)
+	_apply_send_button(send_b_rat_button, machine_b, "rat_raid", live)
+	_apply_send_button(send_b_trogg_button, machine_b, "trogg_push", live)
 
-func _side_gold(world: Node2D) -> int:
-	if world == null:
-		return 0
-	return int(world.get_node("HUD").get("total_gold"))
+func _apply_send_button(button: Button, machine: Node, send_id: String, live: bool) -> void:
+	if button == null:
+		return
+	var definition: Dictionary = ECONOMY.send(send_id)
+	var label := str(definition.get("label", send_id))
+	var cooldown := float(definition.get("cooldown", 20.0))
+	var gem_cost := int(definition.get("gem_cost", 1))
+	var remaining := 0.0
+	if machine != null:
+		var cds: Variant = machine.get("send_cooldowns")
+		if cds is Dictionary:
+			remaining = float(cds.get(send_id, 0.0))
+	if remaining > 0.0:
+		button.text = "%s  CD %.0fs" % [label, ceil(remaining)]
+		button.disabled = true
+	else:
+		button.text = "%s  %dg  CD %.0fs" % [label, gem_cost, cooldown]
+		var can_queue := live and machine != null and bool(machine.call("_can_queue_send", send_id))
+		button.disabled = not can_queue
 
 func _update_status_labels() -> void:
 	side_a_status.text = _side_status_text(controller_a, world_a, "PLAYER A")
@@ -235,7 +294,8 @@ func _side_status_text(controller: Node, world: Node2D, label: String) -> String
 	if controller == null or world == null:
 		return "%s • LOADING" % label
 	var state: Dictionary = controller.call("get_vs_state")
-	var ready_text := "LIVE" if bool(state.get("started", false)) else ("READY" if bool(state.get("ready", false)) else "BUILDING")
+	var build_text := "PEON DIGGING UP" if bool(controller.get("peon_front_active")) else "HERO IN MINE"
+	var ready_text := "LIVE" if bool(state.get("started", false)) else ("READY" if bool(state.get("ready", false)) else build_text)
 	return "%s • %s • BASE %d • GOLD %d (+%d) • GEMS %d • PRESSURE %d" % [
 		label,
 		ready_text,

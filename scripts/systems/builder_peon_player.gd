@@ -5,7 +5,12 @@ signal work_order_failed(message: String)
 
 const INVALID_CELL := Vector2i(99999, 99999)
 const DIG_IMPACT_FRAME := 4
+const UNMINEABLE_SOURCE_ID := 16
 
+@export var player_id := 1
+# Solo play lets the arrow keys double as peon movement. Split-screen must not:
+# the arrows are player two's p2_* bindings and would steer both peons at once.
+@export var allow_ui_movement_fallback := true
 @export var move_speed := 190.0
 @export var movement_bounds := Rect2(-560.0, -520.0, 1120.0, 660.0)
 @export var surface_dig_time := 0.42
@@ -65,6 +70,7 @@ func set_controlled(value: bool) -> void:
 	if camera:
 		camera.enabled = value
 		if value:
+			camera.make_current()
 			camera.reset_smoothing()
 
 func set_command_camera_enabled(value: bool) -> void:
@@ -193,9 +199,13 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var input_vector := Vector2.ZERO
-	if InputMap.has_action("p1_left") and InputMap.has_action("p1_right") and InputMap.has_action("p1_up") and InputMap.has_action("p1_down"):
-		input_vector = Input.get_vector("p1_left", "p1_right", "p1_up", "p1_down")
-	if input_vector.length_squared() < 0.01:
+	var p_left = "p%d_left" % player_id
+	var p_right = "p%d_right" % player_id
+	var p_up = "p%d_up" % player_id
+	var p_down = "p%d_down" % player_id
+	if InputMap.has_action(p_left) and InputMap.has_action(p_right) and InputMap.has_action(p_up) and InputMap.has_action(p_down):
+		input_vector = Input.get_vector(p_left, p_right, p_up, p_down)
+	if input_vector.length_squared() < 0.01 and allow_ui_movement_fallback:
 		input_vector = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 
 	if awaiting_neutral_input:
@@ -375,7 +385,13 @@ func _nearest_open_cell_from_position(max_radius: int) -> Vector2i:
 	return INVALID_CELL
 
 func _is_command_cell(cell: Vector2i) -> bool:
-	return cell.x >= dig_min_cell.x and cell.x <= dig_max_cell.x and cell.y >= dig_min_cell.y and cell.y <= dig_max_cell.y
+	if cell.x < dig_min_cell.x or cell.x > dig_max_cell.x or cell.y < dig_min_cell.y or cell.y > dig_max_cell.y:
+		return false
+	# Bedrock is bedrock for the peon too. Without this the peon chewed straight
+	# through the field's side borders and the base pocket walls, which opened
+	# surface tunnels out to the map edge -- and those became the farthest open
+	# cells, so invasions spawned there instead of in the dug tunnel.
+	return dig_block_layer == null or dig_block_layer.get_cell_source_id(cell) != UNMINEABLE_SOURCE_ID
 
 func _is_open_command_cell(cell: Vector2i) -> bool:
 	return _is_command_cell(cell) and dig_block_layer.get_cell_source_id(cell) == -1

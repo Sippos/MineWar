@@ -11,6 +11,7 @@ var joystick_knob_radius = 40.0
 var joystick_active = false
 var joystick_touch_id = -1
 var joystick_current_pos = Vector2()
+var joystick_default_center = Vector2()  # resting position when idle
 
 var button_radius = 40.0
 var base_tap_radius = 96.0
@@ -60,8 +61,11 @@ func _on_size_changed() -> void:
 	joystick_knob_radius = joystick_radius * 0.5
 	menu_button_radius = clamp(min_axis * 0.035, 22.0, 26.0)
 	base_tap_radius = clamp(min_axis * 0.15, 72.0, 108.0)
-	joystick_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
-	joystick_current_pos = joystick_center
+	# Default / idle resting position (still drawn faintly so player knows the zone)
+	joystick_default_center = Vector2(margin + joystick_radius, viewport_size.y - margin - joystick_radius)
+	if not joystick_active:
+		joystick_center = joystick_default_center
+		joystick_current_pos = joystick_center
 
 	var gap: float = button_radius * 2.0 + 8.0
 	# PICK/DROP form a dedicated row above the 56px ability dock.
@@ -97,9 +101,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 			if _can_start_joystick(touch_position):
+				# Floating joystick: center jumps to the touch point
+				joystick_center = touch_position
+				joystick_current_pos = touch_position
 				joystick_active = true
 				joystick_touch_id = event.index
-				joystick_current_pos = touch_position
 				queue_redraw()
 				get_viewport().set_input_as_handled()
 		else:
@@ -118,6 +124,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if joystick_touch_id == event.index:
 				joystick_active = false
 				joystick_touch_id = -1
+				# Snap back to default resting position
+				joystick_center = joystick_default_center
 				joystick_current_pos = joystick_center
 				update_joystick_input()
 				queue_redraw()
@@ -135,9 +143,18 @@ func _screen_to_canvas(screen_position: Vector2) -> Vector2:
 	return make_canvas_position_local(screen_position)
 
 func _can_start_joystick(touch_position: Vector2) -> bool:
-	# Movement owns only the visible lower-left pad. It must never capture taps
-	# on world prompts, menus, PICK/DROP, or the ability dock.
-	return touch_position.distance_to(joystick_center) <= joystick_radius * 1.35
+	# Floating stick: any touch on the left ~45% of the screen (away from action buttons)
+	# is fair game. Keeps PICK/DROP + ability dock free on the right.
+	var viewport_size: Vector2 = size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = get_viewport().get_visible_rect().size
+	# Left half-ish, but leave a little margin so we don't steal top-center menu taps
+	if touch_position.x > viewport_size.x * 0.48:
+		return false
+	# Don't steal the top menu button zone
+	if touch_position.distance_to(menu_button_pos) < menu_button_radius * 2.0:
+		return false
+	return true
 
 func update_joystick_input() -> void:
 	if not joystick_active:
@@ -197,10 +214,11 @@ func _draw() -> void:
 		draw_circle(joystick_current_pos, joystick_knob_radius, Color(0.32, 0.62, 0.72, 0.72))
 		draw_arc(joystick_current_pos, joystick_knob_radius, 0.0, TAU, 32, Color(0.85, 0.9, 0.92, 0.78), 2.0)
 	else:
-		draw_circle(joystick_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.24))
-		draw_arc(joystick_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.42), 2.0)
-		draw_circle(joystick_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.26))
-		draw_arc(joystick_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.36), 2.0)
+		# Faint resting indicator so the player still knows the movement zone exists
+		draw_circle(joystick_default_center, joystick_radius, Color(0.04, 0.07, 0.1, 0.18))
+		draw_arc(joystick_default_center, joystick_radius, 0.0, TAU, 40, Color(0.28, 0.6, 0.72, 0.28), 2.0)
+		draw_circle(joystick_default_center, joystick_knob_radius, Color(0.35, 0.44, 0.52, 0.18))
+		draw_arc(joystick_default_center, joystick_knob_radius, 0.0, TAU, 32, Color(0.75, 0.82, 0.88, 0.22), 2.0)
 	for btn in buttons:
 		_draw_action_button(btn)
 

@@ -1509,13 +1509,7 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	var slot_size := Vector2(56, 56) if mobile_runtime else ICON_SIZE
 	slot.custom_minimum_size = slot_size
 	slot.tooltip_text = display_name
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.045, 0.06, 0.94) if mobile_runtime else Color(0.06, 0.055, 0.05, 0.92)
-	style.border_color = Color(0.95, 0.72, 0.28, 0.96) if mobile_runtime else Color(0.62, 0.47, 0.25, 1.0)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(11 if mobile_runtime else 6)
-	style.shadow_color = Color(0, 0, 0, 0.55)
-	style.shadow_size = 4
+	var style := StyleBoxEmpty.new()
 	slot.add_theme_stylebox_override("panel", style)
 	var root := Control.new()
 	root.name = "Root"
@@ -1564,8 +1558,12 @@ func _create_ability_slot(ability: String, display_name: String, key_text: Strin
 	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	key_label.text = key_text
 	key_label.visible = not mobile_runtime
-	key_label.add_theme_font_size_override("font_size", 9)
+	var menu_font = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
+	key_label.add_theme_font_override("font", menu_font)
+	key_label.add_theme_font_size_override("font_size", 12)
 	key_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.55))
+	key_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	key_label.add_theme_constant_override("outline_size", 3)
 	key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(key_label)
 	var level_label := Label.new()

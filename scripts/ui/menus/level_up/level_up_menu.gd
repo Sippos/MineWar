@@ -136,7 +136,7 @@ func _build_visuals() -> void:
 
 func _ability_card(option: Dictionary) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(180, 220) if compact else Vector2(260, 280)
+	button.custom_minimum_size = Vector2(140, 200) if compact else Vector2(210, 250)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	button.disabled = not bool(option.get("enabled", true))
@@ -156,14 +156,14 @@ func _ability_card(option: Dictionary) -> Button:
 	button.add_child(row)
 
 	var icon_holder := CenterContainer.new()
-	icon_holder.custom_minimum_size = Vector2(80, 80) if compact else Vector2(120, 120)
+	icon_holder.custom_minimum_size = Vector2(70, 70) if compact else Vector2(100, 100)
 	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon_holder)
 	var path := str(option.get("icon_path", ""))
 	if path != "" and ResourceLoader.exists(path):
 		var icon := TextureRect.new()
 		icon.texture = load(path)
-		icon.custom_minimum_size = Vector2(72, 72) if compact else Vector2(108, 108)
+		icon.custom_minimum_size = Vector2(64, 64) if compact else Vector2(90, 90)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -171,10 +171,10 @@ func _ability_card(option: Dictionary) -> Button:
 	else:
 		var fallback := Label.new()
 		fallback.text = "?"
-		fallback.custom_minimum_size = Vector2(72, 72) if compact else Vector2(108, 108)
+		fallback.custom_minimum_size = Vector2(64, 64) if compact else Vector2(90, 90)
 		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fallback.add_theme_font_size_override("font_size", 48 if compact else 72)
+		fallback.add_theme_font_size_override("font_size", 42 if compact else 64)
 		fallback.add_theme_color_override("font_color", Color(0.85, 0.68, 0.3))
 		fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon_holder.add_child(fallback)
@@ -194,7 +194,7 @@ func _ability_card(option: Dictionary) -> Button:
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_override("font", _get_button_font())
-	heading.add_theme_font_size_override("font_size", 18 if compact else 22)
+	heading.add_theme_font_size_override("font_size", 16 if compact else 20)
 	heading.add_theme_color_override("font_color", Color(0.62, 0.59, 0.54) if button.disabled else Color(1.0, 0.9, 0.68))
 	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_box.add_child(heading)
@@ -217,19 +217,18 @@ func _ability_card(option: Dictionary) -> Button:
 	return button
 
 func _apply_card_style(button: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.12, 0.07, 0.035, 0.94)
-	normal.border_color = Color(0.63, 0.42, 0.17)
-	normal.set_border_width_all(3)
-	normal.set_corner_radius_all(8)
-	var hover := normal.duplicate()
-	hover.bg_color = Color(0.24, 0.13, 0.05, 0.98)
-	hover.border_color = Color(1.0, 0.78, 0.28)
-	var pressed := hover.duplicate()
-	pressed.bg_color = Color(0.34, 0.18, 0.06, 1.0)
-	var disabled := normal.duplicate()
-	disabled.bg_color = Color(0.08, 0.06, 0.05, 0.88)
-	disabled.border_color = Color(0.3, 0.26, 0.22)
+	var normal := StyleBoxEmpty.new()
+	
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = Color(1.0, 1.0, 1.0, 0.08)
+	hover.set_corner_radius_all(8)
+	
+	var pressed := StyleBoxFlat.new()
+	pressed.bg_color = Color(0.0, 0.0, 0.0, 0.2)
+	pressed.set_corner_radius_all(8)
+	
+	var disabled := StyleBoxEmpty.new()
+	
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("focus", hover)

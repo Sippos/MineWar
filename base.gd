@@ -30,6 +30,9 @@ var heal_timer = 0.0
 var prompt_tween: Tween
 var prompt_should_show := false
 var loadout_menu_open := false
+# 0 keeps the historic behaviour of inheriting the owning world's player_id.
+# Hub scenes that place two strongholds inside one world set this explicitly.
+var base_owner_id := 0
 
 @onready var prompt = $PromptLabel
 
@@ -50,7 +53,10 @@ func _ready() -> void:
 	call_deferred("refresh_base_sprite")
 
 func refresh_base_sprite() -> void:
-	_apply_base_sprite(Global.selected_base_id)
+	_apply_base_sprite(Global.get_base_for_player(get_base_owner_id()))
+
+func get_base_owner_id() -> int:
+	return base_owner_id if base_owner_id > 0 else _get_player_id()
 
 func _get_player_id() -> int:
 	var parent = get_parent()
@@ -185,6 +191,14 @@ func _input(event: InputEvent) -> void:
 	if p_id == null:
 		p_id = 1
 	if player_in_zone and event.is_action_pressed("p%d_interact" % p_id):
+		var player = get_parent().get_node_or_null("Player")
+		if player and player.has_method("deposit_gems"):
+			var deposited = player.deposit_gems()
+			if deposited > 0:
+				_emit_deposit_feedback(deposited)
+				if get_parent().has_method("notify_tutorial_gems_deposited"):
+					get_parent().notify_tutorial_gems_deposited(deposited)
+				gems_deposited.emit(deposited)
 		if _is_single_player_hub():
 			_open_loadout_menu()
 			return

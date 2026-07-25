@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://enemyuid"]
+[gd_scene load_steps=9 format=3 uid="uid://enemyuid"]
 
 [ext_resource type="Script" path="res://enemy.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png" id="2_tex"]
@@ -6,6 +6,17 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_enemy"]
 resource_local_to_scene = true
 size = Vector2(40, 40)
+
+[sub_resource type="Gradient" id="Gradient_light"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_light"]
+gradient = SubResource("Gradient_light")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.8, 0.8)
+width = 128
+height = 128
 
 [sub_resource type="Gradient" id="Gradient_shadow"]
 colors = PackedColorArray(0, 0, 0, 0.6, 0, 0, 0, 0)

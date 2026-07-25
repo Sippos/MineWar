@@ -55,7 +55,7 @@ var hero_portrait_hero_name := ""
 var base_status_panel: PanelContainer
 var base_status_label: Label
 var base_status_icon: TextureRect
-var base_status_style: StyleBoxFlat
+var base_status_style: StyleBox
 var base_direction_cue: Control
 var base_direction_arrow: Label
 var base_direction_label: Label
@@ -191,13 +191,7 @@ func _setup_hero_portrait_ui() -> void:
 	hero_portrait_container.offset_right = HERO_PORTRAIT_RECT.end.x
 	hero_portrait_container.offset_bottom = HERO_PORTRAIT_RECT.end.y
 
-	var frame_style = StyleBoxFlat.new()
-	frame_style.bg_color = Color(0.035, 0.045, 0.06, 0.92)
-	frame_style.border_color = Color(0.82, 0.68, 0.32, 0.95)
-	frame_style.set_border_width_all(2)
-	frame_style.set_corner_radius_all(8)
-	frame_style.shadow_color = Color(0, 0, 0, 0.55)
-	frame_style.shadow_size = 4
+	var frame_style = StyleBoxEmpty.new()
 	hero_portrait_container.add_theme_stylebox_override("panel", frame_style)
 
 	var portrait_content = Control.new()
@@ -280,11 +274,7 @@ func _shift_resource_row_for_portrait() -> void:
 	resource_panel.offset_top = 20
 	resource_panel.offset_right = 272
 	resource_panel.offset_bottom = 58
-	var panel_style = StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.025, 0.03, 0.04, 0.78)
-	panel_style.border_color = Color(0.34, 0.38, 0.46, 0.55)
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(7)
+	var panel_style = StyleBoxEmpty.new()
 	resource_panel.add_theme_stylebox_override("panel", panel_style)
 	add_child(resource_panel)
 	move_child(resource_panel, hero_portrait_container.get_index())
@@ -616,11 +606,7 @@ func _setup_base_warning_ui() -> void:
 	base_status_panel.offset_right = -16
 	base_status_panel.offset_bottom = 104
 	base_status_panel.pivot_offset = Vector2(65, 45)
-	base_status_style = StyleBoxFlat.new()
-	base_status_style.set_border_width_all(2)
-	base_status_style.set_corner_radius_all(9)
-	base_status_style.shadow_color = Color(0, 0, 0, 0.55)
-	base_status_style.shadow_size = 4
+	base_status_style = StyleBoxEmpty.new()
 	base_status_panel.add_theme_stylebox_override("panel", base_status_style)
 
 	var content := Control.new()
@@ -790,13 +776,7 @@ func _create_cave_reward_slot(title_text: String, effect_text: String, icon_text
 	slot.custom_minimum_size = Vector2(176, 76)
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slot.pivot_offset = Vector2(88, 38)
-	var slot_style := StyleBoxFlat.new()
-	slot_style.bg_color = Color(0.12, 0.065, 0.025, 0.94)
-	slot_style.border_color = Color(0.95, 0.68, 0.22, 0.96)
-	slot_style.set_border_width_all(2)
-	slot_style.set_corner_radius_all(9)
-	slot_style.shadow_color = Color(0, 0, 0, 0.55)
-	slot_style.shadow_size = 4
+	var slot_style := StyleBoxEmpty.new()
 	slot.add_theme_stylebox_override("panel", slot_style)
 
 	var content := HBoxContainer.new()
@@ -808,11 +788,7 @@ func _create_cave_reward_slot(title_text: String, effect_text: String, icon_text
 	var icon_frame := PanelContainer.new()
 	icon_frame.custom_minimum_size = Vector2(44, 52)
 	icon_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon_style := StyleBoxFlat.new()
-	icon_style.bg_color = Color(0.38, 0.19, 0.07, 1.0)
-	icon_style.border_color = Color(1.0, 0.78, 0.3, 1.0)
-	icon_style.set_border_width_all(2)
-	icon_style.set_corner_radius_all(7)
+	var icon_style := StyleBoxEmpty.new()
 	icon_frame.add_theme_stylebox_override("panel", icon_style)
 	content.add_child(icon_frame)
 
@@ -842,16 +818,24 @@ func _create_cave_reward_slot(title_text: String, effect_text: String, icon_text
 	text_box.add_theme_constant_override("separation", 2)
 	content.add_child(text_box)
 
+	var menu_font = preload("res://assets/fonts/cinzel/Cinzel-Variable.ttf")
+	
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 11)
+	title.add_theme_font_override("font", menu_font)
+	title.add_theme_font_size_override("font_size", 14)
 	title.add_theme_color_override("font_color", Color(1.0, 0.91, 0.7, 1.0))
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	title.add_theme_constant_override("outline_size", 3)
 	text_box.add_child(title)
 
 	var effect := Label.new()
 	effect.text = effect_text
-	effect.add_theme_font_size_override("font_size", 10)
+	effect.add_theme_font_override("font", menu_font)
+	effect.add_theme_font_size_override("font_size", 12)
 	effect.add_theme_color_override("font_color", Color(1.0, 0.72, 0.24, 1.0))
+	effect.add_theme_color_override("font_outline_color", Color.BLACK)
+	effect.add_theme_constant_override("outline_size", 3)
 	text_box.add_child(effect)
 	return slot
 
@@ -899,15 +883,13 @@ func _apply_base_warning_state(pulse: bool) -> void:
 	if not base_status_panel or not base_status_style:
 		return
 	var warning_color: Color = BASE_WARNING_COLORS.get(base_warning_state, BASE_WARNING_COLORS["stable"])
-	base_status_style.bg_color = Color(0.025, 0.03, 0.04, 0.82)
-	base_status_style.border_color = warning_color
 	if base_status_icon:
 		# The base sprite stays readable; the frame and health bar communicate danger.
 		base_status_icon.modulate = Color.WHITE if base_warning_state == "stable" else Color.WHITE.lerp(warning_color, 0.28)
 	if base_status_label:
 		# Mobile has one base-health readout: the unlockable bar beneath the icon.
 		# A second percentage inside the portrait was visual noise.
-		base_status_label.visible = not _is_mobile_hud()
+		base_status_label.visible = false
 		base_status_label.text = "BASE %d%%" % int(round(float(base_warning_health) / float(max(base_warning_max_health, 1)) * 100.0))
 		base_status_label.add_theme_color_override("font_color", warning_color)
 	base_status_panel.queue_redraw()
@@ -1241,17 +1223,14 @@ func _layout_health_hud_module(label_name: String, bar: TextureProgressBar, y: f
 func _style_hud_progress_bar(bar: TextureProgressBar, progress_color: Color) -> void:
 	if not bar:
 		return
-	# Kill the old scale-hack. Bars now live at their real size.
+	# Compact bars: real size, no scale-hack, nine-patch so the frame textures stretch cleanly.
 	bar.scale = Vector2.ONE
-	bar.nine_patch_stretch = false
-	# Real under-bar: dark background that stays full width while progress fills.
+	bar.nine_patch_stretch = true
+	bar.texture_progress_offset = Vector2.ZERO
+	# Dark under-bar stays full width while progress fills.
 	bar.tint_under = Color(0.02, 0.025, 0.035, 0.95)
 	bar.tint_progress = progress_color
 	bar.tint_over = Color(1.0, 1.0, 1.0, 0.85)
-	# Ensure the progress texture is used if present; otherwise tint does the work.
-	if bar.texture_progress == null and bar.texture_under == null:
-		# Fallback solid look when textures are missing.
-		pass
 
 func _make_texture_style(texture: Texture2D) -> StyleBoxTexture:
 	var stylebox = StyleBoxTexture.new()

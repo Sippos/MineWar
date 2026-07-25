@@ -3,6 +3,14 @@
 [ext_resource type="Texture2D" uid="uid://psuop2h0sv45" path="res://assets/sprites/ui/common/Button.png" id="1_l7yju"]
 [ext_resource type="Texture2D" uid="uid://bv7yl63842aux" path="res://assets/sprites/ui/common/MenuPanel.png" id="2_ap137"]
 
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_disabled"]
+texture = ExtResource("1_l7yju")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.32, 0.32, 0.32, 0.78)
+
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_icku4"]
 texture = ExtResource("1_l7yju")
 texture_margin_left = 16.0
@@ -33,14 +41,6 @@ texture_margin_top = 16.0
 texture_margin_right = 16.0
 texture_margin_bottom = 16.0
 modulate_color = Color(0.6, 0.6, 0.6, 1)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_disabled"]
-texture = ExtResource("1_l7yju")
-texture_margin_left = 16.0
-texture_margin_top = 16.0
-texture_margin_right = 16.0
-texture_margin_bottom = 16.0
-modulate_color = Color(0.32, 0.32, 0.32, 0.78)
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_0lf1r"]
 texture = ExtResource("2_ap137")

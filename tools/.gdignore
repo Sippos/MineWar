@@ -1,0 +1,3 @@
+# Offline authoring / one-shot patch scripts. Many contain unfinished or
+# intentionally broken snippets that only produce parse-error + UID spam
+# on every editor boot. Runtime never needs them.
