@@ -169,6 +169,7 @@ func _ready() -> void:
 	# build straight through in one frame (~0.3 s each), so the whole load is one
 	# short hitch instead of a multi-second stall.
 	$Player.player_id = player_id
+	_connect_base_signals()
 	_repair_atlas_tiles()
 	print("[PROF p%d] repair_atlas %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
 	_add_wasd_input()
@@ -210,6 +211,29 @@ func _ready() -> void:
 	preparation_active = preparation_mode and not is_vs_mode
 	if not preparation_active:
 		call_deferred("_begin_player_journey")
+
+func _connect_base_signals() -> void:
+	# level.tscn used to carry these four connections, but a TileSet re-bake of the
+	# scene drops them (the same way it strips node scripts). Without them deposited
+	# gems never reach the HUD bank, so nothing is ever affordable in the forge.
+	# Wiring them here keeps the loop working no matter what the scene file holds.
+	var base := get_node_or_null("Base")
+	if base == null:
+		return
+	var hud := get_node_or_null("HUD")
+	var upgrade_menu := get_node_or_null("UpgradeMenu")
+	if hud != null:
+		_connect_once(base, "gems_deposited", Callable(hud, "add_gems"))
+		_connect_once(base, "base_damaged", Callable(hud, "update_health"))
+		_connect_once(base, "game_over", Callable(hud, "on_game_over"))
+	if upgrade_menu != null:
+		_connect_once(base, "upgrade_requested", Callable(upgrade_menu, "show_menu"))
+
+func _connect_once(source: Node, signal_name: String, target: Callable) -> void:
+	if not source.has_signal(signal_name) or not target.is_valid():
+		return
+	if not source.is_connected(signal_name, target):
+		source.connect(signal_name, target)
 
 func _configure_mine_lighting() -> void:
 	# Keep the generated fog data available for future secrets or minimap use,
@@ -685,8 +709,7 @@ func _begin_player_journey_impl() -> void:
 		# The first-run tutorial temporarily exposes the complete information HUD
 		# so the player can learn what each system means. This does not set upgrade
 		# ownership; the next run returns to the intended purchasable HUD modules.
-		if hud.has_method("unlock_wave_timer"):
-			hud.unlock_wave_timer()
+		# The wave timer is deliberately left out: it stays hidden until purchased.
 		if hud.has_method("unlock_base_healthbar"):
 			hud.unlock_base_healthbar()
 		if hud.has_method("unlock_healthbar"):
@@ -768,29 +791,11 @@ func _remove_entry_marker() -> void:
 	onboarding_entry_marker = null
 
 func _set_onboarding_stage(stage: int) -> void:
+	# The on-screen objective banner is gone; the stages still drive the entry
+	# marker and the one-time completion flag.
 	onboarding_stage = stage
-	var hud := get_node_or_null("HUD")
-	if hud == null or not hud.has_method("show_objective"):
-		return
-	match stage:
-		OnboardingStage.DIG_DOWN:
-			hud.show_objective("I", "DIG  ▼", "")
-		OnboardingStage.FIND_GEM:
-			hud.show_objective("II", "CRYSTAL SEAM", "")
-		OnboardingStage.PICK_UP_GEM:
-			hud.show_objective("III", "SPACE / A", "")
-		OnboardingStage.BANK_GEM:
-			hud.show_objective("IV", "RETURN  ◇", "")
-		OnboardingStage.OPEN_UPGRADES:
-			hud.show_objective("V", "FORGE  E / Y", "")
-		OnboardingStage.COMPLETE:
-			hud.show_objective("READY", "MINE  •  RETURN  •  DEFEND", "")
-			Global.complete_prototype_onboarding()
-			var objective_hud := hud
-			get_tree().create_timer(2.2).timeout.connect(func():
-				if is_instance_valid(objective_hud) and objective_hud.has_method("hide_objective"):
-					objective_hud.hide_objective()
-			)
+	if stage == OnboardingStage.COMPLETE:
+		Global.complete_prototype_onboarding()
 
 func notify_minewars_gem_dug(cell: Vector2i) -> void:
 	if not bool(get_meta("minewars_expedition", false)):
@@ -851,9 +856,6 @@ func notify_tutorial_gems_deposited(amount: int) -> void:
 func notify_tutorial_upgrade_opened() -> void:
 	if not onboarding_active or onboarding_stage != OnboardingStage.OPEN_UPGRADES:
 		return
-	var hud := get_node_or_null("HUD")
-	if hud and hud.has_method("show_objective"):
-		hud.show_objective("V", "CHOOSE  STR  •  AGI  •  INT", "")
 
 func notify_tutorial_upgrade_purchased() -> void:
 	if not onboarding_active or onboarding_stage != OnboardingStage.OPEN_UPGRADES:

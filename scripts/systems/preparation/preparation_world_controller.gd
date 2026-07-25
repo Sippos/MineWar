@@ -156,10 +156,6 @@ func _ready() -> void:
 	var prompt := base.get_node_or_null("PromptLabel") as Label
 	if prompt:
 		prompt.visible = false
-	var hud := world.get_node_or_null("HUD")
-	if hud and hud.has_method("hide_objective"):
-		hud.hide_objective()
-
 	_carve_mode_routes()
 	_build_world_choices()
 	_build_interface()

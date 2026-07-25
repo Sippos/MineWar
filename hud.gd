@@ -25,11 +25,6 @@ var stomp_container: Control
 var stomp_progress: TextureProgressBar
 var notice_label: Label
 var notice_tween: Tween
-var objective_panel: PanelContainer
-var objective_step_label: Label
-var objective_title_label: Label
-var objective_body_label: Label
-var objective_tween: Tween
 var carry_status_panel: PanelContainer
 var carry_status_label: Label
 var return_cue: Control
@@ -166,7 +161,6 @@ func _ready():
 	
 	# Ability 1 is displayed by the hero ability bar; the obsolete standalone stomp slot is intentionally not created.
 	_setup_notice_ui()
-	_setup_objective_ui()
 	_setup_carry_status_ui()
 	_setup_return_cue_ui()
 	_setup_base_warning_ui()
@@ -431,49 +425,6 @@ func _setup_notice_ui() -> void:
 	notice_label.offset_bottom = 222
 	add_child(notice_label)
 
-func _setup_objective_ui() -> void:
-	objective_panel = PanelContainer.new()
-	objective_panel.name = "FirstRunObjective"
-	objective_panel.visible = false
-	objective_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	objective_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_panel.offset_left = -190
-	objective_panel.offset_top = 74
-	objective_panel.offset_right = 190
-	objective_panel.offset_bottom = 132
-	objective_panel.pivot_offset = Vector2(190, 29)
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.018, 0.035, 0.055, 0.82)
-	panel_style.border_color = Color(0.18, 0.78, 1.0, 0.8)
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(8)
-	panel_style.content_margin_left = 14
-	panel_style.content_margin_right = 14
-	panel_style.content_margin_top = 7
-	panel_style.content_margin_bottom = 7
-	objective_panel.add_theme_stylebox_override("panel", panel_style)
-	var box := VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 0)
-	objective_panel.add_child(box)
-	objective_step_label = Label.new()
-	objective_step_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	objective_step_label.add_theme_font_size_override("font_size", 9)
-	objective_step_label.add_theme_color_override("font_color", Color(0.38, 0.82, 1.0, 0.9))
-	box.add_child(objective_step_label)
-	objective_title_label = Label.new()
-	objective_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	objective_title_label.add_theme_font_size_override("font_size", 17)
-	objective_title_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.68, 1.0))
-	box.add_child(objective_title_label)
-	objective_body_label = Label.new()
-	objective_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	objective_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	objective_body_label.add_theme_font_size_override("font_size", 11)
-	objective_body_label.add_theme_color_override("font_color", Color(0.86, 0.92, 0.98, 1.0))
-	box.add_child(objective_body_label)
-	add_child(objective_panel)
-
 func _setup_carry_status_ui() -> void:
 	# Gem carry load is shown by the held gem sprite on the hero — the old teal
 	# HUD bar was redundant and cluttered the portrait/resource cluster.
@@ -513,39 +464,6 @@ func _setup_return_cue_ui() -> void:
 	return_cue_label.add_theme_constant_override("outline_size", 3)
 	return_cue.add_child(return_cue_label)
 	add_child(return_cue)
-
-func show_objective(step_text: String, title_text: String, body_text: String) -> void:
-	if not objective_panel:
-		return
-	if _is_mobile_hud():
-		# Portrait play keeps objectives as a short diegetic cue; the full tutorial
-		# card would cover the health strip and compete with the touch controls.
-		objective_panel.visible = false
-		var compact_text := title_text.strip_edges()
-		if compact_text.is_empty():
-			compact_text = step_text.strip_edges()
-		if compact_text.contains("SPACE / A"):
-			compact_text = "TAP PICK"
-		elif compact_text.contains("E / Y"):
-			compact_text = "TAP THE BASE"
-		show_notice(compact_text, 2.6)
-		return
-	objective_step_label.text = step_text
-	objective_title_label.text = title_text
-	objective_body_label.text = body_text
-	objective_body_label.visible = not body_text.strip_edges().is_empty()
-	objective_panel.visible = true
-	if objective_tween and objective_tween.is_running():
-		objective_tween.kill()
-	objective_panel.scale = Vector2(0.96, 0.96)
-	objective_panel.modulate = Color(1.18, 1.18, 1.18, 1.0)
-	objective_tween = create_tween().set_parallel(true)
-	objective_tween.tween_property(objective_panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	objective_tween.tween_property(objective_panel, "modulate", Color.WHITE, 0.22)
-
-func hide_objective() -> void:
-	if objective_panel:
-		objective_panel.visible = false
 
 func _update_carry_status() -> void:
 	# Carry HUD indicator removed — held gems are visible on the hero sprite.
@@ -909,12 +827,6 @@ func _apply_base_warning_state(pulse: bool) -> void:
 func notify_wave_started(is_boss: bool = false, wave_number: int = 1) -> void:
 	if wave_number == 1 and not is_boss:
 		show_notice("FIRST SCOUT — return to the base and move into it to auto-attack!", 4.5)
-		show_objective("COMBAT TIP", "DEFEND THE BASE", "Approach an enemy to attack automatically. Move away to retreat.")
-		var objective_hud := self
-		get_tree().create_timer(6.0).timeout.connect(func():
-			if is_instance_valid(objective_hud):
-				objective_hud.hide_objective()
-		)
 	else:
 		show_notice("BOSS BREACH — return to the base!" if is_boss else "WAVE BREACH — enemies are moving toward the base!", 3.0)
 
@@ -1027,17 +939,25 @@ func _relayout_unlocked_hud() -> void:
 		base_status_panel.offset_bottom = 104.0
 	_layout_health_hud_module("BaseLabel", base_health_bar, 108.0, true, edge, base_width)
 
-	# Purchased wave information sits between screen center and the base cluster.
+	# Purchased wave information is a true top-center module. Offsets are set
+	# explicitly instead of position/size so the label's own minimum size can
+	# never pull it out of the center and into the player cluster.
+	var wave_half := 105.0
 	if wave_label:
 		wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		wave_label.position = Vector2(-105.0, 18.0)
-		wave_label.size = Vector2(210.0, 24.0)
+		wave_label.offset_left = -wave_half
+		wave_label.offset_top = 18.0
+		wave_label.offset_right = wave_half
+		wave_label.offset_bottom = 42.0
 		wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		wave_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if get_node_or_null("WaveBar"):
 		var wave_bar := get_node("WaveBar") as TextureProgressBar
 		wave_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		wave_bar.position = Vector2(-105.0, 42.0)
-		wave_bar.size = Vector2(210.0, BAR_HEIGHT)
+		wave_bar.offset_left = -wave_half
+		wave_bar.offset_top = 42.0
+		wave_bar.offset_right = wave_half
+		wave_bar.offset_bottom = 42.0 + BAR_HEIGHT
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
 	if minimap and minimap.visible:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1086,12 +1006,10 @@ func _relayout_mobile_hud(canvas_size: Vector2, _physical_size: Vector2) -> void
 		gold_value.size = Vector2(logical.call(34.0), logical.call(32.0))
 		gold_value.add_theme_font_size_override("font_size", int(logical.call(18.0)))
 
-	# Tutorial cards and the large persistent reward card do not belong on the
-	# touch playfield. Purchased HUD modules remain available and are laid out
-	# compactly below, preserving the game's progressive information unlocks.
+	# The large persistent reward card does not belong on the touch playfield.
+	# Purchased HUD modules remain available and are laid out compactly below,
+	# preserving the game's progressive information unlocks.
 	var stats_container := get_node_or_null("StatsContainer") as Control
-	if objective_panel:
-		objective_panel.visible = false
 	if minimap:
 		minimap.visible = false
 	if cave_reward_container:
