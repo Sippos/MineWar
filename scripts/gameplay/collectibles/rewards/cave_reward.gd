@@ -5,7 +5,7 @@ extends Area2D
 
 @export var reward_id: String = ""
 @export var item_texture: Texture2D
-@export var sprite_scale: float = 0.55
+@export var sprite_scale: float = 0.30
 
 var collected := false
 var can_collect := false

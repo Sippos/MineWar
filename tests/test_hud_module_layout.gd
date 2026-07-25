@@ -14,7 +14,7 @@ func _source() -> String:
 func test_semantic_hud_anchors_match_the_gameplay_layout() -> void:
 	var source := _source()
 	assert_true(source.contains("base_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)"), "Base sprite should anchor to the top-right")
-	assert_true(source.contains("PlayerLabel\", player_health_bar, 82.0, false"), "Player health should stay beneath the top-left player cluster")
+	assert_true(source.contains("PlayerLabel\", player_health_bar, player_y, false"), "Player health should stay beneath the top-left player cluster")
 	assert_true(source.contains("BaseLabel\", base_health_bar, 108.0, true"), "Base health should sit directly beneath the base sprite")
 	assert_true(source.contains("wave_label.set_anchors_preset(Control.PRESET_CENTER_TOP)"), "Wave timer should use the top middle-right anchor")
 	assert_true(source.contains("xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)"), "XP should remain bottom-center")
@@ -23,12 +23,14 @@ func test_semantic_hud_anchors_match_the_gameplay_layout() -> void:
 
 func test_health_and_progress_bars_use_compact_visual_treatment() -> void:
 	var source := _source()
-	assert_true(source.contains("bar.size = Vector2(module_width, 22.0)"), "Health bars should use a compact 22-pixel height")
+	assert_true(source.contains("const BAR_HEIGHT := 22.0"), "Bars should declare a compact 22-pixel height constant")
+	assert_true(source.contains("bar.size = Vector2(module_width, BAR_HEIGHT)"), "Health bars should use the compact BAR_HEIGHT")
 	assert_true(source.contains("value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER"), "Health values should be centered inside the bars")
 	assert_true(source.contains("_style_hud_progress_bar(xp_bar"), "XP should use the shared progress-bar treatment")
 	assert_true(source.contains("_style_hud_progress_bar(wave_bar"), "Wave progress should use the shared progress-bar treatment")
 	assert_true(source.contains("var compact := viewport_size.x < 760.0"), "HUD should retain a compact breakpoint")
 	assert_true(source.contains("get_tree().root.size_changed.connect(_relayout_unlocked_hud)"), "HUD should relayout on viewport changes")
+	assert_true(source.contains("tint_under = Color(0.02, 0.025, 0.035, 0.95)"), "Progress bars need a strong dark under-tint")
 
 func test_information_modules_are_tutorial_assistance_not_free_ownership() -> void:
 	var world_source := FileAccess.get_file_as_string("res://scripts/systems/world_generation/world.gd")

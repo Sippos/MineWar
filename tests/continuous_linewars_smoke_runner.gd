@@ -52,12 +52,14 @@ func _run_smoke_test() -> void:
 
 	var tunnel_exit: Vector2i = line_wars.get("tunnel_exit_cell")
 	var minimum_length := int(line_wars.get("MINIMUM_OPENING_ROUTE_LENGTH")) if line_wars.get("MINIMUM_OPENING_ROUTE_LENGTH") != null else 6
+	# Carve the opening through the world instead of injecting a single dig swing:
+	# a player-controlled peon clears any externally queued dig on its next
+	# input-free frame, so the simulated swing never breaks the tile.
 	for step in range(1, minimum_length):
-		var previous_cell := tunnel_exit + Vector2i.UP * (step - 1)
 		var target_cell := tunnel_exit + Vector2i.UP * step
 		_force_solid(world, block_layer, target_cell)
-		peon.global_position = block_layer.to_global(block_layer.map_to_local(previous_cell))
-		peon.call("_process_surface_dig", Vector2.UP, 0.6)
+		world.call("on_cell_dug", target_cell)
+		peon.global_position = block_layer.to_global(block_layer.map_to_local(target_cell))
 		await _wait_frames(3)
 
 	await _wait_frames(6)
@@ -142,6 +144,12 @@ func _wait_for_order(peon: Node, max_frames: int) -> void:
 
 func _wait_frames(count: int) -> void:
 	for _index in count:
+		await get_tree().process_frame
+
+func _wait_until(predicate: Callable, max_frames: int) -> void:
+	for _index in max_frames:
+		if bool(predicate.call()):
+			return
 		await get_tree().process_frame
 
 func _expect(condition: bool, message: String) -> void:

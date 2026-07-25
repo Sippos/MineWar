@@ -16,11 +16,11 @@ const UPGRADE_TREE_DESKTOP_MAX_WIDTH := 860.0
 const UPGRADE_TREE_MAX_HEIGHT := 594.0
 const UPGRADE_TREE_WORLD_STRIP := 260.0
 const UPGRADE_TREE_CANVAS_SIZE := Vector2(860.0, 680.0)
-const UPGRADE_TREE_NODE_SIZE := Vector2(116.0, 72.0)
-const UPGRADE_TREE_ROOT_SIZE := Vector2(72.0, 72.0)
-const UPGRADE_TREE_DEPTH_STEP := 146.0
-const UPGRADE_TREE_ROW_START_X := 168.0
-const UPGRADE_TREE_ROW_GAP := 24.0
+const UPGRADE_TREE_NODE_SIZE := Vector2(130.0, 50.0)
+const UPGRADE_TREE_ROOT_SIZE := Vector2(64.0, 64.0)
+const UPGRADE_TREE_DEPTH_STEP := 150.0
+const UPGRADE_TREE_ROW_START_X := 150.0
+const UPGRADE_TREE_ROW_GAP := 16.0
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const ENEMY_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 const GOLD_ICON_TEXTURE: Texture2D = preload("res://GoldCoin.png")
@@ -50,10 +50,12 @@ var upgrade_tree_shell: PanelContainer
 var upgrade_tree_scroll: ScrollContainer
 var upgrade_tree_canvas: Control
 var upgrade_tree_detail: Label
-var upgrade_tree_resources: Label
+var upgrade_tree_resources: Control
 var upgrade_tree_close: Button
 var upgrade_tree_stat_bar: HBoxContainer
 var upgrade_tree_buttons := {}
+var vs_enemy_cooldowns: Dictionary = {}
+var vs_enemy_cooldown_bars: Dictionary = {}
 var upgrade_tree_descriptions := {}
 var upgrade_tree_currency := {}
 var upgrade_tree_costs := {}
@@ -62,6 +64,28 @@ var upgrade_camera: Camera2D
 var upgrade_camera_original_offset := Vector2.ZERO
 var upgrade_camera_tween: Tween
 var upgrade_camera_shifted := false
+var last_total_gems := -1
+var last_total_gold := -1
+
+func _process(delta: float) -> void:
+	if vs_send_panel != null and vs_send_panel.visible:
+		for type in vs_enemy_cooldowns.keys():
+			if vs_enemy_cooldowns[type] > 0.0:
+				vs_enemy_cooldowns[type] -= delta
+				if vs_enemy_cooldowns[type] <= 0.0:
+					vs_enemy_cooldowns[type] = 0.0
+			var bar = vs_enemy_cooldown_bars.get(type)
+			if is_instance_valid(bar):
+				bar.value = vs_enemy_cooldowns[type]
+
+	if not panel.visible or hud == null:
+		return
+	var current_gems := int(hud.get("total_gems"))
+	var current_gold := int(hud.get("total_gold"))
+	if current_gems != last_total_gems or current_gold != last_total_gold:
+		last_total_gems = current_gems
+		last_total_gold = current_gold
+		_refresh_upgrade_tree_cards()
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -240,7 +264,7 @@ func _build_upgrade_tree_ui() -> void:
 	upgrade_tree_shell = PanelContainer.new()
 	upgrade_tree_shell.name = "UpgradeTreeShell"
 	upgrade_tree_shell.mouse_filter = Control.MOUSE_FILTER_STOP
-	upgrade_tree_shell.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.018, 0.024, 0.032, 0.96), Color(0.82, 0.62, 0.24, 0.98), 2, 12))
+	upgrade_tree_shell.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.08, 0.06, 0.14, 0.97), Color(0.95, 0.72, 0.35, 0.95), 3, 14))
 	panel.add_child(upgrade_tree_shell)
 
 	var shell_box := VBoxContainer.new()
@@ -265,15 +289,45 @@ func _build_upgrade_tree_ui() -> void:
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48, 1.0))
+	var cinzel := load("res://assets/fonts/cinzel/Cinzel-Variable.ttf") as FontFile
+	if cinzel:
+		title.add_theme_font_override("font", cinzel)
 	header.add_child(title)
 
-	upgrade_tree_resources = Label.new()
-	upgrade_tree_resources.name = "Resources"
-	upgrade_tree_resources.custom_minimum_size = Vector2(170, 0)
-	upgrade_tree_resources.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	upgrade_tree_resources.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	upgrade_tree_resources.add_theme_font_size_override("font_size", 17)
-	header.add_child(upgrade_tree_resources)
+	var resources_box = HBoxContainer.new()
+	resources_box.name = "Resources"
+	resources_box.alignment = BoxContainer.ALIGNMENT_END
+	resources_box.custom_minimum_size = Vector2(170, 0)
+	resources_box.add_theme_constant_override("separation", 6)
+	
+	var gem_icon = TextureRect.new()
+	gem_icon.texture = GEM_ICON_TEXTURE
+	gem_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gem_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gem_icon.custom_minimum_size = Vector2(24, 24)
+	resources_box.add_child(gem_icon)
+
+	var gem_label = Label.new()
+	gem_label.name = "GemLabel"
+	gem_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	gem_label.add_theme_font_size_override("font_size", 17)
+	resources_box.add_child(gem_label)
+
+	var gold_icon = TextureRect.new()
+	gold_icon.texture = GOLD_ICON_TEXTURE
+	gold_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gold_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gold_icon.custom_minimum_size = Vector2(24, 24)
+	resources_box.add_child(gold_icon)
+
+	var gold_label = Label.new()
+	gold_label.name = "GoldLabel"
+	gold_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	gold_label.add_theme_font_size_override("font_size", 17)
+	resources_box.add_child(gold_label)
+	
+	header.add_child(resources_box)
+	upgrade_tree_resources = resources_box
 
 	upgrade_tree_close = Button.new()
 	upgrade_tree_close.name = "TreeClose"
@@ -321,16 +375,17 @@ func _hide_legacy_upgrade_nodes() -> void:
 		if child != upgrade_tree_shell:
 			child.visible = false
 
-func _tree_panel_style(background: Color, border: Color, border_width: int = 2, radius: int = 8) -> StyleBoxFlat:
+func _tree_panel_style(background: Color, border: Color, border_width: int = 2, radius: int = 18) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = background
 	style.border_color = border
 	style.set_border_width_all(border_width)
 	style.set_corner_radius_all(radius)
-	style.shadow_color = Color(0, 0, 0, 0.58)
-	style.shadow_size = 5
-	style.content_margin_left = 8.0
-	style.content_margin_right = 8.0
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 4
+	style.shadow_offset = Vector2(0, 2)
+	style.content_margin_left = 10.0
+	style.content_margin_right = 10.0
 	style.content_margin_top = 6.0
 	style.content_margin_bottom = 6.0
 	return style
@@ -346,12 +401,11 @@ func _build_upgrade_tree_canvas() -> void:
 func _upgrade_graph_definition() -> Array:
 	return [
 		{
-			"title": "HUD MODULES",
-			"root_icon": "res://assets/sprites/ui/common/stats/StatRessources.png",
-			"height": 640.0,
+			"title": "HEALTH",
+			"root_icon": "res://assets/sprites/ui/upgrades/max_health.svg",
+			"height": 260.0,
 			"children": [
-				{"id": "UnlockHealthbar", "title": "Hero HP", "description": "Unlock the hero health display and its health upgrades.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockHealthbar"], "action": Callable(self, "_on_unlock_healthbar_pressed"), "children": [
-					{"id": "HealPlayer", "title": "Repair", "description": "Restore 20 hero health.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["HealPlayer"], "action": Callable(self, "_on_heal_player_pressed")},
+				{"id": "UnlockHealthbar", "title": "Hero HP", "description": "Unlock the hero health display and its health upgrades.", "cost": 10, "currency": "gold", "icon": "res://assets/sprites/ui/upgrades/max_health.svg", "action": Callable(self, "_on_unlock_healthbar_pressed"), "children": [
 					{"id": "UpgradeMaxHealth", "title": "+20 HP", "description": "Increase hero maximum health.", "cost": 15, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UpgradeMaxHealth"], "action": Callable(self, "_on_upgrade_max_health_pressed")}
 				]},
 				{"id": "UnlockBaseHealth", "title": "Base HP", "description": "Unlock the base health display and its health upgrades.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockBaseHealth"], "action": Callable(self, "_on_unlock_base_health_pressed"), "children": [
@@ -359,7 +413,14 @@ func _upgrade_graph_definition() -> Array:
 					{"id": "UpgradeBaseHealth", "title": "+25 HP", "description": "Increase base maximum health.", "cost": 20, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockBaseHealth"], "action": Callable(self, "_on_upgrade_base_health_pressed"), "children": [
 						{"id": "BaseFortification", "title": "Fortify", "description": "Future armour and spike branch.", "cost": 0, "currency": "gold", "icon": "res://assets/sprites/ui/upgrades/base_fortification.svg", "future": true}
 					]}
-				]},
+				]}
+			]
+		},
+		{
+			"title": "HUD MODULES",
+			"root_icon": "res://assets/sprites/ui/common/stats/StatRessources.png",
+			"height": 380.0,
+			"children": [
 				{"id": "UnlockXP", "title": "XP", "description": "Show level progress at the bottom centre.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockXP"], "action": Callable(self, "_on_unlock_xp_pressed")},
 				{"id": "UnlockWaveTimer", "title": "Waves", "description": "Show the next-wave countdown.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockWaveTimer"], "action": Callable(self, "_on_unlock_wave_timer_pressed")},
 				{"id": "UnlockStats", "title": "Stats", "description": "Show STR, AGI and INT in the HUD.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockStats"], "action": Callable(self, "_on_unlock_stats_pressed")}
@@ -461,7 +522,7 @@ func _create_parallel_tree_root(branch_title: String, root_title: String, pos: V
 	root.name = "%sRoot" % branch_title.replace(" ", "")
 	root.position = pos
 	root.size = UPGRADE_TREE_ROOT_SIZE
-	root.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.13, 0.075, 0.025, 0.98), Color(0.92, 0.66, 0.22, 1.0), 2, 9))
+	root.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.14, 0.10, 0.06, 0.98), Color(0.95, 0.72, 0.35, 1.0), 2, 16))
 	upgrade_tree_canvas.add_child(root)
 	var content := Control.new()
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -523,13 +584,41 @@ func _create_tree_branch_label(text_value: String, pos: Vector2, width: float) -
 	upgrade_tree_canvas.add_child(label_node)
 
 func _create_tree_connector(from_point: Vector2, to_point: Vector2) -> void:
-	var connector := Line2D.new()
-	connector.name = "Connector"
-	connector.width = 3.0
-	connector.default_color = Color(0.55, 0.42, 0.20, 0.72)
+	# Dome Keeper style: dashed gold polyline with a soft horizontal bend
 	var bend_y := (from_point.y + to_point.y) * 0.5
-	connector.points = PackedVector2Array([from_point, Vector2(from_point.x, bend_y), Vector2(to_point.x, bend_y), to_point])
-	upgrade_tree_canvas.add_child(connector)
+	var path := PackedVector2Array([
+		from_point,
+		Vector2(from_point.x + 8.0, from_point.y),
+		Vector2(from_point.x + 8.0, bend_y),
+		Vector2(to_point.x - 8.0, bend_y),
+		Vector2(to_point.x - 8.0, to_point.y),
+		to_point
+	])
+	var dash_len := 6.0
+	var gap_len := 5.0
+	var line_width := 2.4
+	var color := Color(0.95, 0.72, 0.35, 0.78)
+	for seg in range(path.size() - 1):
+		var a: Vector2 = path[seg]
+		var b: Vector2 = path[seg + 1]
+		var dir := (b - a)
+		var dist := dir.length()
+		if dist < 0.5:
+			continue
+		dir = dir / dist
+		var current := 0.0
+		while current < dist:
+			var start := a + dir * current
+			var end_len := minf(dash_len, dist - current)
+			var end := start + dir * end_len
+			var dash := Line2D.new()
+			dash.name = "Dash"
+			dash.width = line_width
+			dash.default_color = color
+			dash.antialiased = true
+			dash.points = PackedVector2Array([start, end])
+			upgrade_tree_canvas.add_child(dash)
+			current += dash_len + gap_len
 
 func _create_upgrade_tree_node(id: String, title_text: String, description: String, cost: int, currency: String, icon_path: String, pos: Vector2, action: Callable, target_parent: Control = null) -> void:
 	var button := Button.new()
@@ -563,13 +652,14 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 	card_background.name = "CardBackground"
 	card_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card_background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.045, 0.055, 0.07, 0.99), Color(0.34, 0.38, 0.45, 0.9), 2, 8))
+	# Dome Keeper capsule: deep purple fill + warm gold border, high radius
+	card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.12, 0.09, 0.18, 0.97), Color(0.95, 0.72, 0.35, 0.95), 2, 18))
 	button.add_child(card_background)
 
 	var icon := TextureRect.new()
 	icon.name = "Icon"
-	icon.position = Vector2(8, 7)
-	icon.size = Vector2(46, 46)
+	icon.position = Vector2(10, 10)
+	icon.size = Vector2(36, 36)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -579,18 +669,19 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 	var title_label := Label.new()
 	title_label.name = "Title"
 	title_label.text = title_text
-	title_label.position = Vector2(56, 8)
-	title_label.size = Vector2(54, 34)
+	title_label.position = Vector2(46, 4)
+	title_label.size = Vector2(68, 28)
 	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 12)
+	title_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.78, 1.0))
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(title_label)
 
 	var currency_icon := TextureRect.new()
 	currency_icon.name = "CurrencyIcon"
-	currency_icon.position = Vector2(57, 46)
-	currency_icon.size = Vector2(17, 17)
+	currency_icon.position = Vector2(90, 30)
+	currency_icon.size = Vector2(14, 14)
 	currency_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	currency_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	currency_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -599,18 +690,19 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 
 	var cost_label := Label.new()
 	cost_label.name = "Cost"
-	cost_label.position = Vector2(76, 44)
-	cost_label.size = Vector2(32, 21)
+	cost_label.position = Vector2(106, 26)
+	cost_label.size = Vector2(22, 20)
 	cost_label.add_theme_font_size_override("font_size", 13)
+	cost_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.75, 1.0))
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(cost_label)
 
 	var state_label := Label.new()
 	state_label.name = "State"
-	state_label.position = Vector2(88, 4)
+	state_label.position = Vector2(102, 2)
 	state_label.size = Vector2(22, 18)
 	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	state_label.add_theme_font_size_override("font_size", 11)
+	state_label.add_theme_font_size_override("font_size", 12)
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(state_label)
 
@@ -653,7 +745,10 @@ func _refresh_upgrade_tree_cards() -> void:
 	if upgrade_tree_shell == null:
 		return
 	if upgrade_tree_resources:
-		upgrade_tree_resources.text = "Gems %d   Gold %d" % [hud.total_gems if hud else 0, hud.total_gold if hud else 0]
+		var gem_lbl = upgrade_tree_resources.get_node_or_null("GemLabel") as Label
+		var gold_lbl = upgrade_tree_resources.get_node_or_null("GoldLabel") as Label
+		if gem_lbl: gem_lbl.text = str(hud.total_gems if hud else 0) + "  "
+		if gold_lbl: gold_lbl.text = str(hud.total_gold if hud else 0)
 	var hero_name := _get_menu_hero()
 	for id_value in upgrade_tree_buttons.keys():
 		var id := str(id_value)
@@ -735,13 +830,13 @@ func _refresh_upgrade_tree_cards() -> void:
 		var card_background := button.get_node_or_null("CardBackground") as PanelContainer
 		if card_background:
 			if owned:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.025, 0.12, 0.055, 0.99), Color(0.35, 0.95, 0.48, 0.95), 2, 8))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.08, 0.18, 0.12, 0.97), Color(0.45, 0.95, 0.60, 0.95), 2, 18))
 			elif dependency_locked:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.04, 0.045, 0.055, 0.99), Color(0.30, 0.32, 0.38, 0.9), 2, 8))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.10, 0.09, 0.14, 0.92), Color(0.35, 0.32, 0.42, 0.85), 2, 18))
 			elif available_amount < cost:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.10, 0.035, 0.03, 0.99), Color(0.56, 0.22, 0.18, 0.95), 2, 8))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.16, 0.07, 0.08, 0.97), Color(0.70, 0.30, 0.28, 0.95), 2, 18))
 			else:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.045, 0.055, 0.07, 0.99), Color(0.34, 0.38, 0.45, 0.9), 2, 8))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.12, 0.09, 0.18, 0.97), Color(0.95, 0.72, 0.35, 0.95), 2, 18))
 	_hide_legacy_upgrade_nodes()
 
 func _set_upgrade_tree_card_highlight(id: String, highlighted: bool) -> void:
@@ -752,7 +847,7 @@ func _set_upgrade_tree_card_highlight(id: String, highlighted: bool) -> void:
 	if card_background == null:
 		return
 	if highlighted and not button.disabled:
-		card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.11, 0.08, 0.03, 1.0), Color(1.0, 0.76, 0.26, 1.0), 3, 8))
+		card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.16, 0.12, 0.06, 1.0), Color(1.0, 0.82, 0.38, 1.0), 3, 18))
 	else:
 		_refresh_upgrade_tree_cards()
 
@@ -930,17 +1025,22 @@ func _spawn_stat_upgrade_popup(stat_name: String, color: Color) -> void:
 	tween.tween_property(popup, "modulate:a", 0.0, 0.62)
 	tween.chain().tween_callback(popup.queue_free)
 
-func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String) -> Button:
+func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: String, enemy_type: int = -1) -> Button:
 	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(0, 54)
-	btn.tooltip_text = "%s: %d gold, +%d gold income" % [enemy_name, cost, income]
+	btn.custom_minimum_size = Vector2(96, 116)
+	btn.tooltip_text = "%s: %d gold, +%d income" % [enemy_name, cost, income]
 	_apply_enemy_button_style(btn)
 	
-	var hbox = HBoxContainer.new()
-	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_theme_constant_override("separation", 12)
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_theme_constant_override("separation", 2)
+	
+	var sprite_container = Control.new()
+	sprite_container.custom_minimum_size = Vector2(72, 72)
+	sprite_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(sprite_container)
 	
 	var tex_rect = TextureRect.new()
 	var tex = load(tex_path)
@@ -950,45 +1050,77 @@ func _create_enemy_button(enemy_name: String, cost: int, income: int, tex_path: 
 		var fw = tex.get_width() / 8
 		var fh = tex.get_height() / 8
 		if fw > 0 and fh > 0:
-			atlas.region = Rect2(0, 0, fw, fh)
+			var crop_ratio = 0.5
+			var crop_w = fw * crop_ratio
+			var crop_h = fh * crop_ratio
+			var crop_x = (fw - crop_w) / 2.0
+			var crop_y = (fh - crop_h) / 2.0
+			atlas.region = Rect2(crop_x, crop_y, crop_w, crop_h)
 		tex_rect.texture = atlas
 	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tex_rect.custom_minimum_size = Vector2(42, 42)
+	tex_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_child(tex_rect)
+	sprite_container.add_child(tex_rect)
+	
+	if enemy_type >= 0:
+		var cd_bar = TextureProgressBar.new()
+		var bg_tex = GradientTexture2D.new()
+		bg_tex.width = 72
+		bg_tex.height = 72
+		var grad = Gradient.new()
+		grad.colors = PackedColorArray([Color.WHITE, Color.WHITE])
+		bg_tex.gradient = grad
+		cd_bar.texture_progress = bg_tex
+		cd_bar.fill_mode = TextureProgressBar.FILL_CLOCKWISE
+		cd_bar.tint_progress = Color(0, 0, 0, 0.75)
+		cd_bar.nine_patch_stretch = true
+		cd_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+		cd_bar.max_value = float(cost) * 0.1
+		cd_bar.step = 0.01
+		cd_bar.value = 0.0
+		cd_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sprite_container.add_child(cd_bar)
+		
+		vs_enemy_cooldowns[enemy_type] = 0.0
+		vs_enemy_cooldown_bars[enemy_type] = cd_bar
+
+	
+	var qty_lbl = Label.new()
+	qty_lbl.text = "1"
+	qty_lbl.add_theme_font_size_override("font_size", 12)
+	qty_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.2))
+	qty_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	qty_lbl.add_theme_constant_override("outline_size", 3)
+	qty_lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	qty_lbl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	qty_lbl.offset_right = -4
+	qty_lbl.offset_bottom = -2
+	qty_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sprite_container.add_child(qty_lbl)
+	
+	var hbox = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 4)
 	
 	var cost_icon = TextureRect.new()
 	cost_icon.texture = GOLD_ICON_TEXTURE
 	cost_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	cost_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	cost_icon.custom_minimum_size = Vector2(22, 22)
+	cost_icon.custom_minimum_size = Vector2(16, 16)
 	cost_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(cost_icon)
 	
-	var lbl_cost = Label.new()
-	lbl_cost.text = str(cost)
-	lbl_cost.custom_minimum_size = Vector2(28, 0)
-	lbl_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	lbl_cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_child(lbl_cost)
+	var lbl_stats = Label.new()
+	lbl_stats.text = "%d / +%d" % [cost, income]
+	lbl_stats.add_theme_font_size_override("font_size", 11)
+	lbl_stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(lbl_stats)
 	
-	var inc_icon = TextureRect.new()
-	inc_icon.texture = GOLD_ICON_TEXTURE
-	inc_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	inc_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	inc_icon.custom_minimum_size = Vector2(22, 22)
-	inc_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_child(inc_icon)
-	
-	var lbl_inc = Label.new()
-	lbl_inc.text = "+" + str(income)
-	lbl_inc.custom_minimum_size = Vector2(30, 0)
-	lbl_inc.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	lbl_inc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_child(lbl_inc)
-	
-	btn.add_child(hbox)
+	vbox.add_child(hbox)
+	btn.add_child(vbox)
 	return btn
 
 func _create_vs_panels():
@@ -1046,46 +1178,55 @@ func _create_vs_panels():
 	vs_send_panel.anchor_top = 0.5
 	vs_send_panel.anchor_right = 0.5
 	vs_send_panel.anchor_bottom = 0.5
-	vs_send_panel.offset_left = -190
+	vs_send_panel.offset_left = -220
 	vs_send_panel.offset_top = -240
-	vs_send_panel.offset_right = 190
+	vs_send_panel.offset_right = 220
 	vs_send_panel.offset_bottom = 240
 	
 	var vbox2 = VBoxContainer.new()
 	vbox2.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox2.offset_left = 54
-	vbox2.offset_top = 50
-	vbox2.offset_right = -54
-	vbox2.offset_bottom = -50
-	vbox2.add_theme_constant_override("separation", 8)
+	vbox2.offset_left = 50
+	vbox2.offset_top = 40
+	vbox2.offset_right = -50
+	vbox2.offset_bottom = -40
+	vbox2.add_theme_constant_override("separation", 16)
 	
 	var lbl2 = Label.new()
 	lbl2.text = "Send Enemies"
 	lbl2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox2.add_child(lbl2)
 	
-	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png")
+	var grid = GridContainer.new()
+	grid.columns = 3
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	vbox2.add_child(grid)
+	
+	var btn_rat = _create_enemy_button("Rat", 5, 1, "res://assets/sprites/enemies/rat/rat_walk_pixelart_spritesheet.png", 0)
 	btn_rat.pressed.connect(Callable(self, "_on_send_rat"))
-	vbox2.add_child(btn_rat)
+	grid.add_child(btn_rat)
 	
-	var btn_spider = _create_enemy_button("Spider", 10, 2, "res://character_sprites/spider_walk_spritesheet.png")
+	var btn_spider = _create_enemy_button("Spider", 10, 2, "res://character_sprites/spider_walk_spritesheet.png", 1)
 	btn_spider.pressed.connect(Callable(self, "_on_send_spider"))
-	vbox2.add_child(btn_spider)
+	grid.add_child(btn_spider)
 	
-	var btn_bat = _create_enemy_button("Bat", 15, 3, "res://character_sprites/bat_fly_spritesheet.png")
+	var btn_bat = _create_enemy_button("Bat", 15, 3, "res://character_sprites/bat_fly_spritesheet.png", 2)
 	btn_bat.pressed.connect(Callable(self, "_on_send_bat"))
-	vbox2.add_child(btn_bat)
+	grid.add_child(btn_bat)
 	
-	var btn_trogg = _create_enemy_button("Trogg", 20, 4, "res://character_sprites/trogg_walk_spritesheet.png")
+	var btn_trogg = _create_enemy_button("Trogg", 20, 4, "res://character_sprites/trogg_walk_spritesheet.png", 3)
 	btn_trogg.pressed.connect(Callable(self, "_on_send_trogg"))
-	vbox2.add_child(btn_trogg)
+	grid.add_child(btn_trogg)
 	
-	var btn_orc = _create_enemy_button("Orc", 25, 5, "res://character_sprites/orc_walk_pixelart_spritesheet.png")
+	var btn_orc = _create_enemy_button("Orc", 25, 5, "res://character_sprites/orc_walk_pixelart_spritesheet.png", 4)
 	btn_orc.pressed.connect(Callable(self, "_on_send_orc"))
-	vbox2.add_child(btn_orc)
+	grid.add_child(btn_orc)
 	
 	var btn_back = Button.new()
 	btn_back.text = "Back"
+	btn_back.custom_minimum_size = Vector2(100, 36)
+	btn_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn_back.pressed.connect(Callable(self, "_on_vs_back_pressed"))
 	vbox2.add_child(btn_back)
 	
@@ -1293,28 +1434,43 @@ func _on_heal_player_pressed():
 		hud.update_player_health(player.health, player.max_health)
 
 func _on_send_rat():
-	if hud.total_gold >= 50:
-		hud.add_gold(-50)
+	if vs_enemy_cooldowns.get(0, 0.0) > 0.0:
+		return
+	if hud.total_gold >= 5:
+		hud.add_gold(-5)
+		vs_enemy_cooldowns[0] = 0.5
 		emit_signal("send_enemy", 0) # 0 = Rat
 
 func _on_send_spider():
-	if hud.total_gold >= 80:
-		hud.add_gold(-80)
+	if vs_enemy_cooldowns.get(1, 0.0) > 0.0:
+		return
+	if hud.total_gold >= 10:
+		hud.add_gold(-10)
+		vs_enemy_cooldowns[1] = 1.0
 		emit_signal("send_enemy", 1) # 1 = Spider
 
 func _on_send_bat():
-	if hud.total_gold >= 120:
-		hud.add_gold(-120)
+	if vs_enemy_cooldowns.get(2, 0.0) > 0.0:
+		return
+	if hud.total_gold >= 15:
+		hud.add_gold(-15)
+		vs_enemy_cooldowns[2] = 1.5
 		emit_signal("send_enemy", 2) # 2 = Bat
 
 func _on_send_trogg():
-	if hud.total_gold >= 120:
-		hud.add_gold(-120)
+	if vs_enemy_cooldowns.get(3, 0.0) > 0.0:
+		return
+	if hud.total_gold >= 20:
+		hud.add_gold(-20)
+		vs_enemy_cooldowns[3] = 2.0
 		emit_signal("send_enemy", 3) # 3 = Trogg
 
 func _on_send_orc():
-	if hud.total_gold >= 250:
-		hud.add_gold(-250)
+	if vs_enemy_cooldowns.get(4, 0.0) > 0.0:
+		return
+	if hud.total_gold >= 25:
+		hud.add_gold(-25)
+		vs_enemy_cooldowns[4] = 2.5
 		emit_signal("send_enemy", 4) # 4 = Orc
 
 func _on_buy_rail_pressed():

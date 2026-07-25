@@ -5,8 +5,9 @@ signal send_dispatched(payload: Dictionary)
 
 const MACHINE_CELL := Vector2i(3, 10)
 const INTERACT_RADIUS := 92.0
-const DISPATCH_INTERVAL := 7.0
+const DISPATCH_INTERVAL := 4.0
 const MECH_TEXTURE := preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
+const ECONOMY := preload("res://scripts/systems/linewars_economy.gd")
 
 var world: Node2D
 var hero: CharacterBody2D
@@ -17,12 +18,20 @@ var prompt_label: Label
 var status_label: Label
 var menu_layer: CanvasLayer
 var queue_label: Label
+var rat_button: Button
+var trogg_button: Button
 var machine_revealed := false
 var menu_open := false
 var auto_pressure := false
 var dispatch_timer := DISPATCH_INTERVAL
 var send_queue: Array[Dictionary] = []
 var dispatched_sends: Array[Dictionary] = []
+# HLW-style per-send cooldowns (seconds remaining).
+var send_cooldowns: Dictionary = {
+	"rat_raid": 0.0,
+	"trogg_push": 0.0,
+	"elite_push": 0.0,
+}
 
 func setup(p_world: Node2D, p_hero: CharacterBody2D, p_world_hud: CanvasLayer) -> void:
 	world = p_world
@@ -37,14 +46,20 @@ func setup(p_world: Node2D, p_hero: CharacterBody2D, p_world_hud: CanvasLayer) -
 func _process(delta: float) -> void:
 	if world == null or hero == null or block_layer == null:
 		return
+	# Tick cooldowns even before the machine is revealed so the first send
+	# after reveal still respects the HLW gate.
+	for send_id in send_cooldowns.keys():
+		send_cooldowns[send_id] = maxf(float(send_cooldowns[send_id]) - delta, 0.0)
 	if not machine_revealed and block_layer.get_cell_source_id(MACHINE_CELL) == -1:
 		_reveal_machine()
 	if not machine_revealed:
 		return
 	var near := hero.global_position.distance_to(machine_root.global_position) <= INTERACT_RADIUS
 	prompt_label.visible = near and not menu_open
-	if auto_pressure and send_queue.is_empty() and _available_gems() >= 1:
-		_queue_send("RAT RAID", 5, "RAT", 1)
+	if menu_open:
+		_refresh_menu()
+	if auto_pressure and send_queue.is_empty() and _can_queue_send("rat_raid"):
+		_queue_reliable_send("rat_raid")
 	if send_queue.is_empty():
 		dispatch_timer = DISPATCH_INTERVAL
 		return
@@ -176,7 +191,7 @@ func _build_menu() -> void:
 	title.add_theme_font_size_override("font_size", 26)
 	column.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "Queue pressure for the enemy side. Networking will consume the same send payloads later."
+	subtitle.text = "HLW-style sends. Each unit type has its own cooldown. Gems still matter, but the cooldown is the real gate."
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.add_theme_font_size_override("font_size", 15)
@@ -187,9 +202,11 @@ func _build_menu() -> void:
 	queue_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28, 1.0))
 	column.add_child(queue_label)
 
-	column.add_child(_choice_button("RAT RAID • 1 GEM", "Queue 5 fast rats", _choose_rat_raid))
-	column.add_child(_choice_button("TROGG PUSH • 2 GEMS", "Queue 2 durable troggs", _choose_trogg_push))
-	column.add_child(_choice_button("AUTO PRESSURE", "Automatically queue Rat Raids whenever 1 gem is available", _toggle_auto_pressure))
+	rat_button = _choice_button("RAT RAID", _choose_rat_raid)
+	trogg_button = _choice_button("TROGG PUSH", _choose_trogg_push)
+	column.add_child(rat_button)
+	column.add_child(trogg_button)
+	column.add_child(_choice_button("AUTO PRESSURE", _toggle_auto_pressure))
 	var close := Button.new()
 	close.custom_minimum_size = Vector2(0, 52)
 	close.text = "RETURN TO MINE"
@@ -197,10 +214,10 @@ func _build_menu() -> void:
 	close.pressed.connect(_close_menu)
 	column.add_child(close)
 
-func _choice_button(title: String, description: String, callback: Callable) -> Button:
+func _choice_button(title: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 70)
-	button.text = "%s\n%s" % [title, description]
+	button.text = title
 	button.add_theme_font_size_override("font_size", 17)
 	button.pressed.connect(callback)
 	return button
@@ -209,7 +226,7 @@ func _reveal_machine() -> void:
 	machine_revealed = true
 	machine_root.visible = true
 	status_label.text = "GOBLIN WAR MACHINE • ONLINE"
-	_announce("WAR MACHINE UNCOVERED\nPRESSURE OPTIONS AVAILABLE")
+	_announce("WAR MACHINE UNCOVERED\nHLW COOLDOWNS ACTIVE")
 
 func _open_menu() -> void:
 	if not machine_revealed:
@@ -226,30 +243,54 @@ func _close_menu() -> void:
 	get_tree().paused = false
 
 func _choose_rat_raid() -> void:
-	_queue_send("RAT RAID", 5, "RAT", 1)
+	_queue_reliable_send("rat_raid")
 
 func _choose_trogg_push() -> void:
-	_queue_send("TROGG PUSH", 2, "TROGG", 2)
+	_queue_reliable_send("trogg_push")
 
 func _toggle_auto_pressure() -> void:
 	auto_pressure = not auto_pressure
 	_refresh_menu()
 
-func _queue_send(label: String, count: int, enemy_type: String, gem_cost: int) -> bool:
+func _can_queue_send(send_id: String) -> bool:
+	var definition: Dictionary = ECONOMY.send(send_id)
+	if definition.is_empty():
+		return false
+	var gem_cost := int(definition.get("gem_cost", 1))
+	if _available_gems() < gem_cost:
+		return false
+	if float(send_cooldowns.get(send_id, 0.0)) > 0.0:
+		return false
+	return true
+
+func _queue_reliable_send(send_id: String) -> bool:
+	var definition: Dictionary = ECONOMY.send(send_id)
+	if definition.is_empty():
+		_announce("UNKNOWN SEND")
+		return false
+	var gem_cost := int(definition.get("gem_cost", 1))
+	var cooldown := float(definition.get("cooldown", 20.0))
+	var remaining := float(send_cooldowns.get(send_id, 0.0))
+	if remaining > 0.0:
+		_announce("%s ON COOLDOWN\n%.0fs LEFT" % [str(definition.get("label", send_id)), ceil(remaining)])
+		return false
 	if _available_gems() < gem_cost:
 		_announce("WAR MACHINE NEEDS %d GEM%s" % [gem_cost, "S" if gem_cost != 1 else ""])
 		return false
 	_spend_gems(gem_cost)
+	send_cooldowns[send_id] = cooldown
 	var payload := {
-		"label": label,
-		"count": count,
-		"enemy_type": enemy_type,
+		"id": send_id,
+		"label": str(definition.get("label", send_id)),
+		"count": int(definition.get("count", 1)),
+		"enemy_type": str(definition.get("enemy_type", "RAT")),
 		"gem_cost": gem_cost,
+		"cooldown": cooldown,
 		"queued_at_msec": Time.get_ticks_msec()
 	}
 	send_queue.append(payload)
 	send_queued.emit(payload)
-	_announce("%s QUEUED\nDISPATCH IN %ds" % [label, int(ceil(dispatch_timer))])
+	_announce("%s QUEUED\nCOOLDOWN %.0fs • DISPATCH SOON" % [payload["label"], cooldown])
 	_refresh_menu()
 	return true
 
@@ -265,7 +306,25 @@ func _dispatch_next() -> void:
 func _refresh_menu() -> void:
 	if queue_label == null:
 		return
+	var rat_cd := float(send_cooldowns.get("rat_raid", 0.0))
+	var trogg_cd := float(send_cooldowns.get("trogg_push", 0.0))
 	queue_label.text = "QUEUE %d • GEMS %d • AUTO %s" % [send_queue.size(), _available_gems(), "ON" if auto_pressure else "OFF"]
+	if rat_button:
+		var rat_def: Dictionary = ECONOMY.send("rat_raid")
+		if rat_cd > 0.0:
+			rat_button.text = "RAT RAID  •  CD %.0fs\n5 fast rats" % ceil(rat_cd)
+			rat_button.disabled = true
+		else:
+			rat_button.text = "RAT RAID  •  %d GEM  •  CD %.0fs\n5 fast rats" % [int(rat_def.get("gem_cost", 1)), float(rat_def.get("cooldown", 22.0))]
+			rat_button.disabled = not _can_queue_send("rat_raid")
+	if trogg_button:
+		var trogg_def: Dictionary = ECONOMY.send("trogg_push")
+		if trogg_cd > 0.0:
+			trogg_button.text = "TROGG PUSH  •  CD %.0fs\n2 durable troggs" % ceil(trogg_cd)
+			trogg_button.disabled = true
+		else:
+			trogg_button.text = "TROGG PUSH  •  %d GEMS  •  CD %.0fs\n2 durable troggs" % [int(trogg_def.get("gem_cost", 2)), float(trogg_def.get("cooldown", 32.0))]
+			trogg_button.disabled = not _can_queue_send("trogg_push")
 
 func _announce(text: String) -> void:
 	var controller := get_parent()

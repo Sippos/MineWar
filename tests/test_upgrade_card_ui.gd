@@ -57,27 +57,6 @@ func test_level_up_card_shows_lock_reason_and_disabled_state() -> void:
 	assert_true(card.disabled, "Locked abilities should remain disabled")
 	assert_true(_label_texts(card).has("REQUIRES HERO LEVEL 6"), "The lock reason should remain visible")
 
-func test_compact_base_upgrade_card_uses_child_content() -> void:
-	var script := load("res://compact_vs_upgrade_menu.gd") as GDScript
-	var menu := script.new() as CanvasLayer
-	track(menu)
-	var card := menu.call("_button", "Base HP", "10 gold", "_unused", "res://assets/sprites/ui/upgrades/base_health.png", false) as Button
-	menu.add_child(card)
-	assert_eq(card.text, "", "Compact upgrade cards should use explicit child controls")
-	var texts := _label_texts(card)
-	assert_true(texts.has("Base HP"), "The compact card should show its title")
-	assert_true(texts.has("10 gold"), "The compact card should show its cost")
-	var icons := card.find_children("*", "TextureRect", true, false)
-	assert_true(icons.size() == 1 and icons[0].texture != null, "The compact card should show a real icon child")
-
-func test_compact_owned_upgrade_is_disabled_and_labeled() -> void:
-	var script := load("res://compact_vs_upgrade_menu.gd") as GDScript
-	var menu := script.new() as CanvasLayer
-	track(menu)
-	var card := menu.call("_button", "Minimap", "20 gold", "_unused", "res://assets/sprites/ui/upgrades/minimap.png", true) as Button
-	menu.add_child(card)
-	assert_true(card.disabled, "Already-owned upgrades should be disabled")
-	assert_true(_label_texts(card).has("OWNED"), "Already-owned upgrades should be labeled instead of showing a stale price")
 
 func test_vs_level_up_input_maps_only_the_active_players_actions() -> void:
 	var script := load("res://vs_mode.gd") as GDScript

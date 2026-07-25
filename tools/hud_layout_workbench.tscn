@@ -1,0 +1,132 @@
+[gd_scene format=3 uid="uid://6f5dw3l1lb3t"]
+
+[ext_resource type="Texture2D" uid="uid://cms34ijx34usb" path="res://character_sprites/hero_idle/mech_idle_front.png" id="1_wpmso"]
+[ext_resource type="Texture2D" uid="uid://dyf3an1f8lntc" path="res://assets/sprites/ui/common/stats/StatRessources.png" id="2_7u4ci"]
+[ext_resource type="Texture2D" uid="uid://dppparsni082r" path="res://assets/sprites/ui/hud/HealthBarRed.png" id="3_fonwm"]
+[ext_resource type="Texture2D" uid="uid://bfqjvrrqremcr" path="res://assets/sprites/ui/common/stats/Strenght.png" id="4_rbe5h"]
+[ext_resource type="Texture2D" uid="uid://dw48465ik5sbr" path="res://assets/sprites/ui/common/stats/Agility.png" id="5_nmddu"]
+[ext_resource type="Texture2D" uid="uid://o2r73wjtn3cr" path="res://assets/sprites/ui/common/stats/Int.png" id="6_lya7i"]
+[ext_resource type="Texture2D" uid="uid://btlti23gaw44w" path="res://DwarfBase.png" id="7_wa4cf"]
+[ext_resource type="Texture2D" uid="uid://b5dg8rc6veim7" path="res://assets/sprites/ui/common/stats/Healthbar.png" id="8_df5c0"]
+[ext_resource type="Texture2D" uid="uid://cwq2ecylosvfk" path="res://assets/sprites/ui/common/stats/HealthBarPurple.png" id="9_dm8pn"]
+
+[node name="HUDLayoutWorkbench" type="CanvasLayer" unique_id=1299328172]
+
+[node name="HeroPortrait" type="PanelContainer" parent="." unique_id=2074978807]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 84.0
+offset_bottom = 80.0
+
+[node name="Icon" type="TextureRect" parent="HeroPortrait" unique_id=1628708208]
+layout_mode = 2
+texture = ExtResource("1_wpmso")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LevelBadge" type="PanelContainer" parent="HeroPortrait" unique_id=794168716]
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="HeroPortrait/LevelBadge" unique_id=324121739]
+layout_mode = 2
+
+[node name="ResourcePanel" type="PanelContainer" parent="." unique_id=501443107]
+offset_left = 92.0
+offset_top = 20.0
+offset_right = 272.0
+offset_bottom = 58.0
+
+[node name="GemIcon" type="TextureRect" parent="." unique_id=1946394475]
+texture = ExtResource("2_7u4ci")
+
+[node name="GemLabel" type="Label" parent="." unique_id=59954521]
+
+[node name="GoldIcon" type="TextureRect" parent="." unique_id=83091235]
+texture = ExtResource("2_7u4ci")
+
+[node name="GoldLabel" type="Label" parent="." unique_id=1951578426]
+
+[node name="PlayerHealthBar" type="TextureProgressBar" parent="." unique_id=1274977486]
+offset_left = 16.0
+offset_top = 90.0
+offset_right = 236.0
+offset_bottom = 112.0
+texture_progress = ExtResource("3_fonwm")
+
+[node name="PlayerLabel" type="Label" parent="." unique_id=1164693237]
+text = "78 / 120"
+
+[node name="StatsContainer" type="HBoxContainer" parent="." unique_id=1144961036]
+
+[node name="StrIcon" type="TextureRect" parent="StatsContainer" unique_id=850240940]
+layout_mode = 2
+texture = ExtResource("4_rbe5h")
+
+[node name="StrLabel" type="Label" parent="StatsContainer" unique_id=1013693726]
+layout_mode = 2
+
+[node name="AgiIcon" type="TextureRect" parent="StatsContainer" unique_id=707946258]
+layout_mode = 2
+texture = ExtResource("5_nmddu")
+
+[node name="AgiLabel" type="Label" parent="StatsContainer" unique_id=826391618]
+layout_mode = 2
+
+[node name="IntIcon" type="TextureRect" parent="StatsContainer" unique_id=1326861353]
+layout_mode = 2
+texture = ExtResource("6_lya7i")
+
+[node name="IntLabel" type="Label" parent="StatsContainer" unique_id=1017384020]
+layout_mode = 2
+
+[node name="BaseStatus" type="PanelContainer" parent="." unique_id=1990845054]
+offset_left = 1000.0
+offset_top = 14.0
+offset_right = 1130.0
+offset_bottom = 104.0
+
+[node name="BaseIcon" type="TextureRect" parent="BaseStatus" unique_id=224026862]
+layout_mode = 2
+texture = ExtResource("7_wa4cf")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BaseHealthBar" type="TextureProgressBar" parent="." unique_id=1071316821]
+texture_progress = ExtResource("8_df5c0")
+
+[node name="BaseLabel" type="Label" parent="." unique_id=1522289875]
+text = "68 / 100"
+
+[node name="WaveLabel" type="Label" parent="." unique_id=610084780]
+offset_left = 470.0
+offset_top = 18.0
+offset_right = 615.0
+offset_bottom = 41.0
+text = "STAGE 3 - EXPLORE"
+
+[node name="WaveBar" type="TextureProgressBar" parent="." unique_id=1689859518]
+offset_left = 470.0
+offset_top = 42.0
+offset_right = 680.0
+offset_bottom = 64.0
+
+[node name="XPBar" type="TextureProgressBar" parent="." unique_id=1444953223]
+offset_left = 460.0
+offset_top = 600.0
+offset_right = 720.0
+offset_bottom = 622.0
+texture_progress = ExtResource("9_dm8pn")
+
+[node name="XPLabel" type="Label" parent="." unique_id=1793594152]
+offset_left = 460.0
+offset_top = 600.0
+offset_right = 598.0
+offset_bottom = 623.0
+text = "Lvl 6: 420 / 800 XP"
+
+[node name="Minimap" type="ColorRect" parent="." unique_id=1447962426]
+offset_left = 980.0
+offset_top = 148.0
+offset_right = 1140.0
+offset_bottom = 308.0
+color = Color(0.1, 0.1, 0.12, 0.85)

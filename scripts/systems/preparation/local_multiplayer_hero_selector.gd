@@ -56,15 +56,7 @@ func _process(_delta: float) -> void:
 		_process_player_selection(player_two, 2)
 
 func _compact_hero_choices() -> Array[String]:
-	var choices: Array[String] = []
-	_add_choice_if_available(choices, str(Global.hero_p1))
-	_add_choice_if_available(choices, str(Global.hero_p2))
-	_add_choice_if_available(choices, str(Global.selected_hero_id))
-	for hero_name in HERO_ORDER:
-		_add_choice_if_available(choices, hero_name)
-		if choices.size() >= 2:
-			break
-	return choices
+	return HERO_ORDER.duplicate()
 
 func _add_choice_if_available(choices: Array[String], hero_name: String) -> void:
 	if choices.size() >= 2:
@@ -106,7 +98,6 @@ func _select_hero_for_player(hero_name: String, player_id: int) -> void:
 		target.update_hero_sprites()
 	Global.save_game()
 	_refresh_shrines()
-	_set_status("Player %d chose %s  •  Enter the lower tunnel when both are ready." % [player_id, hero_name])
 	var pulse := create_tween()
 	pulse.tween_property(target, "scale", Vector2(1.14, 1.14), 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	pulse.tween_property(target, "scale", Vector2.ONE, 0.17).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -116,13 +107,15 @@ func _build_hero_shrines() -> void:
 	shrine_root.name = "CompactHeroShrines"
 	shrine_root.z_index = 12
 	world.add_child(shrine_root)
+	
+	var positions := [
+		Vector2(-240, -80), Vector2(-240, 0), Vector2(-240, 80),
+		Vector2(240, -80), Vector2(240, 0), Vector2(240, 80)
+	]
+	
 	for index in range(displayed_heroes.size()):
 		var hero_name := displayed_heroes[index]
-		var position := LEFT_SHRINE_POSITION
-		if displayed_heroes.size() == 1:
-			position = LEFT_SHRINE_POSITION
-		elif index == 1:
-			position = RIGHT_SHRINE_POSITION
+		var position = positions[index] if index < positions.size() else Vector2.ZERO
 		_create_shrine(hero_name, position)
 	_refresh_shrines()
 

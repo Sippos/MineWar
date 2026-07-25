@@ -22,6 +22,8 @@ var join_sent := false
 var connecting := false
 var leaving_lobby := false
 var transition_started := false
+var remote_description_set := false
+var pending_ice_candidates: Array = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -120,17 +122,23 @@ func _process(_delta: float) -> void:
 		set_process(false)
 		return
 	ws.poll()
+	if ws == null:
+		set_process(false)
+		return
 	var state := ws.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
 		if not join_sent:
 			join_sent = true
 			status_label.text = "Connected to relay. Opening stronghold %s…" % pending_room
 			ws.send_text(JSON.stringify({"type": "join", "room": pending_room}))
-		while ws.get_available_packet_count() > 0:
+		while ws != null and ws.get_available_packet_count() > 0:
 			var packet := ws.get_packet()
 			var parsed: Variant = JSON.parse_string(packet.get_string_from_utf8())
 			if parsed is Dictionary:
 				_handle_signaling_message(parsed as Dictionary)
+		if ws == null:
+			set_process(false)
+			return
 	elif state == WebSocketPeer.STATE_CLOSED and connecting:
 		connecting = false
 		join_sent = false
@@ -170,6 +178,8 @@ func _start_connection(room: String, host_request: bool) -> void:
 	wants_to_host = host_request
 	join_sent = false
 	is_host = false
+	remote_description_set = false
+	pending_ice_candidates.clear()
 	ws = WebSocketPeer.new()
 	status_label.text = "Creating your private stronghold…" if wants_to_host else "Searching for the hosted stronghold…"
 	var err := ws.connect_to_url(SIGNALING_SERVER_URL)
@@ -210,19 +220,37 @@ func _handle_signaling_message(msg: Dictionary) -> void:
 			status_label.text = "Player found. Establishing peer-to-peer connection…"
 			_create_rtc_connection(2)
 			if Global.rtc_conn:
-				Global.rtc_conn.create_offer()
+				var offer_err := Global.rtc_conn.create_offer()
+				if offer_err != OK:
+					status_label.text = "WebRTC offer failed (native plugin missing or broken)."
+					connecting = false
+					_set_controls_enabled(true)
 		"offer":
 			status_label.text = "Host found. Establishing peer-to-peer connection…"
 			_create_rtc_connection(1)
 			if Global.rtc_conn:
-				Global.rtc_conn.set_remote_description("offer", str(msg.get("sdp", "")))
-				Global.rtc_conn.create_answer()
+				var set_err := Global.rtc_conn.set_remote_description("offer", str(msg.get("sdp", "")))
+				if set_err != OK:
+					status_label.text = "WebRTC remote offer failed (native plugin missing or broken)."
+					connecting = false
+					_set_controls_enabled(true)
+					return
+				remote_description_set = true
+				_flush_pending_ice_candidates()
 		"answer":
 			if Global.rtc_conn:
-				Global.rtc_conn.set_remote_description("answer", str(msg.get("sdp", "")))
+				var set_err := Global.rtc_conn.set_remote_description("answer", str(msg.get("sdp", "")))
+				if set_err != OK:
+					push_warning("WebRTC set remote answer failed: %s" % set_err)
+					return
+				remote_description_set = true
+				_flush_pending_ice_candidates()
 		"candidate":
-			if Global.rtc_conn:
-				Global.rtc_conn.add_ice_candidate(str(msg.get("media", "")), int(msg.get("index", 0)), str(msg.get("name", "")))
+			_queue_or_add_ice_candidate(
+				str(msg.get("media", "")),
+				int(msg.get("index", 0)),
+				str(msg.get("name", ""))
+			)
 		"error":
 			status_label.text = "Online error: %s" % str(msg.get("message", "Unknown signaling error"))
 			connecting = false
@@ -231,6 +259,36 @@ func _handle_signaling_message(msg: Dictionary) -> void:
 			status_label.text = "The other player disconnected before entering the hub."
 			connecting = false
 			_set_controls_enabled(true)
+
+func _queue_or_add_ice_candidate(media: String, index: int, name: String) -> void:
+	if Global.rtc_conn == null:
+		return
+	# ICE can arrive before remote description is applied — queue until ready.
+	if not remote_description_set:
+		pending_ice_candidates.append({"media": media, "index": index, "name": name})
+		return
+	_add_ice_candidate_safe(media, index, name)
+
+func _flush_pending_ice_candidates() -> void:
+	if Global.rtc_conn == null:
+		pending_ice_candidates.clear()
+		return
+	for candidate in pending_ice_candidates:
+		_add_ice_candidate_safe(
+			str(candidate.get("media", "")),
+			int(candidate.get("index", 0)),
+			str(candidate.get("name", ""))
+		)
+	pending_ice_candidates.clear()
+
+func _add_ice_candidate_safe(media: String, index: int, name: String) -> void:
+	if Global.rtc_conn == null or name.is_empty():
+		return
+	# Without webrtc-native GDExtension, this virtual is not overridden and errors.
+	# Guard so a bad candidate never hard-crashes the lobby.
+	var err := Global.rtc_conn.add_ice_candidate(media, index, name)
+	if err != OK:
+		push_warning("add_ice_candidate failed (%s). Is webrtc-native installed for this platform?" % err)
 
 func _reject_role(message: String) -> void:
 	status_label.text = message
@@ -243,26 +301,44 @@ func _reject_role(message: String) -> void:
 	set_process(false)
 
 func _create_rtc_connection(id: int) -> void:
+	remote_description_set = false
+	pending_ice_candidates.clear()
 	Global.rtc_conn = WebRTCPeerConnection.new()
 	var init_result := Global.rtc_conn.initialize({
-		"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+		"iceServers": [
+			{"urls": ["stun:stun.l.google.com:19302"]},
+			{"urls": ["stun:stun1.l.google.com:19302"]}
+		]
 	})
 	if init_result != OK:
-		status_label.text = "WebRTC initialization failed on this device."
+		status_label.text = "WebRTC init failed. Install webrtc-native for this Godot build/platform."
 		connecting = false
 		Global.rtc_conn = null
 		_set_controls_enabled(true)
 		return
 	Global.rtc_conn.session_description_created.connect(_on_session_description_created)
 	Global.rtc_conn.ice_candidate_created.connect(_on_ice_candidate_created)
-	Global.rtc_peer.add_peer(Global.rtc_conn, id)
+	var add_err := Global.rtc_peer.add_peer(Global.rtc_conn, id)
+	if add_err != OK:
+		status_label.text = "Could not register WebRTC peer (%s)." % add_err
+		connecting = false
+		Global.rtc_conn = null
+		_set_controls_enabled(true)
+		return
 	if not Global.rtc_peer.peer_connected.is_connected(_on_rtc_peer_connected):
 		Global.rtc_peer.peer_connected.connect(_on_rtc_peer_connected)
 
 func _on_session_description_created(type: String, sdp: String) -> void:
 	if Global.rtc_conn == null or ws == null:
 		return
-	Global.rtc_conn.set_local_description(type, sdp)
+	var local_err := Global.rtc_conn.set_local_description(type, sdp)
+	if local_err != OK:
+		push_warning("set_local_description failed: %s" % local_err)
+		return
+	if type == "answer":
+		# Local answer is set; remote offer was already applied earlier.
+		remote_description_set = true
+		_flush_pending_ice_candidates()
 	if ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		ws.send_text(JSON.stringify({"type": type, "sdp": sdp}))
 
@@ -277,6 +353,7 @@ func _on_rtc_peer_connected(_id: int) -> void:
 	connecting = false
 	if ws:
 		ws.close()
+		ws = null
 	if is_host:
 		transition_started = true
 		await get_tree().create_timer(0.25).timeout
@@ -301,11 +378,14 @@ func _generate_room_password() -> String:
 func _cleanup_peer(clear_socket: bool = true) -> void:
 	if clear_socket and ws:
 		ws.close()
+		ws = null
 	if Global.rtc_peer:
 		Global.rtc_peer.close()
 	Global.rtc_peer = null
 	Global.rtc_conn = null
 	multiplayer.multiplayer_peer = null
+	remote_description_set = false
+	pending_ice_candidates.clear()
 
 func _on_back_pressed() -> void:
 	if leaving_lobby:
@@ -314,6 +394,7 @@ func _on_back_pressed() -> void:
 	connecting = false
 	if ws:
 		ws.close()
+		ws = null
 	_cleanup_peer(false)
 	await get_tree().create_timer(0.12, true).timeout
 	get_tree().change_scene_to_file("res://scenes/menus/main/menu.tscn")

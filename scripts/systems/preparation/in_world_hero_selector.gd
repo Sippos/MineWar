@@ -217,14 +217,26 @@ func _build_hero_shrines() -> void:
 	# A fresh save already has its starting Dwarf. Keep the first room focused on
 	# the actual character and bastion; the physical hero gallery appears only
 	# after the first completed MineWars expedition.
-	if not Global.first_level_beaten:
+	if not Global.first_level_beaten and not (world and world.get("is_vs_mode")):
 		return
 	shrine_root = Node2D.new()
 	shrine_root.name = "PhysicalHeroShrines"
 	shrine_root.z_index = 12
 	world.add_child(shrine_root)
-	var visible_choices := _compact_hero_choices()
-	var compact_positions := [Vector2(-205, -62), Vector2(205, -62)]
+	
+	var visible_choices: Array[String]
+	var compact_positions: Array[Vector2]
+	
+	if world and world.get("is_vs_mode"):
+		visible_choices = HERO_ORDER.duplicate()
+		compact_positions = [
+			Vector2(-450, -62), Vector2(-350, -62), Vector2(-250, -62),
+			Vector2(250, -62), Vector2(350, -62), Vector2(450, -62)
+		]
+	else:
+		visible_choices = _compact_hero_choices()
+		compact_positions = [Vector2(-205, -62), Vector2(205, -62)]
+		
 	for choice_index in range(visible_choices.size()):
 		var hero_name: String = visible_choices[choice_index]
 		var root := Node2D.new()
@@ -607,6 +619,8 @@ func _set_hub_status(message: String) -> void:
 		status.text = message
 
 func _hero_unlocked(hero_name: String) -> bool:
+	if world and world.get("is_vs_mode"):
+		return true
 	return Global.is_hero_unlocked(hero_name)
 
 func _animate_newly_unlocked_shrines() -> void:

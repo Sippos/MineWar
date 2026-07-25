@@ -1,6 +1,7 @@
 extends Control
 
 const COMPACT_VS_MENU = preload("res://compact_vs_upgrade_menu.gd")
+const VSMatchResult = preload("res://vs_match_result.gd")
 
 @onready var viewport1: SubViewport = $HBoxContainer/SubViewportContainer1/SubViewport1
 @onready var viewport2: SubViewport = $HBoxContainer/SubViewportContainer2/SubViewport2
@@ -8,27 +9,57 @@ const COMPACT_VS_MENU = preload("res://compact_vs_upgrade_menu.gd")
 @onready var level2 = viewport2.get_node("Level2")
 
 var _routing_level_up_input := false
+var _match_over := false
+
+func _enter_tree() -> void:
+	# World.gd reads is_vs_mode/player_id throughout _ready() and
+	# generate_initial_world(). Godot readies children before their parent, so
+	# setting them from _ready() below lands AFTER both mines have already been
+	# generated - they would build with the single-player layout. vs_mode.tscn now
+	# carries both as instance overrides; this pass keeps them correct even if the
+	# overrides are lost, because _enter_tree runs before any child readies.
+	var paths := {
+		1: "HBoxContainer/SubViewportContainer1/SubViewport1/Level1",
+		2: "HBoxContainer/SubViewportContainer2/SubViewport2/Level2",
+	}
+	for player_number in paths:
+		var level := get_node_or_null(NodePath(paths[player_number]))
+		if level == null:
+			push_error("VSMode: missing level for player %d at %s" % [player_number, paths[player_number]])
+			continue
+		level.set("is_vs_mode", true)
+		level.set("player_id", player_number)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	level1.player_id = 1
-	level1.is_vs_mode = true
-	level2.player_id = 2
-	level2.is_vs_mode = true
 	_refresh_level_base(level1)
 	_refresh_level_base(level2)
 	_attach_compact_upgrade_menu(level1)
 	_attach_compact_upgrade_menu(level2)
 
-	var menu1 = level1.get_node_or_null("UpgradeMenu")
-	if menu1:
-		menu1.connect("send_enemy", Callable(self, "_on_p1_send_enemy"))
-	var menu2 = level2.get_node_or_null("UpgradeMenu")
-	if menu2:
-		menu2.connect("send_enemy", Callable(self, "_on_p2_send_enemy"))
+	_connect_level_signals(level1, 1)
+	_connect_level_signals(level2, 2)
+
+func _connect_level_signals(level, player_number: int) -> void:
+	if level == null:
+		return
+	var menu = level.get_node_or_null("UpgradeMenu")
+	if menu and menu.has_signal("send_enemy"):
+		menu.send_enemy.connect(_on_send_enemy.bind(player_number))
+	# Base.game_over was previously connected nowhere in split-screen, so
+	# destroying the opponent's base ended nothing at all.
+	var base = level.get_node_or_null("Base")
+	if base and base.has_signal("game_over"):
+		base.game_over.connect(_on_base_destroyed.bind(player_number))
+
+func _level_for(player_number: int):
+	return level1 if player_number == 1 else level2
+
+func _opponent_of(player_number: int) -> int:
+	return 2 if player_number == 1 else 1
 
 func _input(event: InputEvent) -> void:
-	if _routing_level_up_input or not get_tree().paused:
+	if _match_over or _routing_level_up_input or not get_tree().paused:
 		return
 	var context := _active_level_up_context()
 	if context.is_empty():
@@ -97,20 +128,31 @@ func _refresh_level_base(level) -> void:
 	if base and base.has_method("refresh_base_sprite"):
 		base.call_deferred("refresh_base_sprite")
 
-func _on_p1_send_enemy(enemy_type: int) -> void:
-	level1.income += enemy_type + 1
-	var e = level2.ENEMY_SCENE.instantiate()
-	var target_cell = level2.get_farthest_open_cell()
-	e.global_position = level2.block_layer.to_global(level2.block_layer.map_to_local(target_cell))
-	level2.add_child(e)
+func _on_send_enemy(enemy_type: int, sender_id: int) -> void:
+	if _match_over:
+		return
+	var sender = _level_for(sender_id)
+	var target = _level_for(_opponent_of(sender_id))
+	if sender == null or target == null or not is_instance_valid(sender) or not is_instance_valid(target):
+		return
+	sender.income += enemy_type + 1
+	var block_layer = target.block_layer
+	if block_layer == null or not target.has_method("get_farthest_open_cell"):
+		return
+	var e = target.ENEMY_SCENE.instantiate()
+	var target_cell = target.get_farthest_open_cell()
+	e.global_position = block_layer.to_global(block_layer.map_to_local(target_cell))
+	target.add_child(e)
 	if e.has_method("initialize"):
 		e.initialize(1, false, enemy_type)
 
-func _on_p2_send_enemy(enemy_type: int) -> void:
-	level2.income += enemy_type + 1
-	var e = level1.ENEMY_SCENE.instantiate()
-	var target_cell = level1.get_farthest_open_cell()
-	e.global_position = level1.block_layer.to_global(level1.block_layer.map_to_local(target_cell))
-	level1.add_child(e)
-	if e.has_method("initialize"):
-		e.initialize(1, false, enemy_type)
+func _on_base_destroyed(loser_id: int) -> void:
+	if _match_over:
+		return
+	_match_over = true
+	VSMatchResult.show_result(
+		self,
+		"PLAYER %d WINS" % _opponent_of(loser_id),
+		"Player %d's base was destroyed." % loser_id,
+		Color(1.0, 0.86, 0.42, 1.0)
+	)

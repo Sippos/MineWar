@@ -115,20 +115,23 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="BuildA" type="Button" parent="Layout/TopBar/Margin/Row"]
-custom_minimum_size = Vector2(92, 48)
+[node name="SwitchA" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(150, 48)
 layout_mode = 2
-text = "BUILD A"
+tooltip_text = "Player A: hand control between the digging peon and the hero in the mine (Tab)."
+text = "A → HERO"
 
-[node name="BuildB" type="Button" parent="Layout/TopBar/Margin/Row"]
-custom_minimum_size = Vector2(92, 48)
+[node name="SwitchB" type="Button" parent="Layout/TopBar/Margin/Row"]
+custom_minimum_size = Vector2(150, 48)
 layout_mode = 2
-text = "BUILD B"
+tooltip_text = "Player B: hand control between the digging peon and the hero in the mine (slash key)."
+text = "B → HERO"
 
-[node name="BuildBoth" type="Button" parent="Layout/TopBar/Margin/Row"]
+[node name="AutoOpening" type="Button" parent="Layout/TopBar/Margin/Row"]
 custom_minimum_size = Vector2(124, 48)
 layout_mode = 2
-text = "BUILD BOTH"
+tooltip_text = "Playtest shortcut: carve both opening tunnels instead of digging them."
+text = "AUTO OPENING"
 
 [node name="Start" type="Button" parent="Layout/TopBar/Margin/Row"]
 custom_minimum_size = Vector2(112, 48)

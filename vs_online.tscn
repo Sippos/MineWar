@@ -7,3 +7,5 @@
 script = ExtResource("1_script")
 
 [node name="Level" parent="." instance=ExtResource("2_level")]
+player_id = 1
+is_vs_mode = true
