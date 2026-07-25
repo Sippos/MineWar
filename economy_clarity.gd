@@ -80,7 +80,6 @@ func _unlock_core_information() -> void:
 	active_menu.set("healthbar_unlocked", true)
 	active_menu.set("base_health_unlocked", true)
 	active_menu.set("stats_unlocked", true)
-	active_menu.set("wave_timer_unlocked", true)
 	active_menu.set("xp_unlocked", true)
 	
 	if hud.has_method("unlock_healthbar"):
@@ -89,8 +88,7 @@ func _unlock_core_information() -> void:
 		hud.unlock_base_healthbar()
 	if hud.has_method("unlock_stats"):
 		hud.unlock_stats()
-	if hud.has_method("unlock_wave_timer"):
-		hud.unlock_wave_timer()
+	# The wave timer stays hidden until it is actually purchased.
 	if hud.has_method("unlock_xp"):
 		hud.unlock_xp()
 

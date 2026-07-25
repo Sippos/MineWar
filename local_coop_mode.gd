@@ -292,7 +292,7 @@ func _hide_single_player_hud() -> void:
 		return
 	var hidden_nodes := [
 		"PlayerLabel", "PlayerHealthBar", "HeroPortrait", "StatsBackdrop", "StatsContainer",
-		"BaseHealthBar", "BaseLabel", "BaseStatus", "HeroRPGSummaryP1", "HeroRPGSummaryP2",
+		"BaseHealthBar", "BaseLabel", "BaseStatus",
 		"ResourcePanel", "GemIcon", "Label", "GoldIcon", "GoldLabel", "NoticeLabel"
 	]
 	for node_name in hidden_nodes:

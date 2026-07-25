@@ -71,11 +71,8 @@ func _test_mobile_hud_progression() -> void:
 	hud.call("_set_base_warning_health", 98, 100, false)
 	var base_percent := hud.get("base_status_label") as Label
 	_expect(base_percent != null and not base_percent.visible, "Mobile base icon does not duplicate the health percentage")
-	hud.call("show_objective", "III", "SPACE / A", "")
-	var objective_panel := hud.get("objective_panel") as PanelContainer
-	var notice_label := hud.get("notice_label") as Label
-	_expect(objective_panel != null and not objective_panel.visible, "Large tutorial card stays off the touch playfield")
-	_expect(notice_label != null and notice_label.text == "TAP PICK", "Mobile tutorial uses the touch action name")
+	_expect(not hud.has_method("show_objective"), "Objective banner is gone from the HUD entirely")
+	_expect(hud.get_node_or_null("FirstRunObjective") == null, "No tutorial card is built on the playfield")
 
 	hud.queue_free()
 	await get_tree().process_frame

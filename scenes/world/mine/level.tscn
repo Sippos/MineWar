@@ -866,3 +866,8 @@ shadow_color = Color(0, 0, 0, 0.72)
 shadow_filter = 1
 texture = ExtResource("25_vagr4")
 texture_scale = 1.25
+
+[connection signal="base_damaged" from="Base" to="HUD" method="update_health"]
+[connection signal="game_over" from="Base" to="HUD" method="on_game_over"]
+[connection signal="gems_deposited" from="Base" to="HUD" method="add_gems"]
+[connection signal="upgrade_requested" from="Base" to="UpgradeMenu" method="show_menu"]

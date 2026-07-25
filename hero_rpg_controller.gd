@@ -77,8 +77,6 @@ var permanent_stat_bonuses: Dictionary = {
 var extra_max_health_bonus: int = 0
 var regen_progress: float = 0.0
 var hud_refresh_timer: float = 0.0
-var summary_panel: PanelContainer
-var summary_label: Label
 
 func _ready() -> void:
 	player = get_parent() as CharacterBody2D
@@ -396,32 +394,9 @@ func _ensure_hud() -> void:
 	var stats_container: Control = hud.get_node_or_null("StatsContainer") as Control
 	if stats_container == null:
 		return
+	# The derived combat numbers live in the stat tooltips and the upgrade menu.
+	# A permanent sentence strip across the playfield was pure noise.
 	_update_stat_tooltips(stats_container)
-	if summary_panel != null and is_instance_valid(summary_panel):
-		return
-	summary_panel = PanelContainer.new()
-	summary_panel.name = "HeroRPGSummaryP%d" % int(player.get("player_id"))
-	summary_panel.offset_left = 20.0
-	summary_panel.offset_top = 108.0
-	summary_panel.offset_right = 500.0
-	summary_panel.offset_bottom = 138.0
-	summary_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	summary_panel.z_index = 12
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.025, 0.03, 0.04, 0.88)
-	style.border_color = Color(0.48, 0.4, 0.26, 0.72)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(5)
-	style.content_margin_left = 8.0
-	style.content_margin_right = 8.0
-	summary_panel.add_theme_stylebox_override("panel", style)
-	hud.add_child(summary_panel)
-	summary_label = Label.new()
-	summary_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	summary_label.add_theme_font_size_override("font_size", 13)
-	summary_label.add_theme_color_override("font_color", Color(0.92, 0.84, 0.65))
-	summary_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	summary_panel.add_child(summary_label)
 
 func _update_stat_tooltips(stats_container: Control) -> void:
 	var primary: String = get_primary_attribute()
@@ -444,23 +419,16 @@ func _update_stat_tooltips(stats_container: Control) -> void:
 		if control != null:
 			control.tooltip_text = str(tooltip_map[node_name])
 
-func _update_hud(force: bool) -> void:
-	if summary_panel == null or not is_instance_valid(summary_panel):
-		return
+func _update_hud(_force: bool) -> void:
+	# Only the Str/Agi/Int icons remain on the HUD; keep their tooltips in sync
+	# so the derived numbers stay reachable on hover.
 	var hud: Node = world.get_node_or_null("HUD") if world != null else null
-	var stats_container: Control = hud.get_node_or_null("StatsContainer") as Control if hud != null else null
-	var mobile_hud := hud != null and hud.has_method("_is_mobile_hud") and bool(hud.call("_is_mobile_hud"))
-	# Detailed derived combat math belongs in the upgrade menu/tooltips on mobile,
-	# not as a permanent sentence spanning the playfield.
-	summary_panel.visible = not mobile_hud and stats_container != null and stats_container.visible
-	if summary_label == null:
+	if hud == null:
 		return
-	var primary_text: String = get_primary_attribute().to_upper()
-	var spell_percent: int = int(round(get_spell_power_multiplier() * 100.0))
-	var summon_percent: int = int(round(get_summon_power_multiplier() * 100.0))
-	var new_text: String = "PRIMARY %s   DMG %d   APS %.2f   ARM %.1f   SPELL %d%%   SUMMON %d%%" % [primary_text, get_basic_attack_damage(), get_attacks_per_second(), get_armor(), spell_percent, summon_percent]
-	if force or summary_label.text != new_text:
-		summary_label.text = new_text
+	var stats_container: Control = hud.get_node_or_null("StatsContainer") as Control
+	if stats_container == null:
+		return
+	_update_stat_tooltips(stats_container)
 
 func _refresh_hud_health() -> void:
 	if world == null:
