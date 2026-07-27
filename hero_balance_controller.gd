@@ -3,14 +3,11 @@ extends Node
 const ENEMY_STATUS_SCRIPT = preload("res://enemy_status.gd")
 const GRAVE_MIGHT_ICON: Texture2D = preload("res://ability_icons/generated/UndeadKing_GraveMight.png")
 
-const HERO_PROFILES := {
-	"Dwarf": {"health": 40, "speed": 190.0, "dig_time": 0.36},
-	"Mech": {"health": 52, "speed": 176.0, "dig_time": 0.34},
-	"Shaman": {"health": 32, "speed": 205.0, "dig_time": 0.42},
-	"Nerubian": {"health": 36, "speed": 215.0, "dig_time": 0.46},
-	"Druid": {"health": 34, "speed": 210.0, "dig_time": 0.39},
-	"Undead King": {"health": 38, "speed": 195.0, "dig_time": 0.43}
-}
+# One hero table for the whole game. This file used to carry its own copy of
+# health/speed/dig_time, so a balance change could land in hero_rpg_controller.gd
+# and silently disagree with this one. Health was duplicated across both.
+const HERO_RPG_SCRIPT := preload("res://hero_rpg_controller.gd")
+const HERO_PROFILES: Dictionary = HERO_RPG_SCRIPT.HERO_PROFILES
 
 const HERO_SCALE_MULTIPLIERS := {
 	"Dwarf": 1.0,
@@ -115,8 +112,8 @@ func _apply_profile_once() -> void:
 	var profile: Dictionary = HERO_PROFILES[hero]
 	var previous_profile: Dictionary = HERO_PROFILES.get(applied_hero, {})
 	var old_max_health := int(player.get("max_health"))
-	var target_health := int(profile["health"])
-	var can_replace_health: bool = old_max_health <= 30 or (not previous_profile.is_empty() and old_max_health == int(previous_profile.get("health", old_max_health)))
+	var target_health := int(profile["base_health"])
+	var can_replace_health: bool = old_max_health <= 30 or (not previous_profile.is_empty() and old_max_health == int(previous_profile.get("base_health", old_max_health)))
 	if can_replace_health:
 		var health_ratio: float = clampf(float(player.get("health")) / maxf(1.0, float(old_max_health)), 0.0, 1.0)
 		player.set("max_health", target_health)

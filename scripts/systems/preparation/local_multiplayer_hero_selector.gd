@@ -20,6 +20,13 @@ const HERO_ACCENTS := {
 const SELECT_DISTANCE := 54.0
 const LEFT_SHRINE_POSITION := Vector2(-205, -54)
 const RIGHT_SHRINE_POSITION := Vector2(205, -54)
+# The pedestal is a footprint under the hero, not a plate the hero stands behind.
+# Keep it well inside the sprite silhouette so the portrait stays readable.
+const PEDESTAL_RADIUS := 13.0
+const GLOW_RADIUS := 17.0
+const HERO_SPRITE_HEIGHT := 72.0
+const SHRINE_COLUMN_X := 200.0
+const SHRINE_ROW_SPACING := 112.0
 
 @export var world_path: NodePath = NodePath("../Level")
 
@@ -109,8 +116,8 @@ func _build_hero_shrines() -> void:
 	world.add_child(shrine_root)
 	
 	var positions := [
-		Vector2(-240, -80), Vector2(-240, 0), Vector2(-240, 80),
-		Vector2(240, -80), Vector2(240, 0), Vector2(240, 80)
+		Vector2(-SHRINE_COLUMN_X, -SHRINE_ROW_SPACING), Vector2(-SHRINE_COLUMN_X, 0), Vector2(-SHRINE_COLUMN_X, SHRINE_ROW_SPACING),
+		Vector2(SHRINE_COLUMN_X, -SHRINE_ROW_SPACING), Vector2(SHRINE_COLUMN_X, 0), Vector2(SHRINE_COLUMN_X, SHRINE_ROW_SPACING)
 	]
 	
 	for index in range(displayed_heroes.size()):
@@ -125,25 +132,27 @@ func _create_shrine(hero_name: String, shrine_position: Vector2) -> void:
 	root.position = shrine_position
 	shrine_root.add_child(root)
 
+	# The disc is squashed into an ellipse so it reads as ground under the hero
+	# rather than a big coin the hero is hiding behind.
 	var accent: Color = HERO_ACCENTS[hero_name]
 	var glow := Polygon2D.new()
 	glow.name = "Glow"
-	glow.position = Vector2(0, 18)
-	glow.polygon = _ring_polygon(29.0)
-	glow.color = Color(accent.r, accent.g, accent.b, 0.18)
+	glow.position = Vector2(0, 16)
+	glow.polygon = _disc_polygon(GLOW_RADIUS)
+	glow.color = Color(accent.r, accent.g, accent.b, 0.16)
 	root.add_child(glow)
 
 	var pedestal := Polygon2D.new()
 	pedestal.name = "Pedestal"
-	pedestal.position = Vector2(0, 18)
-	pedestal.polygon = _ring_polygon(24.0)
-	pedestal.color = Color(0.055, 0.07, 0.095, 0.98)
+	pedestal.position = Vector2(0, 16)
+	pedestal.polygon = _disc_polygon(PEDESTAL_RADIUS)
+	pedestal.color = Color(0.09, 0.11, 0.15, 0.85)
 	root.add_child(pedestal)
 
 	var edge := Line2D.new()
 	edge.name = "Edge"
-	edge.position = Vector2(0, 18)
-	edge.points = _ring_line(24.0)
+	edge.position = Vector2(0, 16)
+	edge.points = _disc_line(PEDESTAL_RADIUS)
 	edge.width = 2.0
 	edge.default_color = Color(accent.r, accent.g, accent.b, 0.72)
 	root.add_child(edge)
@@ -151,17 +160,18 @@ func _create_shrine(hero_name: String, shrine_position: Vector2) -> void:
 	var sprite := Sprite2D.new()
 	sprite.name = "Hero"
 	sprite.texture = HERO_TEXTURES[hero_name]
-	sprite.position = Vector2(0, -23)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var texture_size: Vector2 = sprite.texture.get_size()
-	var scale_factor := 58.0 / maxf(texture_size.y, 1.0)
+	var scale_factor := HERO_SPRITE_HEIGHT / maxf(texture_size.y, 1.0)
 	sprite.scale = Vector2(scale_factor, scale_factor)
+	# Plant the feet on the disc instead of floating the portrait above it.
+	sprite.position = Vector2(0, 16.0 - HERO_SPRITE_HEIGHT * 0.5 + 4.0)
 	root.add_child(sprite)
 
 	var name_label := Label.new()
 	name_label.name = "Name"
-	name_label.position = Vector2(-82, 43)
-	name_label.size = Vector2(164, 28)
+	name_label.position = Vector2(-58, 26)
+	name_label.size = Vector2(116, 24)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 10)
 	name_label.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -195,22 +205,24 @@ func _refresh_shrines() -> void:
 			suffix = "  •  P2"
 		label.text = hero_name + suffix
 		label.add_theme_color_override("font_color", accent if p1_selected or p2_selected else Color(0.82, 0.91, 1.0, 1.0))
-		pedestal.color = Color(0.17, 0.105, 0.028, 0.98) if p1_selected or p2_selected else Color(0.055, 0.07, 0.095, 0.98)
-		edge.width = 4.0 if p1_selected or p2_selected else 2.0
-		glow.color = Color(accent.r, accent.g, accent.b, 0.55) if p1_selected or p2_selected else Color(accent.r, accent.g, accent.b, 0.18)
+		var chosen := p1_selected or p2_selected
+		pedestal.color = Color(accent.r * 0.42, accent.g * 0.42, accent.b * 0.42, 0.9) if chosen else Color(0.09, 0.11, 0.15, 0.85)
+		edge.width = 3.0 if chosen else 2.0
+		glow.color = Color(accent.r, accent.g, accent.b, 0.5) if chosen else Color(accent.r, accent.g, accent.b, 0.16)
 
 func _set_status(message: String) -> void:
 	var status := get_parent().get_node_or_null("LocalMultiplayerHubController/SinglePlayerHubHUD/StatusPanel/Margin/Status") as Label
 	if status:
 		status.text = message
 
-func _ring_polygon(radius: float) -> PackedVector2Array:
+func _disc_polygon(radius: float) -> PackedVector2Array:
 	var points := PackedVector2Array()
-	for index in range(12):
-		points.append(Vector2.RIGHT.rotated(TAU * float(index) / 12.0) * radius)
+	for index in range(16):
+		var offset := Vector2.RIGHT.rotated(TAU * float(index) / 16.0) * radius
+		points.append(Vector2(offset.x, offset.y * 0.45))
 	return points
 
-func _ring_line(radius: float) -> PackedVector2Array:
-	var points := _ring_polygon(radius)
+func _disc_line(radius: float) -> PackedVector2Array:
+	var points := _disc_polygon(radius)
 	points.append(points[0])
 	return points

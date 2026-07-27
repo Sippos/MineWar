@@ -15,6 +15,9 @@ uniform vec4 rim_tint : source_color = vec4(1.0, 0.90, 0.65, 1.0);
 // Inverse of typical ambient_tint so lit faces don't stay muddy
 uniform float ambient_compensate = 1.18;
 uniform vec4 base_ambient : source_color = vec4(0.12, 0.1, 0.15, 1.0);
+uniform float biome_depth_start = 1152.0; // Depth 18
+uniform float biome_depth_max = 2560.0;   // Depth 40
+uniform vec4 biome_tint : source_color = vec4(0.35, 0.38, 0.45, 1.0);
 
 varying vec2 v_world_pos;
 
@@ -43,6 +46,10 @@ void fragment() {
 
 	vec3 light_color = mix(base_ambient.rgb, vec3(ambient_compensate), falloff);
 	dark.rgb *= light_color;
+
+	// Apply depth tint
+	float depth_factor = clamp((v_world_pos.y - biome_depth_start) / (biome_depth_max - biome_depth_start), 0.0, 1.0);
+	dark.rgb = mix(dark.rgb, dark.rgb * biome_tint.rgb * 1.8, depth_factor * 0.85);
 
 	COLOR = dark;
 }

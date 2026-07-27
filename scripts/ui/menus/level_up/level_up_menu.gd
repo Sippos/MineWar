@@ -124,7 +124,10 @@ func _build_visuals() -> void:
 
 	var options: Array = controller.call("get_level_up_options")
 	if options.is_empty():
+		# The menu pauses the tree, so a hero with no offers must still hand control
+		# back. Without this the run stalls on an undismissable modal.
 		_show_grid_message("No ability upgrades available")
+		_add_dismiss_button()
 		return
 	for option in options:
 		grid.add_child(_ability_card(option))
@@ -242,6 +245,20 @@ func _show_grid_message(message: String) -> void:
 	label.add_theme_font_size_override("font_size", 18)
 	grid.add_child(label)
 
+func _add_dismiss_button() -> void:
+	var button := Button.new()
+	button.text = "Continue"
+	button.custom_minimum_size = Vector2(180, 52)
+	button.add_theme_font_override("font", _get_button_font())
+	button.add_theme_font_size_override("font_size", 20)
+	button.pressed.connect(_dismiss)
+	grid.add_child(button)
+	button.call_deferred("grab_focus")
+
+func _dismiss() -> void:
+	get_tree().paused = false
+	queue_free()
+
 func _show_error(message: String) -> void:
 	push_error("LevelUpMenu: " + message)
 	_make_background()
@@ -260,7 +277,19 @@ func _show_error(message: String) -> void:
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	label.add_theme_font_size_override("font_size", 22)
 	label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.45))
+	label.offset_bottom = -54.0
 	panel.add_child(label)
+	# A broken controller must not trap the paused run behind this panel either.
+	var button := Button.new()
+	button.text = "Continue"
+	button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	button.offset_left = -90.0
+	button.offset_right = 90.0
+	button.offset_top = -50.0
+	button.offset_bottom = -10.0
+	button.pressed.connect(_dismiss)
+	panel.add_child(button)
+	button.call_deferred("grab_focus")
 
 func _choose(id: String) -> void:
 	if id == "":

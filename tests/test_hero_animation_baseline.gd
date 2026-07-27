@@ -59,14 +59,30 @@ func test_shaman_attack_uses_matching_direction_row_without_mirroring() -> void:
 	assert_eq(sprite.frame / 8, 2, "The corrected action sheet must use the same direction row as walking")
 
 func test_shaman_walk_and_attack_keep_one_world_space_foot_anchor() -> void:
+	# The two sheets render the Shaman at different sizes inside the 128 px frame,
+	# so the fit is verified in world space: matching silhouette height and one
+	# shared foot line, not identical scale numbers.
+	var walk_body_height := 92.0
+	var walk_foot_row := 96.5
+	var attack_body_height := 55.0
+	var attack_foot_row := 75.5
 	var player := _new_player_with_sprite()
 	player.set("current_hero_name", "Shaman")
 	player.call("_apply_sprite_visuals", false)
-	assert_eq(player.get("current_sprite_scale"), Vector2(0.64, 0.64))
-	assert_eq(player.get("current_sprite_position"), Vector2(0, -5))
+	var walk_scale: Vector2 = player.get("current_sprite_scale")
+	var walk_position: Vector2 = player.get("current_sprite_position")
+	assert_eq(walk_scale, Vector2(0.64, 0.64))
+	assert_eq(walk_position, Vector2(0, -5))
 	player.call("_apply_sprite_visuals", true)
-	assert_eq(player.get("current_sprite_scale"), Vector2(0.64, 0.64))
-	assert_eq(player.get("current_sprite_position"), Vector2(0, -5))
+	var attack_scale: Vector2 = player.get("current_sprite_scale")
+	var attack_position: Vector2 = player.get("current_sprite_position")
+	assert_true(attack_scale.x > walk_scale.x * 1.25, "The smaller staff-swing artwork needs an independent corrective scale")
+	var walk_world_height := walk_body_height * walk_scale.y
+	var attack_world_height := attack_body_height * attack_scale.y
+	assert_true(absf(attack_world_height - walk_world_height) < 4.0, "The swing must keep the walk silhouette height (%.1f vs %.1f)" % [attack_world_height, walk_world_height])
+	var walk_foot_y := (walk_foot_row - 64.0) * walk_scale.y + walk_position.y
+	var attack_foot_y := (attack_foot_row - 64.0) * attack_scale.y + attack_position.y
+	assert_true(absf(attack_foot_y - walk_foot_y) < 2.0, "Both states must share one world-space foot line (%.1f vs %.1f)" % [attack_foot_y, walk_foot_y])
 
 func _frame_change_ratio(texture_path: String, row: int, first_frame: int, second_frame: int, start_y := 0) -> float:
 	var texture := load(texture_path) as Texture2D

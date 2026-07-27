@@ -2,13 +2,14 @@ extends Node
 
 const LEVEL_SCENE: PackedScene = preload("res://scenes/world/mine/level.tscn")
 const LEVEL_UP_SCENE: PackedScene = preload("res://scenes/ui/overlays/level_up/level_up_menu.tscn")
-const HEROES := ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King"]
+const HEROES := ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King", "Mech"]
 const EXPECTED_PROFILES := {
 	"Dwarf": {"health": 40, "speed": 190.0, "dig_time": 0.36},
 	"Shaman": {"health": 32, "speed": 205.0, "dig_time": 0.42},
 	"Nerubian": {"health": 36, "speed": 215.0, "dig_time": 0.46},
 	"Druid": {"health": 34, "speed": 210.0, "dig_time": 0.39},
-	"Undead King": {"health": 38, "speed": 195.0, "dig_time": 0.43}
+	"Undead King": {"health": 38, "speed": 195.0, "dig_time": 0.43},
+	"Mech": {"health": 52, "speed": 176.0, "dig_time": 0.34}
 }
 
 var failures: Array[String] = []
@@ -19,7 +20,7 @@ func _ready() -> void:
 		await _test_hero(hero)
 	get_tree().paused = false
 	if failures.is_empty():
-		print("HERO_BALANCE_SMOKE: PASS (5/5 heroes)")
+		print("HERO_BALANCE_SMOKE: PASS (%d/%d heroes)" % [HEROES.size(), HEROES.size()])
 		get_tree().quit()
 		return
 	for failure: String in failures:
@@ -143,6 +144,22 @@ func _exercise_hero(hero: String, player: CharacterBody2D, abilities: Node, bala
 				await get_tree().process_frame
 				if not bool(balance.get("grave_might_active")):
 					_fail(hero, "Grave Might command did not activate")
+		"Mech":
+			if int(abilities.get("rocket_level")) < 1:
+				_fail(hero, "Scrap Rockets is not available at level 1")
+			abilities.call("_try_scrap_rockets")
+			if float(abilities.get("rocket_cooldown")) <= 0.0:
+				_fail(hero, "Scrap Rockets did not activate")
+			abilities.set("drill_level", 1)
+			abilities.call("_try_drill_charge")
+			if float(abilities.get("drill_cooldown")) <= 0.0:
+				_fail(hero, "Drill Charge did not activate")
+			abilities.set("overdrive_level", 1)
+			player.set("level", 6)
+			abilities.call("_try_siege_overdrive")
+			if not bool(abilities.get("overdrive_active")):
+				_fail(hero, "Siege Overdrive did not activate")
+			abilities.call("_end_overdrive")
 
 func _owned_group_count(group_name: String, owner_player: Node) -> int:
 	var count := 0

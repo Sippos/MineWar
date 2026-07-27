@@ -8,25 +8,29 @@ const COMPACT_FILL_X_MIN := -12
 const COMPACT_FILL_X_MAX := 11
 const COMPACT_FILL_Y_MIN := -10
 const COMPACT_FILL_Y_MAX := 10
-const FRESH_ROOM_HALF_WIDTH := 4
-const PROGRESSED_ROOM_HALF_WIDTH := 5
+# Cell c covers world x in [c * 64, c * 64 + 64), so a room that reads as centred
+# on x = 0 needs an even cell span from -half to half - 1. The old odd span put
+# the room (and the tunnel mouths) 32 px to the right of everything the hub
+# scripts place around the origin, which is why the entrance boxes sat off-centre.
+const ROOM_HALF_WIDTH := 4
+const ROOM_X_MIN := -ROOM_HALF_WIDTH
+const ROOM_X_MAX := ROOM_HALF_WIDTH - 1
 const ROOM_Y_MIN := -3
-const ROOM_Y_MAX := 3
+const ROOM_Y_MAX := 2
 const TUNNEL_X_MIN := -1
-const TUNNEL_X_MAX := 1
-const TUNNEL_Y_MIN := 4
-const TUNNEL_Y_MAX := 8
-const TOP_TUNNEL_Y_MIN := -8
+const TUNNEL_X_MAX := 0
+const TUNNEL_Y_MIN := 3
+const TUNNEL_Y_MAX := 6
+const TOP_TUNNEL_Y_MIN := -7
 const TOP_TUNNEL_Y_MAX := -4
 
 func get_playable_map_rect() -> Rect2i:
 	return COMPACT_PLAYABLE_RECT
 
 func generate_initial_world() -> void:
-	var room_half_width := FRESH_ROOM_HALF_WIDTH
-	if Global.unlocked_heroes.size() > 1:
-		room_half_width = PROGRESSED_ROOM_HALF_WIDTH
-
+	# The room never grows with progression any more: a tight shell keeps the two
+	# heroes and their shrines large on screen instead of scattering them across
+	# an empty hall.
 	# A small fixed shell is dramatically cheaper than the 40 x 63 persistent
 	# mine and also guarantees that the local hub keeps the same cozy silhouette.
 	for x in range(COMPACT_FILL_X_MIN, COMPACT_FILL_X_MAX + 1):
@@ -36,7 +40,7 @@ func generate_initial_world() -> void:
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 
-	_carve_compact_rect(-room_half_width, room_half_width, ROOM_Y_MIN, ROOM_Y_MAX)
+	_carve_compact_rect(ROOM_X_MIN, ROOM_X_MAX, ROOM_Y_MIN, ROOM_Y_MAX)
 	_carve_compact_rect(TUNNEL_X_MIN, TUNNEL_X_MAX, TUNNEL_Y_MIN, TUNNEL_Y_MAX)
 	_carve_compact_rect(TUNNEL_X_MIN, TUNNEL_X_MAX, TOP_TUNNEL_Y_MIN, TOP_TUNNEL_Y_MAX)
 

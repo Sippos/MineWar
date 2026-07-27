@@ -1,6 +1,6 @@
 extends Control
 
-const COMPACT_VS_MENU = preload("res://compact_vs_upgrade_menu.gd")
+
 const VSMatchResult = preload("res://vs_match_result.gd")
 
 @onready var viewport1: SubViewport = $HBoxContainer/SubViewportContainer1/SubViewport1
@@ -34,8 +34,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_refresh_level_base(level1)
 	_refresh_level_base(level2)
-	_attach_compact_upgrade_menu(level1)
-	_attach_compact_upgrade_menu(level2)
+
 
 	_connect_level_signals(level1, 1)
 	_connect_level_signals(level2, 2)
@@ -113,15 +112,7 @@ func _level_up_ui_action(action_name: String, player_number: int) -> String:
 		return "ui_accept"
 	return ""
 
-func _attach_compact_upgrade_menu(level) -> void:
-	var menu = level.get_node_or_null("UpgradeMenu")
-	if menu == null or level.get_node_or_null("CompactVSUpgradeMenu"):
-		return
-	var compact := CanvasLayer.new()
-	compact.name = "CompactVSUpgradeMenu"
-	compact.set_script(COMPACT_VS_MENU)
-	level.add_child(compact)
-	compact.call_deferred("setup", menu)
+
 
 func _refresh_level_base(level) -> void:
 	var base = level.get_node_or_null("Base")

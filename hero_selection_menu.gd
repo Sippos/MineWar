@@ -9,7 +9,7 @@ var p2_index = 0
 
 # Keep unlock progression in Global for later, but expose every implemented hero
 # in the selection carousel while the project is in playtest mode.
-var available_heroes = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King"]
+var available_heroes = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King", "Mech"]
 const PLAYTEST_ALL_HEROES := true
 const HERO_IDLE_PREVIEWS = {
 	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
@@ -24,7 +24,8 @@ const HERO_PREVIEW_VISUALS = {
 	"Shaman": {"scale": 1.75, "center": Vector2(62.5, 56.0)},
 	"Nerubian": {"scale": 1.02, "center": Vector2(70.0, 87.0)},
 	"Druid": {"scale": 1.45, "center": Vector2(72.5, 53.0)},
-	"Undead King": {"scale": 1.20, "center": Vector2(53.5, 95.5)}
+	"Undead King": {"scale": 1.20, "center": Vector2(53.5, 95.5)},
+	"Mech": {"scale": 1.30, "center": Vector2(64.0, 78.0)}
 }
 const HERO_ABILITY_PREVIEWS = {
 	"Dwarf": [
@@ -56,6 +57,14 @@ const HERO_ABILITY_PREVIEWS = {
 		{"icon": preload("res://ability_icons/generated/UndeadKing_GraveMight.png"), "title": "Grave Might", "description": "Strengthen the undead host"},
 		{"icon": preload("res://ability_icons/generated/UndeadKing_SoulHarvest.png"), "title": "Soul Harvest", "description": "Claim power from fallen souls"},
 		{"icon": preload("res://ability_icons/generated/UndeadKing_DeathMarch.png"), "title": "Death March", "description": "Level 6 undead army form"}
+	],
+	# The Mech joins last and still runs on stand-in icons; hero_abilities.gd maps
+	# the same placeholders so the carousel and the in-run HUD stay consistent.
+	"Mech": [
+		{"icon": preload("res://ability_icons/placeholder_hammer.svg"), "title": "Scrap Rockets", "description": "Explosive salvo with knockback"},
+		{"icon": preload("res://ability_icons/placeholder_stomp.svg"), "title": "Drill Charge", "description": "Bores through enemies and rock"},
+		{"icon": preload("res://ability_icons/placeholder_carapace.svg"), "title": "Reinforced Plating", "description": "Self-repairing hull plates"},
+		{"icon": preload("res://ability_icons/placeholder_avatar.svg"), "title": "Siege Overdrive", "description": "Level 6 power and reload form"}
 	]
 }
 

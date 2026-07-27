@@ -67,17 +67,24 @@ func _test_hero(hero: String) -> void:
 	var damage_after_strength: int = int(rpg.call("get_basic_attack_damage"))
 	if damage_after_strength <= starting_damage:
 		_fail(hero, "Strength did not improve basic attack damage")
+	# Armor answers to Strength now. Agility already owned dig speed, attack speed
+	# and move speed; durability on top of that made it the universally correct buy.
+	if float(rpg.call("get_armor")) <= starting_armor:
+		_fail(hero, "Strength did not increase armor")
 	var interval_before_agility: float = float(rpg.call("get_attack_interval"))
 	var armor_before_agility: float = float(rpg.call("get_armor"))
 	var speed_before_agility: float = float(rpg.call("get_move_speed"))
 	player.call("upgrade_agility")
 	if float(rpg.call("get_attack_interval")) >= interval_before_agility:
 		_fail(hero, "Agility did not increase attack speed")
-	if float(rpg.call("get_armor")) <= armor_before_agility:
-		_fail(hero, "Agility did not increase armor")
+	if not is_equal_approx(float(rpg.call("get_armor")), armor_before_agility):
+		_fail(hero, "Agility should no longer affect armor")
 	if float(rpg.call("get_move_speed")) <= speed_before_agility:
 		_fail(hero, "Agility did not increase movement speed")
+	var gem_chance_before_intelligence: float = float(rpg.call("get_bonus_gem_chance"))
 	player.call("upgrade_intelligence")
+	if float(rpg.call("get_bonus_gem_chance")) <= gem_chance_before_intelligence:
+		_fail(hero, "Intelligence did not improve the bonus gem chance")
 	if float(rpg.call("get_spell_power_multiplier")) <= starting_spell:
 		_fail(hero, "Intelligence did not increase spell power")
 	if float(rpg.call("get_summon_power_multiplier")) <= starting_summon:

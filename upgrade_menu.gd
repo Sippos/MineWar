@@ -6,20 +6,25 @@ signal send_enemy(type: int)
 @onready var panel = $Panel
 
 const MENU_ART_CENTER := Vector2(580.0, 323.0)
+# Attribute points per single-player cost tier. The hero's primary attribute
+# uses the wider step, so committing to it stays cheaper than spreading.
+const SP_STAT_COST_STEP := 2
+const SP_STAT_COST_PRIMARY_STEP := 3
+const HERO_RPG_PROFILES := preload("res://hero_rpg_controller.gd").HERO_PROFILES
 const MENU_ART_SIZE := Vector2(992.0, 624.0)
-const VS_MENU_MARGIN := 16.0
-const SINGLE_MENU_MARGIN := 18.0
+const VS_MENU_MARGIN := 12.0
+const SINGLE_MENU_MARGIN := 12.0
 const SINGLE_MENU_MIN_SCALE := 0.34
 const SINGLE_MENU_MAX_SCALE := 0.56
 const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.70
 const UPGRADE_TREE_DESKTOP_MAX_WIDTH := 860.0
 const UPGRADE_TREE_MAX_HEIGHT := 594.0
 const UPGRADE_TREE_WORLD_STRIP := 260.0
-const UPGRADE_TREE_CANVAS_SIZE := Vector2(860.0, 680.0)
+const UPGRADE_TREE_CANVAS_SIZE := Vector2(530.0, 680.0)
 const UPGRADE_TREE_NODE_SIZE := Vector2(130.0, 50.0)
 const UPGRADE_TREE_ROOT_SIZE := Vector2(64.0, 64.0)
-const UPGRADE_TREE_DEPTH_STEP := 150.0
-const UPGRADE_TREE_ROW_START_X := 150.0
+const UPGRADE_TREE_DEPTH_STEP := 126.0
+const UPGRADE_TREE_ROW_START_X := 140.0
 const UPGRADE_TREE_ROW_GAP := 16.0
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const ENEMY_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
@@ -98,6 +103,7 @@ func _ready():
 	_build_upgrade_tree_ui()
 	get_tree().root.size_changed.connect(_relayout_open_upgrade_menu)
 	hide_menu()
+	call_deferred("_grant_multiplayer_hud_modules")
 
 
 func _apply_upgrade_icons() -> void:
@@ -113,21 +119,40 @@ func _apply_upgrade_icons() -> void:
 		button.add_theme_constant_override("icon_spacing", 8)
 
 
-func get_upgrade_cost(stat_level: int) -> int:
-	# MineWars rewards frequent, readable build choices. Competitive modes keep
-	# the escalating economy so this single-player tuning does not affect LineWars.
-	return (stat_level * 2) - 1 if _is_vs_mode() else 1
+func get_upgrade_cost(stat_level: int, stat_name: String = "") -> int:
+	# Competitive modes keep the steep escalating economy so this single-player
+	# tuning never reaches LineWars.
+	if _is_vs_mode():
+		return (stat_level * 2) - 1
+	# Single player used to charge a flat 1 gem forever. A run banks far more gem
+	# value than that, so every purchase was automatic and purchased stats buried
+	# the authored hero attributes. The cost now climbs a tier at a time: early
+	# buys stay cheap and readable, deep gems buy meaningfully more, and spreading
+	# across all three attributes costs more than committing to one.
+	var step := SP_STAT_COST_PRIMARY_STEP if stat_name != "" and stat_name == _hero_primary_attribute() else SP_STAT_COST_STEP
+	return 1 + int(maxi(stat_level - 1, 0) / step)
+
+## The hero's primary attribute climbs its cost tiers more slowly, so each hero
+## has a build direction that is cheap to commit to without the other two
+## attributes becoming unaffordable.
+## Read from the profile table rather than the live HeroRPGController: the menu
+## builds its cards before that controller has resolved its own player.
+func _hero_primary_attribute() -> String:
+	var profile: Variant = HERO_RPG_PROFILES.get(_get_menu_hero())
+	if not profile is Dictionary:
+		return ""
+	return str((profile as Dictionary).get("primary", ""))
 
 func update_button_texts():
-	var str_cost = get_upgrade_cost(player.strength)
+	var str_cost = get_upgrade_cost(player.strength, "strength")
 	$Panel/UpgradeStrength.text = ""
 	$Panel/StrengthCost.text = str(str_cost)
 	
-	var agi_cost = get_upgrade_cost(player.agility)
+	var agi_cost = get_upgrade_cost(player.agility, "agility")
 	$Panel/UpgradeAgility.text = ""
 	$Panel/AgilityCost.text = str(agi_cost)
 	
-	var int_cost = get_upgrade_cost(player.intelligence)
+	var int_cost = get_upgrade_cost(player.intelligence, "intelligence")
 	$Panel/UpgradeIntelligence.text = ""
 	$Panel/IntelligenceCost.text = str(int_cost)
 	
@@ -157,6 +182,36 @@ var vs_send_panel: Panel
 func _is_vs_mode() -> bool:
 	var level = get_parent()
 	return level != null and (bool(level.get("is_vs_mode")) or bool(level.get_meta("linewars_vs_mirror_active", false)))
+
+func _is_multiplayer_session() -> bool:
+	# Single player keeps the Dome Keeper loop: HUD modules are earned with gold.
+	# Multiplayer never sells them, because a split screen or a shared mine has to
+	# read the same for both players from the first second of the match.
+	if _is_vs_mode():
+		return true
+	var level = get_parent()
+	return level != null and level.get_node_or_null("Player2") != null
+
+func _grant_multiplayer_hud_modules() -> void:
+	if not _is_multiplayer_session():
+		return
+	var hud = get_parent().get_node_or_null("HUD") if get_parent() else null
+	healthbar_unlocked = true
+	base_health_unlocked = true
+	stats_unlocked = true
+	wave_timer_unlocked = true
+	xp_unlocked = true
+	minimap_unlocked = true
+	if hud == null:
+		return
+	for unlock_method in ["unlock_healthbar", "unlock_base_healthbar", "unlock_stats", "unlock_xp", "unlock_minimap"]:
+		if hud.has_method(unlock_method):
+			hud.call(unlock_method)
+	# The wave countdown is meaningless in versus, where pressure comes from the
+	# opponent's sends rather than a shared timer, so it stays out of that HUD.
+	if not _is_vs_mode() and hud.has_method("unlock_wave_timer"):
+		hud.unlock_wave_timer()
+	update_button_texts()
 
 func _get_menu_hero() -> String:
 	if player:
@@ -270,10 +325,10 @@ func _build_upgrade_tree_ui() -> void:
 	var shell_box := VBoxContainer.new()
 	shell_box.name = "ShellBox"
 	shell_box.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shell_box.offset_left = 18.0
-	shell_box.offset_top = 14.0
-	shell_box.offset_right = -18.0
-	shell_box.offset_bottom = -14.0
+	shell_box.offset_left = 12.0
+	shell_box.offset_top = 10.0
+	shell_box.offset_right = -12.0
+	shell_box.offset_bottom = -10.0
 	shell_box.add_theme_constant_override("separation", 8)
 	upgrade_tree_shell.add_child(shell_box)
 
@@ -356,6 +411,7 @@ func _build_upgrade_tree_ui() -> void:
 	upgrade_tree_stat_bar.name = "QuickStats"
 	upgrade_tree_stat_bar.custom_minimum_size = Vector2(0, 78)
 	upgrade_tree_stat_bar.add_theme_constant_override("separation", 12)
+	upgrade_tree_stat_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	shell_box.add_child(upgrade_tree_stat_bar)
 	_build_upgrade_tree_stat_bar()
 
@@ -396,14 +452,24 @@ func _build_upgrade_tree_canvas() -> void:
 	for branch in graph:
 		_layout_upgrade_graph_branch(branch, branch_y)
 		branch_y += float(branch.get("height", 170.0))
-	upgrade_tree_canvas.custom_minimum_size = Vector2(860.0, maxf(branch_y + 28.0, 640.0))
+	upgrade_tree_canvas.custom_minimum_size = Vector2(530.0, maxf(branch_y + 28.0, 640.0))
 
 func _upgrade_graph_definition() -> Array:
+	var hero_name := _get_menu_hero()
+	var faction_icon := "res://character_sprites/hero_idle/%s_idle_front.png" % hero_name.to_lower()
+	var faction_children := []
+	if hero_name == "Dwarf":
+		faction_children.append({"id": "BuyRail", "title": "Rail", "description": "Place another rail segment.", "cost": 10, "currency": "gold", "icon": "res://rail_item_placeholder.png", "action": Callable(self, "_on_buy_rail_pressed"), "children": [
+			{"id": "BuyMinecart", "title": "Minecart", "description": "Create a minecart for the rail network.", "cost": 50, "currency": "gold", "icon": "res://character_sprites/minecart_spritesheet_25d.png", "action": Callable(self, "_on_buy_minecart_pressed")}
+		]})
+	else:
+		faction_children.append({"id": "BuyPeon", "title": "Peon", "description": "Recruit a Shaman worker.", "cost": 30, "currency": "gold", "icon": "res://character_sprites/shaman_walk_spritesheet_25d.png", "action": Callable(self, "_on_buy_peon_pressed")})
+
 	return [
 		{
 			"title": "HEALTH",
 			"root_icon": "res://assets/sprites/ui/upgrades/max_health.svg",
-			"height": 260.0,
+			"height": 180.0,
 			"children": [
 				{"id": "UnlockHealthbar", "title": "Hero HP", "description": "Unlock the hero health display and its health upgrades.", "cost": 10, "currency": "gold", "icon": "res://assets/sprites/ui/upgrades/max_health.svg", "action": Callable(self, "_on_unlock_healthbar_pressed"), "children": [
 					{"id": "UpgradeMaxHealth", "title": "+20 HP", "description": "Increase hero maximum health.", "cost": 15, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UpgradeMaxHealth"], "action": Callable(self, "_on_upgrade_max_health_pressed")}
@@ -419,7 +485,7 @@ func _upgrade_graph_definition() -> Array:
 		{
 			"title": "HUD MODULES",
 			"root_icon": "res://assets/sprites/ui/common/stats/StatRessources.png",
-			"height": 380.0,
+			"height": 210.0,
 			"children": [
 				{"id": "UnlockXP", "title": "XP", "description": "Show level progress at the bottom centre.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockXP"], "action": Callable(self, "_on_unlock_xp_pressed")},
 				{"id": "UnlockWaveTimer", "title": "Waves", "description": "Show the next-wave countdown.", "cost": 10, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockWaveTimer"], "action": Callable(self, "_on_unlock_wave_timer_pressed")},
@@ -429,7 +495,7 @@ func _upgrade_graph_definition() -> Array:
 		{
 			"title": "EXPLORATION",
 			"root_icon": UPGRADE_ICON_PATHS["UnlockMinimap"],
-			"height": 138.0,
+			"height": 90.0,
 			"children": [
 				{"id": "UnlockMinimap", "title": "Minimap", "description": "Reveal the explored mine layout.", "cost": 20, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UnlockMinimap"], "action": Callable(self, "_on_unlock_minimap_pressed"), "children": [
 					{"id": "UpgradeMinimap", "title": "Enemies", "description": "Add enemy positions to the minimap.", "cost": 50, "currency": "gold", "icon": UPGRADE_ICON_PATHS["UpgradeMinimap"], "action": Callable(self, "_on_upgrade_minimap_pressed")}
@@ -438,14 +504,9 @@ func _upgrade_graph_definition() -> Array:
 		},
 		{
 			"title": "FACTION",
-			"root_icon": "res://rail_item_placeholder.png",
-			"height": 138.0,
-			"children": [
-				{"id": "BuyRail", "title": "Rail", "description": "Place another rail segment.", "cost": 10, "currency": "gold", "icon": "res://rail_item_placeholder.png", "action": Callable(self, "_on_buy_rail_pressed"), "children": [
-					{"id": "BuyMinecart", "title": "Minecart", "description": "Create a minecart for the rail network.", "cost": 50, "currency": "gold", "icon": "res://character_sprites/minecart_spritesheet_25d.png", "action": Callable(self, "_on_buy_minecart_pressed")}
-				]},
-				{"id": "BuyPeon", "title": "Peon", "description": "Recruit a Shaman worker.", "cost": 30, "currency": "gold", "icon": "res://character_sprites/shaman_walk_spritesheet_25d.png", "action": Callable(self, "_on_buy_peon_pressed")}
-			]
+			"root_icon": faction_icon,
+			"height": 90.0,
+			"children": faction_children
 		}
 	]
 
@@ -518,7 +579,7 @@ func _load_upgrade_icon_texture(icon_path: String) -> Texture2D:
 
 func _create_parallel_tree_root(branch_title: String, root_title: String, pos: Vector2, icon_path: String) -> void:
 	_create_tree_branch_label(branch_title, Vector2(pos.x - 8.0, pos.y - 24.0), 124)
-	var root := PanelContainer.new()
+	var root := Panel.new()
 	root.name = "%sRoot" % branch_title.replace(" ", "")
 	root.position = pos
 	root.size = UPGRADE_TREE_ROOT_SIZE
@@ -528,7 +589,7 @@ func _create_parallel_tree_root(branch_title: String, root_title: String, pos: V
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(content)
 	var icon := TextureRect.new()
-	icon.position = Vector2(9, 9)
+	icon.position = Vector2(5, 5)
 	icon.size = Vector2(54, 54)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -557,7 +618,6 @@ func _build_upgrade_tree_stat_bar() -> void:
 	_create_upgrade_tree_node("UpgradeStrength", "STR +1", "Always 1 gem in MineWars. More damage, hard-rock force, and free carrying thresholds.", 1, "gems", "res://assets/sprites/ui/common/stats/Strenght.png", Vector2.ZERO, Callable(self, "_on_upgrade_strength_pressed"), upgrade_tree_stat_bar)
 	_create_upgrade_tree_node("UpgradeAgility", "AGI +1", "Always 1 gem in MineWars. Faster attacks, movement, and mining cadence.", 1, "gems", "res://assets/sprites/ui/common/stats/Agility.png", Vector2.ZERO, Callable(self, "_on_upgrade_agility_pressed"), upgrade_tree_stat_bar)
 	_create_upgrade_tree_node("UpgradeIntelligence", "INT +1", "Always 1 gem in MineWars. Stronger abilities, summons, and magical mining utility.", 1, "gems", "res://assets/sprites/ui/common/stats/Int.png", Vector2.ZERO, Callable(self, "_on_upgrade_intelligence_pressed"), upgrade_tree_stat_bar)
-	_create_upgrade_tree_node("UpgradePickPower", "Pick Power", "Each rank sharply reduces dense-stone and ancient-wall resistance.", 2, "gems", "res://assets/sprites/world/terrain/bricks/Hard_Brick.png", Vector2.ZERO, Callable(self, "_on_upgrade_pick_power_pressed"), upgrade_tree_stat_bar)
 
 func _create_horizontal_upgrade_row(row_title: String, row_y: float, entries: Array) -> void:
 	_create_tree_branch_label(row_title, Vector2(12, row_y + 26.0), 132)
@@ -628,7 +688,6 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 		button.size = UPGRADE_TREE_NODE_SIZE
 	else:
 		button.custom_minimum_size = UPGRADE_TREE_NODE_SIZE
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_ALL
 	button.tooltip_text = description
 	button.text = ""
@@ -755,11 +814,11 @@ func _refresh_upgrade_tree_cards() -> void:
 		var button := upgrade_tree_buttons[id] as Button
 		var cost := int(upgrade_tree_costs.get(id, 0))
 		if id == "UpgradeStrength" and player:
-			cost = get_upgrade_cost(player.strength)
+			cost = get_upgrade_cost(player.strength, "strength")
 		elif id == "UpgradeAgility" and player:
-			cost = get_upgrade_cost(player.agility)
+			cost = get_upgrade_cost(player.agility, "agility")
 		elif id == "UpgradeIntelligence" and player:
-			cost = get_upgrade_cost(player.intelligence)
+			cost = get_upgrade_cost(player.intelligence, "intelligence")
 		elif id == "UpgradePickPower" and player:
 			cost = get_pick_power_cost()
 		var competitive_hero_upgrade := id == "HealPlayer" or id == "UpgradeMaxHealth"
@@ -796,13 +855,9 @@ func _refresh_upgrade_tree_cards() -> void:
 			dependency_locked = not base_health_unlocked
 		if _is_vs_mode() and competitive_hero_upgrade:
 			dependency_locked = false
-		var mode_hidden := id == "UnlockWaveTimer" and _is_vs_mode()
-		if _is_vs_mode():
-			var allowed_vs_upgrade := id == "UpgradeStrength" or id == "UpgradeAgility" or id == "UpgradeIntelligence" or id == "UpgradePickPower" or competitive_hero_upgrade
-			mode_hidden = not allowed_vs_upgrade
 		var faction_hidden := (id == "BuyRail" or id == "BuyMinecart") and hero_name != "Dwarf"
 		faction_hidden = faction_hidden or (id == "BuyPeon" and hero_name != "Shaman")
-		button.visible = not mode_hidden and not faction_hidden
+		button.visible = not faction_hidden
 		button.disabled = owned or dependency_locked or future_locked
 		var cost_label := button.get_node_or_null("Cost") as Label
 		var state_label := button.get_node_or_null("State") as Label
@@ -867,11 +922,11 @@ func _focus_first_upgrade_tree_node() -> void:
 	var preferred_ids: Array[String] = []
 	if hud and player:
 		var available_gems: int = int(hud.total_gems)
-		if available_gems >= get_upgrade_cost(int(player.strength)):
+		if available_gems >= get_upgrade_cost(int(player.strength), "strength"):
 			preferred_ids.append("UpgradeStrength")
-		if available_gems >= get_upgrade_cost(int(player.agility)):
+		if available_gems >= get_upgrade_cost(int(player.agility), "agility"):
 			preferred_ids.append("UpgradeAgility")
-		if available_gems >= get_upgrade_cost(int(player.intelligence)):
+		if available_gems >= get_upgrade_cost(int(player.intelligence), "intelligence"):
 			preferred_ids.append("UpgradeIntelligence")
 		if int(player.get("mining_power_level")) < 3 and available_gems >= get_pick_power_cost():
 			preferred_ids.append("UpgradePickPower")
@@ -917,9 +972,8 @@ func _get_stat_upgrade_color(stat_name: String) -> Color:
 			return Color(1.0, 0.66, 0.22, 1.0)
 	return Color(1.0, 0.9, 0.25, 1.0)
 
-func _play_stat_upgrade_effect(stat_name: String, source_button: Control = null) -> void:
+func _play_stat_upgrade_effect(stat_name: String) -> void:
 	var color = _get_stat_upgrade_color(stat_name)
-	_pulse_upgrade_button(source_button)
 	_pulse_player_sprite(color)
 	_spawn_stat_upgrade_particles(color)
 	_spawn_stat_upgrade_ring(color)
@@ -928,7 +982,9 @@ func _play_stat_upgrade_effect(stat_name: String, source_button: Control = null)
 func _pulse_upgrade_button(source_button: Control) -> void:
 	if source_button == null or not is_instance_valid(source_button):
 		return
-	var original_scale = source_button.scale
+	if not source_button.has_meta("base_scale"):
+		source_button.set_meta("base_scale", source_button.scale)
+	var original_scale: Vector2 = source_button.get_meta("base_scale")
 	source_button.pivot_offset = source_button.size * 0.5
 	source_button.scale = original_scale * 1.14
 	var tween = create_tween()
@@ -942,8 +998,12 @@ func _pulse_player_sprite(color: Color) -> void:
 	var sprite = player.get_node_or_null("Sprite2D")
 	if sprite == null:
 		return
-	var original_scale = sprite.scale
-	var original_modulate = sprite.modulate
+	if not sprite.has_meta("base_scale"):
+		sprite.set_meta("base_scale", sprite.scale)
+	if not sprite.has_meta("base_modulate"):
+		sprite.set_meta("base_modulate", sprite.modulate)
+	var original_scale: Vector2 = sprite.get_meta("base_scale")
+	var original_modulate: Color = sprite.get_meta("base_modulate")
 	sprite.scale = original_scale * 1.28
 	sprite.modulate = color
 	var tween = create_tween()
@@ -1368,32 +1428,32 @@ func _notify_tutorial_upgrade_purchased() -> void:
 		world.notify_tutorial_upgrade_purchased()
 
 func _on_upgrade_strength_pressed():
-	var cost = get_upgrade_cost(player.strength)
+	var cost = get_upgrade_cost(player.strength, "strength")
 	if hud.total_gems >= cost:
 		hud.add_gems(-cost)
 		player.upgrade_strength()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
-		_play_stat_upgrade_effect("Strength", $Panel/UpgradeStrength)
+		_play_stat_upgrade_effect("Strength")
 		update_button_texts()
 		_notify_tutorial_upgrade_purchased()
 
 func _on_upgrade_agility_pressed():
-	var cost = get_upgrade_cost(player.agility)
+	var cost = get_upgrade_cost(player.agility, "agility")
 	if hud.total_gems >= cost:
 		hud.add_gems(-cost)
 		player.upgrade_agility()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
-		_play_stat_upgrade_effect("Agility", $Panel/UpgradeAgility)
+		_play_stat_upgrade_effect("Agility")
 		update_button_texts()
 		_notify_tutorial_upgrade_purchased()
 
 func _on_upgrade_intelligence_pressed():
-	var cost = get_upgrade_cost(player.intelligence)
+	var cost = get_upgrade_cost(player.intelligence, "intelligence")
 	if hud.total_gems >= cost:
 		hud.add_gems(-cost)
 		player.upgrade_intelligence()
 		hud.update_stats(player.strength, player.agility, player.intelligence)
-		_play_stat_upgrade_effect("Intelligence", $Panel/UpgradeIntelligence)
+		_play_stat_upgrade_effect("Intelligence")
 		update_button_texts()
 		_notify_tutorial_upgrade_purchased()
 
@@ -1405,7 +1465,7 @@ func _on_upgrade_pick_power_pressed() -> void:
 		return
 	hud.add_gems(-cost)
 	player.upgrade_mining_power()
-	_play_stat_upgrade_effect("Pick Power", upgrade_tree_buttons.get("UpgradePickPower") as Control)
+	_play_stat_upgrade_effect("Pick Power")
 	_notify_tutorial_upgrade_purchased()
 
 func _on_upgrade_spikes_pressed():

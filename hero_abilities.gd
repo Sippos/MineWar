@@ -5,6 +5,7 @@ const HERO_SHAMAN := "Shaman"
 const HERO_NERUBIAN := "Nerubian"
 const HERO_DRUID := "Druid"
 const HERO_UNDEAD_KING := "Undead King"
+const HERO_MECH := "Mech"
 
 const SHAMAN_TOTEM_SCENE = preload("res://shaman_totem.tscn")
 const SPIDER_MINION_SCENE = preload("res://spider_minion.tscn")
@@ -37,7 +38,21 @@ const ICON_PATHS := {
 	"raise_dead": "res://ability_icons/generated/UndeadKing_RaiseDead.png",
 	"grave_might": "res://ability_icons/generated/UndeadKing_GraveMight.png",
 	"soul_harvest": "res://ability_icons/generated/UndeadKing_SoulHarvest.png",
-	"death_march": "res://ability_icons/generated/UndeadKing_DeathMarch.png"
+	"death_march": "res://ability_icons/generated/UndeadKing_DeathMarch.png",
+	"scrap_rockets": "res://ability_icons/generated/Mech_ScrapRockets.png",
+	"drill_charge": "res://ability_icons/generated/Mech_DrillCharge.png",
+	"reinforced_plating": "res://ability_icons/generated/Mech_ReinforcedPlating.png",
+	"siege_overdrive": "res://ability_icons/generated/Mech_SiegeOverdrive.png"
+}
+
+# The Mech is the last hero to join the roster and its final art is not painted
+# yet. These stand-ins keep every HUD slot and upgrade card readable until the
+# generated Mech_*.png icons above exist.
+const ICON_FALLBACK_PATHS := {
+	"scrap_rockets": "res://ability_icons/placeholder_hammer.svg",
+	"drill_charge": "res://ability_icons/placeholder_stomp.svg",
+	"reinforced_plating": "res://ability_icons/placeholder_carapace.svg",
+	"siege_overdrive": "res://ability_icons/placeholder_avatar.svg"
 }
 
 const STOMP_KNOWN_PATHS := [
@@ -122,6 +137,20 @@ var soul_harvest_level := 0
 var death_march_level := 0
 var death_march_cooldown := 0.0
 
+var rocket_level := 0
+var drill_level := 0
+var plating_level := 0
+var overdrive_level := 0
+var rocket_cooldown := 0.0
+var drill_cooldown := 0.0
+var overdrive_cooldown := 0.0
+var overdrive_duration := 0.0
+var overdrive_active := false
+var overdrive_strength_bonus := 0
+var overdrive_speed_bonus := 0.0
+var overdrive_aura: CPUParticles2D
+var plating_repair_tick := 0.0
+
 var facing_direction := Vector2.DOWN
 var ability_bar: HBoxContainer
 var ability_slots := {}
@@ -178,6 +207,8 @@ func _physics_process(delta: float) -> void:
 			_process_druid()
 		HERO_UNDEAD_KING:
 			_process_undead_king()
+		HERO_MECH:
+			_process_mech(delta)
 	_update_ability_hud()
 
 func _hero_name() -> String:
@@ -262,6 +293,9 @@ func _initialize_starting_skill() -> void:
 		HERO_UNDEAD_KING:
 			if undead_summon_level <= 0:
 				undead_summon_level = 1
+		HERO_MECH:
+			if rocket_level <= 0:
+				rocket_level = 1
 
 func _uses_single_player_starter_choice() -> bool:
 	if _player_id() != 1 or world == null or world.get_parent() == null:
@@ -304,6 +338,8 @@ func _has_any_learned_basic_ability() -> bool:
 			return mole_level > 0 or tunnel_level > 0 or deep_roots_level > 0
 		HERO_UNDEAD_KING:
 			return undead_summon_level > 0 or grave_might_level > 0 or soul_harvest_level > 0
+		HERO_MECH:
+			return rocket_level > 0 or drill_level > 0 or plating_level > 0
 	return true
 
 func _ability_is_learned(ability_id: String) -> bool:
@@ -328,15 +364,20 @@ func _ability_is_learned(ability_id: String) -> bool:
 		"grave_might": return grave_might_level > 0
 		"soul_harvest": return soul_harvest_level > 0
 		"death_march": return death_march_level > 0
+		"scrap_rockets": return rocket_level > 0
+		"drill_charge": return drill_level > 0
+		"reinforced_plating": return plating_level > 0
+		"siege_overdrive": return overdrive_level > 0
 	return false
 
 func _learned_ability_signature() -> String:
-	return "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [
+	return "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [
 		_hero_name(), int(player.get("stomp_level")), hammer_level, bash_level, avatar_level,
 		totem_level, chain_level, wisdom_level, ascendance_level,
 		brood_level, web_level, carapace_level, broodmother_level,
 		mole_level, tunnel_level, deep_roots_level, worldroot_level,
-		undead_summon_level, grave_might_level, soul_harvest_level + death_march_level
+		undead_summon_level, grave_might_level, soul_harvest_level + death_march_level,
+		rocket_level, drill_level, plating_level, overdrive_level
 	]
 
 func _tick_cooldowns(delta: float) -> void:
@@ -353,6 +394,13 @@ func _tick_cooldowns(delta: float) -> void:
 	worldroot_cooldown = max(0.0, worldroot_cooldown - delta)
 	undead_summon_cooldown = max(0.0, undead_summon_cooldown - delta)
 	death_march_cooldown = max(0.0, death_march_cooldown - delta)
+	rocket_cooldown = max(0.0, rocket_cooldown - delta)
+	drill_cooldown = max(0.0, drill_cooldown - delta)
+	overdrive_cooldown = max(0.0, overdrive_cooldown - delta)
+	if overdrive_active:
+		overdrive_duration = max(0.0, overdrive_duration - delta)
+		if overdrive_duration <= 0.0:
+			_end_overdrive()
 	if mole_active:
 		mole_duration = max(0.0, mole_duration - delta)
 		if mole_duration <= 0.0:
@@ -548,6 +596,32 @@ func _track_stomp_cast() -> void:
 		var stomp_rank := int(player.get("stomp_level"))
 		var base_radius := 100.0 + stomp_rank * 20.0
 		var radius := base_radius + (55.0 if avatar_active else 0.0)
+		
+		var camera = player.get_node_or_null("Camera2D")
+		if camera != null:
+			var rest = camera.offset
+			var shake = create_tween()
+			shake.tween_property(camera, "offset", rest + Vector2(6, -6), 0.05)
+			shake.tween_property(camera, "offset", rest + Vector2(-4, 4), 0.05)
+			shake.tween_property(camera, "offset", rest, 0.08)
+		
+		if world != null and is_instance_valid(world):
+			var ring := Line2D.new()
+			ring.default_color = Color(0.6, 0.4, 0.2, 0.8)
+			ring.width = 12.0
+			var points := PackedVector2Array()
+			for i in range(33):
+				points.append(Vector2.RIGHT.rotated(TAU * float(i) / 32.0) * radius)
+			ring.points = points
+			ring.global_position = player.global_position
+			ring.z_index = 20
+			world.add_child(ring)
+			var ring_tween = create_tween().set_parallel(true)
+			ring.scale = Vector2(0.3, 0.3)
+			ring_tween.tween_property(ring, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			ring_tween.tween_property(ring, "modulate:a", 0.0, 0.4)
+			ring_tween.chain().tween_callback(ring.queue_free)
+			
 		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if not is_instance_valid(enemy):
 				continue
@@ -982,6 +1056,173 @@ func _owned_undead_minions() -> Array:
 			result.append(minion)
 	return result
 
+func _process_mech(delta: float) -> void:
+	if Input.is_action_just_pressed(_action("stomp")):
+		_try_scrap_rockets()
+	if Input.is_action_just_pressed(_action("secondary")):
+		_try_drill_charge()
+	if Input.is_action_just_pressed(_action("ultimate")):
+		_try_siege_overdrive()
+	_process_reinforced_plating(delta)
+	if overdrive_active:
+		_apply_overdrive_visuals()
+
+func _rocket_max_cooldown() -> float:
+	return _rpg_cooldown(max(3.0, 7.5 - rocket_level * 0.9) * (0.6 if overdrive_active else 1.0))
+
+func _try_scrap_rockets() -> void:
+	if rocket_level <= 0:
+		_show_notice("Learn Scrap Rockets at the next level up")
+		return
+	if rocket_cooldown > 0.0:
+		_show_notice("Rockets ready in %.1fs" % rocket_cooldown, 0.8)
+		return
+	rocket_cooldown = _rocket_max_cooldown()
+	var direction := _cardinal_direction()
+	var impact := player.global_position + direction * (96.0 + rocket_level * 18.0)
+	var radius := 86.0 + rocket_level * 16.0
+	var damage_value: int = _rpg_physical_damage(45 + rocket_level * 40 + int(player.get("strength")) * 12)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy):
+			continue
+		if impact.distance_to(enemy.global_position) > radius:
+			continue
+		if enemy.has_method("take_damage"):
+			enemy.take_damage(damage_value)
+		_apply_enemy_stun(enemy, 0.3 + rocket_level * 0.12, impact.direction_to(enemy.global_position) * 140.0)
+	_spawn_burst(impact, Color(1.0, 0.58, 0.18, 0.95), 34)
+	_show_notice("Scrap Rockets!")
+
+func _drill_max_cooldown() -> float:
+	return _rpg_cooldown(max(4.0, 9.0 - drill_level * 1.0) * (0.6 if overdrive_active else 1.0))
+
+func _try_drill_charge() -> void:
+	if drill_level <= 0:
+		_show_notice("Learn Drill Charge at the next level up")
+		return
+	if drill_cooldown > 0.0:
+		_show_notice("Drill Charge ready in %.1fs" % drill_cooldown, 0.8)
+		return
+	drill_cooldown = _drill_max_cooldown()
+	var direction := _cardinal_direction()
+	var range_value := 150.0 + drill_level * 40.0
+	var origin := player.global_position + Vector2(0, -18)
+	var damage_value: int = _rpg_physical_damage(55 + drill_level * 45 + int(player.get("strength")) * 14)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy):
+			continue
+		var to_enemy: Vector2 = enemy.global_position + Vector2(0, 8) - origin
+		var forward_distance := to_enemy.dot(direction)
+		if forward_distance < 0.0 or forward_distance > range_value or abs(to_enemy.cross(direction)) > 36.0:
+			continue
+		if enemy.has_method("take_damage"):
+			enemy.take_damage(damage_value)
+		_apply_enemy_stun(enemy, 0.5 + drill_level * 0.15, direction * (170.0 + drill_level * 25.0))
+	_drill_through_tiles(direction)
+	_spawn_burst(origin + direction * 48.0, Color(0.72, 0.78, 0.9, 0.95), 26)
+	_show_notice("Drill Charge!")
+
+func _drill_through_tiles(direction: Vector2) -> void:
+	if tile_map == null:
+		return
+	var origin_cell := tile_map.local_to_map(tile_map.to_local(player.global_position))
+	var step := Vector2i(int(direction.x), int(direction.y))
+	var tiles_to_break := drill_level + 1 + (2 if overdrive_active else 0)
+	var broken := 0
+	for distance in range(1, tiles_to_break + 5):
+		var cell := origin_cell + step * distance
+		var source_id := tile_map.get_cell_source_id(cell)
+		if source_id == -1:
+			continue
+		if _is_protected_tile(cell, source_id):
+			break
+		if _break_soft_tile(cell):
+			broken += 1
+		if broken >= tiles_to_break:
+			break
+
+func _process_reinforced_plating(delta: float) -> void:
+	if plating_level <= 0:
+		return
+	plating_repair_tick -= delta
+	if plating_repair_tick > 0.0:
+		return
+	plating_repair_tick = 1.5
+	var max_health := int(player.get("max_health"))
+	var health := int(player.get("health"))
+	if health >= max_health:
+		return
+	player.set("health", min(max_health, health + plating_level))
+	_refresh_stats_hud()
+
+func _try_siege_overdrive() -> void:
+	if overdrive_level <= 0 or int(player.get("level")) < ULTIMATE_REQUIRED_LEVEL:
+		_show_notice("Siege Overdrive unlocks at hero level 6")
+		return
+	if overdrive_cooldown > 0.0:
+		_show_notice("Overdrive ready in %.1fs" % overdrive_cooldown, 0.8)
+		return
+	if overdrive_active:
+		return
+	overdrive_active = true
+	overdrive_duration = _rpg_duration(11.0)
+	overdrive_cooldown = _rpg_cooldown(58.0)
+	overdrive_strength_bonus = max(2, int(ceil(int(player.get("strength")) * 0.45)))
+	overdrive_speed_bonus = 40.0
+	player.set("strength", int(player.get("strength")) + overdrive_strength_bonus)
+	player.set("base_speed", float(player.get("base_speed")) + overdrive_speed_bonus)
+	rocket_cooldown = 0.0
+	drill_cooldown = 0.0
+	_spawn_overdrive_aura()
+	_refresh_stats_hud()
+	_show_notice("SIEGE OVERDRIVE!")
+
+func _end_overdrive() -> void:
+	if not overdrive_active:
+		return
+	overdrive_active = false
+	player.set("strength", max(1, int(player.get("strength")) - overdrive_strength_bonus))
+	player.set("base_speed", max(1.0, float(player.get("base_speed")) - overdrive_speed_bonus))
+	overdrive_strength_bonus = 0
+	overdrive_speed_bonus = 0.0
+	if is_instance_valid(overdrive_aura):
+		overdrive_aura.queue_free()
+	overdrive_aura = null
+	var sprite := player.get_node_or_null("Sprite2D")
+	if sprite:
+		sprite.modulate = Color.WHITE
+		var normal_scale = player.get("current_sprite_scale")
+		if normal_scale is Vector2:
+			sprite.scale = normal_scale
+	_refresh_stats_hud()
+
+func _apply_overdrive_visuals() -> void:
+	var sprite := player.get_node_or_null("Sprite2D")
+	if sprite:
+		var normal_scale = player.get("current_sprite_scale")
+		if normal_scale is Vector2:
+			sprite.scale = normal_scale * 1.12
+		sprite.modulate = Color(1.2, 0.86, 0.6, 1.0)
+
+func _spawn_overdrive_aura() -> void:
+	overdrive_aura = CPUParticles2D.new()
+	overdrive_aura.amount = 30
+	overdrive_aura.lifetime = 0.7
+	overdrive_aura.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	overdrive_aura.emission_sphere_radius = 24.0
+	overdrive_aura.direction = Vector2(0, -1)
+	overdrive_aura.spread = 160.0
+	overdrive_aura.gravity = Vector2(0, -30)
+	overdrive_aura.initial_velocity_min = 14.0
+	overdrive_aura.initial_velocity_max = 52.0
+	overdrive_aura.scale_amount_min = 1.2
+	overdrive_aura.scale_amount_max = 3.4
+	overdrive_aura.color = Color(1.0, 0.5, 0.14, 0.7)
+	overdrive_aura.position = Vector2(0, -20)
+	overdrive_aura.z_index = 12
+	player.add_child(overdrive_aura)
+	overdrive_aura.emitting = true
+
 func _process_nerubian(delta: float) -> void:
 	if Input.is_action_just_pressed(_action("stomp")):
 		_try_spawn_brood(false)
@@ -1176,7 +1417,7 @@ func _break_soft_tile(cell: Vector2i) -> bool:
 	tile_map.erase_cell(cell)
 	if damage_layer:
 		damage_layer.erase_cell(cell)
-	var below_cell := Vector2i(cell.x, cell.y + 1)
+	var below_cell: Vector2i = Vector2i(cell.x, cell.y + 1)
 	if front_damage_layer:
 		front_damage_layer.erase_cell(below_cell)
 	var cell_had_gem := false
@@ -1242,6 +1483,8 @@ func _cancel_temporary_forms() -> void:
 		_end_broodmother()
 	if mole_active:
 		_end_mole_form()
+	if overdrive_active:
+		_end_overdrive()
 
 func get_level_up_options() -> Array:
 	if starter_choice_open:
@@ -1283,6 +1526,13 @@ func get_level_up_options() -> Array:
 				_option("soul_harvest", "Soul Harvest", "Minion damage heals their king", soul_harvest_level, MAX_BASIC_LEVEL, 0),
 				_option("death_march", "Death March", "Raise reinforcements and empower the entire army", death_march_level, 1, ULTIMATE_REQUIRED_LEVEL)
 			]
+		HERO_MECH:
+			options = [
+				_option("scrap_rockets", "Scrap Rockets", "Launch an explosive salvo that knocks enemies back", rocket_level, MAX_BASIC_LEVEL, 0),
+				_option("drill_charge", "Drill Charge", "Gore a line of enemies and bore through soft rock", drill_level, MAX_BASIC_LEVEL, 0),
+				_option("reinforced_plating", "Reinforced Plating", "Bolt on hull plates that repair themselves over time", plating_level, MAX_BASIC_LEVEL, 0),
+				_option("siege_overdrive", "Siege Overdrive", "Vent the boilers for raw power, speed, and fast reloads", overdrive_level, 1, ULTIMATE_REQUIRED_LEVEL)
+			]
 	return options
 
 func _starter_options() -> Array:
@@ -1316,6 +1566,12 @@ func _starter_options() -> Array:
 				_option("raise_dead", "Raise Dead", "Summon an undead miner", undead_summon_level, MAX_BASIC_LEVEL, 0),
 				_option("grave_might", "Grave Might", "Empower the undead host", grave_might_level, MAX_BASIC_LEVEL, 0),
 				_option("soul_harvest", "Soul Harvest", "Minion damage heals the king", soul_harvest_level, MAX_BASIC_LEVEL, 0),
+			]
+		HERO_MECH:
+			return [
+				_option("scrap_rockets", "Scrap Rockets", "Fire an explosive salvo", rocket_level, MAX_BASIC_LEVEL, 0),
+				_option("drill_charge", "Drill Charge", "Bore through enemies and rock", drill_level, MAX_BASIC_LEVEL, 0),
+				_option("reinforced_plating", "Reinforced Plating", "Self-repairing hull plates", plating_level, MAX_BASIC_LEVEL, 0),
 			]
 	return []
 
@@ -1395,6 +1651,18 @@ func _on_upgrade_selected(upgrade_type: String) -> void:
 		"death_march":
 			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
 				death_march_level = 1
+		"scrap_rockets":
+			rocket_level = min(MAX_BASIC_LEVEL, rocket_level + 1)
+		"drill_charge":
+			drill_level = min(MAX_BASIC_LEVEL, drill_level + 1)
+		"reinforced_plating":
+			if plating_level < MAX_BASIC_LEVEL:
+				plating_level += 1
+				player.set("max_health", int(player.get("max_health")) + 14)
+				player.set("health", int(player.get("health")) + 14)
+		"siege_overdrive":
+			if int(player.get("level")) >= ULTIMATE_REQUIRED_LEVEL:
+				overdrive_level = 1
 	starter_choice_open = false
 	_refresh_stats_hud()
 	_rebuild_hud()
@@ -1480,6 +1748,13 @@ func _rebuild_hud() -> void:
 				["soul_harvest", "Soul Harvest", "PASSIVE"],
 				["death_march", "Death March", "T / LB"]
 			]
+		HERO_MECH:
+			definitions = [
+				["scrap_rockets", "Scrap Rockets", "R / X"],
+				["drill_charge", "Drill Charge", "F / RB"],
+				["reinforced_plating", "Reinforced Plating", "PASSIVE"],
+				["siege_overdrive", "Siege Overdrive", "T / LB"]
+			]
 	var mobile_runtime := _is_mobile_runtime()
 	var learned_definitions := []
 	for definition in definitions:
@@ -1495,11 +1770,11 @@ func _rebuild_hud() -> void:
 	_update_ability_hud()
 
 func _mobile_action_for_ability(ability: String) -> String:
-	if ability in ["stomp", "totem", "brood", "mole", "raise_dead"]:
+	if ability in ["stomp", "totem", "brood", "mole", "raise_dead", "scrap_rockets"]:
 		return _action("stomp")
-	if ability in ["hammer", "chain", "web", "tunnel"]:
+	if ability in ["hammer", "chain", "web", "tunnel", "drill_charge"]:
 		return _action("secondary")
-	if ability in ["avatar", "ascendance", "broodmother", "worldroot", "death_march"]:
+	if ability in ["avatar", "ascendance", "broodmother", "worldroot", "death_march", "siege_overdrive"]:
 		return _action("ultimate")
 	return ""
 
@@ -1621,6 +1896,11 @@ func _update_ability_hud() -> void:
 			_update_slot("grave_might", grave_might_level, 0.0, 1.0, "PASSIVE" if grave_might_level > 0 else "LOCKED")
 			_update_slot("soul_harvest", soul_harvest_level, 0.0, 1.0, "PASSIVE" if soul_harvest_level > 0 else "LOCKED")
 			_update_slot("death_march", death_march_level, death_march_cooldown, 60.0, "LVL 6" if death_march_level <= 0 else "")
+		HERO_MECH:
+			_update_slot("scrap_rockets", rocket_level, rocket_cooldown, _rocket_max_cooldown())
+			_update_slot("drill_charge", drill_level, drill_cooldown, _drill_max_cooldown())
+			_update_slot("reinforced_plating", plating_level, 0.0, 1.0, "PASSIVE" if plating_level > 0 else "LOCKED")
+			_update_slot("siege_overdrive", overdrive_level, overdrive_cooldown, 58.0, "LVL 6" if overdrive_level <= 0 else ("%.1f" % overdrive_duration if overdrive_active else ""), overdrive_active)
 
 func _update_slot(ability: String, level_value: int, cooldown: float, max_cooldown: float, override_text: String = "", active: bool = false) -> void:
 	var slot = ability_slots.get(ability)
@@ -1671,6 +1951,9 @@ func _icon_path(ability: String) -> String:
 		var scanned := _scan_for_texture_path("res://", "stomp", 0)
 		if scanned != "":
 			return scanned
+	var fallback_path := str(ICON_FALLBACK_PATHS.get(ability, ""))
+	if fallback_path != "" and ResourceLoader.exists(fallback_path):
+		return fallback_path
 	return configured_path
 
 func _scan_for_texture_path(directory_path: String, keyword: String, depth: int) -> String:

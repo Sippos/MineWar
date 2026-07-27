@@ -5,6 +5,7 @@ const HUB_HUD_SCENE := preload("res://scenes/ui/overlays/single_player_hub_hud.t
 const LINE_WARS_CONTROLLER_SCRIPT := preload("res://scripts/systems/continuous_line_wars_controller.gd")
 const STRONGHOLD_AMBIENCE_SCRIPT := preload("res://scripts/systems/stronghold_ambience_controller.gd")
 const STRONGHOLD_PRACTICE_GEM_SCRIPT := preload("res://scripts/systems/stronghold_practice_gem_controller.gd")
+const LEGACY_FORGE_SCRIPT := preload("res://scripts/systems/stronghold_legacy_forge.gd")
 
 const LINE_WARS_ENTRY_Y := -6
 const ROUTE_X_MIN := -1
@@ -32,6 +33,8 @@ var _committing := false
 var _last_locked_message := ""
 var first_run_guide_layer: CanvasLayer
 var first_run_route_marker: Node2D
+var line_wars_route_marker: Node2D
+var legacy_forge: Node2D
 
 func _ready() -> void:
 	world = get_node_or_null(world_path) as Node2D
@@ -90,7 +93,7 @@ func _ready() -> void:
 	var hub_subtitle := hub_hud.get_node("TopPanel/Margin/VBox/Subtitle") as Label
 	status_label = hub_hud.get_node("StatusPanel/Margin/Status") as Label
 	hub_title.text = "STRONGHOLD"
-	hub_subtitle.text = "One warm base  •  one expedition shaft"
+	hub_subtitle.text = "One warm base  •  two shafts" if world.is_top_tunnel_unlocked() else "One warm base  •  one expedition shaft"
 	var top_panel := hub_hud.get_node_or_null("TopPanel") as Control
 	if top_panel:
 		top_panel.visible = false
@@ -98,21 +101,54 @@ func _ready() -> void:
 	if status_panel:
 		status_panel.visible = false
 	_configure_progression_signs()
+	_create_legacy_forge()
 	_set_initial_status()
 	if Global.minewars_runs_completed == 0 and not Global.prototype_onboarding_completed:
 		_create_first_run_stronghold_cue()
 		_create_first_run_guide_panel()
+	if _has_line_wars_reward(pending_rewards):
+		_create_line_wars_route_cue()
 	if not pending_rewards.is_empty():
 		call_deferred("_play_unlock_ceremony", pending_rewards)
 
-func _create_first_run_stronghold_cue() -> void:
-	if world == null or block_layer == null or first_run_route_marker != null:
+## The first completed expedition announces the forge, so from then on the
+## stronghold has to actually contain one that spends Legacy Ore.
+func _create_legacy_forge() -> void:
+	if world == null or legacy_forge != null or not Global.is_legacy_workshop_unlocked():
 		return
-	first_run_route_marker = Node2D.new()
-	first_run_route_marker.name = "FirstRunMineWarsRoute"
-	first_run_route_marker.global_position = block_layer.to_global(block_layer.map_to_local(world.get_minewars_entrance()))
-	first_run_route_marker.z_index = 35
-	world.add_child(first_run_route_marker)
+	var forge := Node2D.new()
+	forge.name = "StrongholdLegacyForge"
+	forge.set_script(LEGACY_FORGE_SCRIPT)
+	world.add_child(forge)
+	legacy_forge = forge
+
+func _has_line_wars_reward(rewards: Array) -> bool:
+	for reward_value in rewards:
+		var reward: Dictionary = reward_value
+		if str(reward.get("tunnel", "")) == "line_wars":
+			return true
+	return false
+
+func _create_first_run_stronghold_cue() -> void:
+	if first_run_route_marker != null:
+		return
+	first_run_route_marker = _create_route_cue(world.get_minewars_entrance(), "FirstRunMineWarsRoute", true)
+
+## Freshly opened upper shaft — same beckoning cue as the first expedition, aimed up.
+func _create_line_wars_route_cue() -> void:
+	if line_wars_route_marker != null or not world.is_top_tunnel_unlocked():
+		return
+	line_wars_route_marker = _create_route_cue(world.get_top_tunnel_entrance(), "LineWarsRoute", false)
+
+func _create_route_cue(cell: Vector2i, marker_name: String, point_down: bool) -> Node2D:
+	if world == null or block_layer == null:
+		return null
+	var marker := Node2D.new()
+	marker.name = marker_name
+	marker.global_position = block_layer.to_global(block_layer.map_to_local(cell))
+	marker.z_index = 35
+	world.add_child(marker)
+	var facing := 1.0 if point_down else -1.0
 
 	var glow := Polygon2D.new()
 	var glow_points := PackedVector2Array()
@@ -120,7 +156,7 @@ func _create_first_run_stronghold_cue() -> void:
 		glow_points.append(Vector2.RIGHT.rotated(TAU * float(index) / 32.0) * 48.0)
 	glow.polygon = glow_points
 	glow.color = Color(0.18, 0.86, 1.0, 0.12)
-	first_run_route_marker.add_child(glow)
+	marker.add_child(glow)
 
 	for ring_index in range(2):
 		var ring := Line2D.new()
@@ -130,40 +166,41 @@ func _create_first_run_stronghold_cue() -> void:
 		for index in range(33):
 			ring_points.append(Vector2.RIGHT.rotated(TAU * float(index) / 32.0) * (34.0 + float(ring_index) * 13.0))
 		ring.points = ring_points
-		first_run_route_marker.add_child(ring)
+		marker.add_child(ring)
 
 	for chevron_index in range(3):
 		var chevron := Line2D.new()
 		chevron.width = 5.0
 		chevron.default_color = Color(0.48, 0.98, 1.0, 0.95 - float(chevron_index) * 0.18)
-		var y := -70.0 + float(chevron_index) * 22.0
-		chevron.points = PackedVector2Array([Vector2(-18, y), Vector2(0, y + 15), Vector2(18, y)])
-		first_run_route_marker.add_child(chevron)
+		var y := (-70.0 + float(chevron_index) * 22.0) * facing
+		chevron.points = PackedVector2Array([Vector2(-18, y), Vector2(0, y + 15.0 * facing), Vector2(18, y)])
+		marker.add_child(chevron)
 
 	var dust := CPUParticles2D.new()
 	dust.amount = 18
 	dust.lifetime = 1.7
 	dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	dust.emission_rect_extents = Vector2(34, 5)
-	dust.gravity = Vector2(0, -16)
+	dust.gravity = Vector2(0, -16.0 * facing)
 	dust.initial_velocity_min = 5.0
 	dust.initial_velocity_max = 18.0
 	dust.scale_amount_min = 1.2
 	dust.scale_amount_max = 3.2
 	dust.color = Color(0.42, 0.9, 1.0, 0.38)
-	dust.position = Vector2(0, 28)
+	dust.position = Vector2(0, 28.0 * facing)
 	dust.emitting = true
-	first_run_route_marker.add_child(dust)
+	marker.add_child(dust)
 
-	var pulse := create_tween().bind_node(first_run_route_marker).set_loops()
-	pulse.tween_property(first_run_route_marker, "scale", Vector2(1.11, 1.11), 0.62).set_trans(Tween.TRANS_SINE)
-	pulse.tween_property(first_run_route_marker, "scale", Vector2.ONE, 0.62).set_trans(Tween.TRANS_SINE)
+	var pulse := create_tween().bind_node(marker).set_loops()
+	pulse.tween_property(marker, "scale", Vector2(1.11, 1.11), 0.62).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(marker, "scale", Vector2.ONE, 0.62).set_trans(Tween.TRANS_SINE)
 	var glow_pulse := create_tween().bind_node(glow).set_loops()
 	glow_pulse.tween_property(glow, "modulate:a", 0.35, 0.8).set_trans(Tween.TRANS_SINE)
 	glow_pulse.tween_property(glow, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
 	var sound_fx := get_node_or_null("/root/SoundFX")
 	if sound_fx and sound_fx.has_method("play_mine_awaken"):
 		sound_fx.play_mine_awaken()
+	return marker
 
 func _create_first_run_guide_panel() -> void:
 	if first_run_guide_layer != null or hub_hud == null:
@@ -263,6 +300,12 @@ func _process(_delta: float) -> void:
 func _advanced_modes_unlocked() -> bool:
 	return Global.first_level_beaten
 
+## Sign/glow anchor for a tunnel cell, expressed in the mode-signs local space.
+func _tunnel_sign_position(cell: Vector2i) -> Vector2:
+	if signs == null or block_layer == null:
+		return Vector2.ZERO
+	return signs.to_local(block_layer.to_global(block_layer.map_to_local(cell)))
+
 func _configure_progression_signs() -> void:
 	if signs == null:
 		return
@@ -271,12 +314,19 @@ func _configure_progression_signs() -> void:
 	var adventure := signs.get_node_or_null("Adventure") as Label
 	var top_glow := signs.get_node_or_null("TopDoorGlow") as CanvasItem
 	var right_glow := signs.get_node_or_null("RightDoorGlow") as CanvasItem
+	var top_tunnel_open: bool = world.is_top_tunnel_unlocked()
+	var top_tunnel_pos := _tunnel_sign_position(world.get_top_tunnel_entrance())
 	if top_glow:
-		top_glow.visible = false
+		top_glow.visible = top_tunnel_open
+		if top_tunnel_open and top_glow is Node2D:
+			(top_glow as Node2D).position = top_tunnel_pos
 	if right_glow:
 		right_glow.visible = false
 	if line_wars:
-		line_wars.visible = false
+		line_wars.visible = top_tunnel_open
+		line_wars.text = "LINEWARS\nUPPER SHAFT"
+		line_wars.size = Vector2(220, 54)
+		line_wars.position = top_tunnel_pos + Vector2(-110, -118)
 	if adventure:
 		adventure.visible = false
 	if mine_wars:
@@ -290,6 +340,8 @@ func _configure_progression_signs() -> void:
 func _set_initial_status() -> void:
 	if Global.minewars_runs_completed == 0:
 		_set_status("The lower shaft is awake.")
+	elif world != null and world.is_top_tunnel_unlocked():
+		_set_status("Two shafts stand open — expedition below, LineWars above.")
 	elif _advanced_modes_unlocked():
 		_set_status("The stronghold is ready.")
 	else:
@@ -342,15 +394,22 @@ func _play_unlock_ceremony(rewards: Array) -> void:
 		banner.queue_free()
 	world.remove_meta("stronghold_pending_rewards")
 
+## World position a reward should draw the eye to: a hero shrine, the newly
+## opened upper shaft, or the hub centre when the reward has no anchor.
+func _unlock_reward_focus(reward: Dictionary) -> Vector2:
+	var hero_name := str(reward.get("hero", ""))
+	if not hero_name.is_empty() and world != null:
+		var shrine := world.get_node_or_null("PhysicalHeroShrines/" + hero_name.replace(" ", "") + "Shrine") as Node2D
+		if shrine != null:
+			return shrine.global_position
+	if str(reward.get("tunnel", "")) == "line_wars" and block_layer != null:
+		return block_layer.to_global(block_layer.map_to_local(world.get_top_tunnel_entrance()))
+	return Vector2.ZERO
+
 func _focus_unlock_target(reward: Dictionary) -> void:
 	if hub_camera == null or world == null:
 		return
-	var target_position := Vector2.ZERO
-	var hero_name := str(reward.get("hero", ""))
-	if not hero_name.is_empty():
-		var shrine := world.get_node_or_null("PhysicalHeroShrines/" + hero_name.replace(" ", "") + "Shrine") as Node2D
-		if shrine != null:
-			target_position = shrine.global_position
+	var target_position := _unlock_reward_focus(reward)
 	var home: Vector2 = world.get_hub_camera_pos()
 	var pan := create_tween().set_parallel(true)
 	pan.tween_property(hub_camera, "position", target_position if target_position != Vector2.ZERO else home, 0.42).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
@@ -369,12 +428,7 @@ func _return_unlock_camera_later(home: Vector2) -> void:
 func _play_unlock_world_burst(reward: Dictionary) -> void:
 	if world == null:
 		return
-	var origin := Vector2.ZERO
-	var hero_name := str(reward.get("hero", ""))
-	if not hero_name.is_empty():
-		var shrine := world.get_node_or_null("PhysicalHeroShrines/" + hero_name.replace(" ", "") + "Shrine") as Node2D
-		if shrine != null:
-			origin = shrine.global_position
+	var origin := _unlock_reward_focus(reward)
 	var burst := Node2D.new()
 	burst.name = "UnlockWorldBurst"
 	burst.global_position = origin
@@ -437,9 +491,24 @@ func _prepare_world_for_run(message: String) -> void:
 	if first_run_route_marker != null and is_instance_valid(first_run_route_marker):
 		first_run_route_marker.queue_free()
 	first_run_route_marker = null
+	if line_wars_route_marker != null and is_instance_valid(line_wars_route_marker):
+		line_wars_route_marker.queue_free()
+	line_wars_route_marker = null
 	if first_run_guide_layer != null and is_instance_valid(first_run_guide_layer):
 		first_run_guide_layer.queue_free()
 	first_run_guide_layer = null
+	# The forge is stronghold furniture, not run furniture. It lives on the world
+	# rather than on this controller, so leaving it behind would park five glowing
+	# pads and their labels on top of the expedition arena and the base.
+	if legacy_forge != null and is_instance_valid(legacy_forge):
+		legacy_forge.queue_free()
+	legacy_forge = null
+	if practice_gem_station != null and is_instance_valid(practice_gem_station):
+		practice_gem_station.queue_free()
+	practice_gem_station = null
+	if stronghold_ambience != null and is_instance_valid(stronghold_ambience):
+		stronghold_ambience.queue_free()
+	stronghold_ambience = null
 	world.remove_meta("single_player_hub_active")
 	world.begin_run_from_preparation()
 	if hub_camera and is_instance_valid(hub_camera):

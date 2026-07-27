@@ -62,36 +62,145 @@ const STAGE_MOTHERLODE_COUNTS := {
 	3: 6,
 	4: 8,
 }
-const STAGE_OBJECTIVES := {
-	1: {
-		"title": "RICH VEIN",
-		"description": "Break 2 crystals from the marked seam.",
-		"target": 2,
-		"reward": "2 secured gems",
-		"reward_id": "gems_2",
-	},
-	2: {
-		"title": "MINER'S SATCHEL",
-		"description": "Clear 3 crystals to recover the lost carrying harness.",
-		"target": 3,
-		"reward": "+1 free carry slot",
-		"reward_id": "satchel",
-	},
-	3: {
-		"title": "ANCIENT FORGE",
-		"description": "Crack 4 ancient crystals to reforge the pick.",
-		"target": 4,
-		"reward": "+1 Pick Power",
-		"reward_id": "pick_power",
-	},
-	4: {
-		"title": "HEART CACHE",
-		"description": "Strip 5 crystals before the final assault.",
-		"target": 5,
-		"reward": "3 boss-preparation gems",
-		"reward_id": "gems_3",
-	},
+# Every expedition used to run the identical four stages with the identical four
+# objectives, so run 12 played exactly like run 2. Each stage now draws its
+# objective from a pool and the run draws one world-wide modifier, which is what
+# turns "I beat it" into "one more run". Index 0 of every pool is the original
+# authored objective: the first expedition and the guided trial always draw it,
+# so onboarding stays word-for-word what it was.
+# Targets must stay within STAGE_MOTHERLODE_COUNTS for their stage.
+const STAGE_OBJECTIVE_POOLS := {
+	1: [
+		{
+			"title": "RICH VEIN",
+			"description": "Break 2 crystals from the marked seam.",
+			"target": 2,
+			"reward": "2 secured gems",
+			"reward_id": "gems_2",
+		},
+		{
+			"title": "SHALLOW CACHE",
+			"description": "Strip all 3 crystals from the marked seam.",
+			"target": 3,
+			"reward": "prospector's boots",
+			"reward_id": "boots",
+		},
+		{
+			"title": "FIRST CUT",
+			"description": "Break 2 crystals from the marked seam.",
+			"target": 2,
+			"reward": "3 secured gems",
+			"reward_id": "gems_3",
+		},
+	],
+	2: [
+		{
+			"title": "MINER'S SATCHEL",
+			"description": "Clear 3 crystals to recover the lost carrying harness.",
+			"target": 3,
+			"reward": "+1 free carry slot",
+			"reward_id": "satchel",
+		},
+		{
+			"title": "SHARPENED EDGE",
+			"description": "Clear 4 crystals to recover the lost pickaxe.",
+			"target": 4,
+			"reward": "faster mining",
+			"reward_id": "pickaxe",
+		},
+		{
+			"title": "DEEP POCKETS",
+			"description": "Clear 3 crystals from the deep vein.",
+			"target": 3,
+			"reward": "4 secured gems",
+			"reward_id": "gems_4",
+		},
+	],
+	3: [
+		{
+			"title": "ANCIENT FORGE",
+			"description": "Crack 4 ancient crystals to reforge the pick.",
+			"target": 4,
+			"reward": "+1 Pick Power",
+			"reward_id": "pick_power",
+		},
+		{
+			"title": "BURIED HOARD",
+			"description": "Crack 5 ancient crystals to open the hoard.",
+			"target": 5,
+			"reward": "5 secured gems",
+			"reward_id": "gems_5",
+		},
+		{
+			"title": "SUREFOOTED",
+			"description": "Crack 4 ancient crystals to free the buried boots.",
+			"target": 4,
+			"reward": "prospector's boots",
+			"reward_id": "boots",
+		},
+	],
+	4: [
+		{
+			"title": "HEART CACHE",
+			"description": "Strip 5 crystals before the final assault.",
+			"target": 5,
+			"reward": "3 boss-preparation gems",
+			"reward_id": "gems_3",
+		},
+		{
+			"title": "WAR PREPARATION",
+			"description": "Strip 6 crystals before the final assault.",
+			"target": 6,
+			"reward": "5 boss-preparation gems",
+			"reward_id": "gems_5",
+		},
+		{
+			"title": "LAST FORGE",
+			"description": "Strip 5 crystals to reforge the pick for the boss.",
+			"target": 5,
+			"reward": "+1 Pick Power",
+			"reward_id": "pick_power",
+		},
+	],
 }
+
+# Run-wide modifiers. Each one is two-sided so the draw is a plan change rather
+# than a difficulty roll: the harder ones pay Legacy Ore on the way out.
+const RUN_MODIFIERS := [
+	{
+		"id": "steady",
+		"title": "STEADY DIG",
+		"description": "No omens. The mine is quiet.",
+	},
+	{
+		"id": "rich_seam",
+		"title": "RICH SEAM",
+		"description": "The seams run rich, but the air is going bad — shorter dig windows, richer hauls.",
+		"mining_scale": 0.88,
+		"gem_bonus": 1,
+	},
+	{
+		"id": "unstable_ceiling",
+		"title": "UNSTABLE CEILING",
+		"description": "The rock is groaning. Dig fast and the Bastion pays for the risk.",
+		"mining_scale": 0.8,
+		"ore_bonus": 2,
+	},
+	{
+		"id": "horde_stirring",
+		"title": "THE HORDE STIRS",
+		"description": "Something has woken below — every assault comes a body heavier.",
+		"enemy_bonus": 1,
+		"ore_bonus": 2,
+	},
+	{
+		"id": "long_fuse",
+		"title": "LONG FUSE",
+		"description": "The breach is slow to open, but the seams give up nothing easily.",
+		"muster_scale": 1.35,
+		"target_bonus": 1,
+	},
+]
 const MOTHERLODE_PATTERN: Array[Vector2i] = [
 	Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN,
 	Vector2i(-1, 1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1),
@@ -132,6 +241,10 @@ var secondary_entrance_marker: Node2D
 var first_run_training_active := false
 var first_expedition_run := false
 var muster_arrival_announced := false
+# Per-run variance: one objective drawn per stage plus a single run-wide modifier.
+var run_objectives: Dictionary = {}
+var run_modifier: Dictionary = {}
+var run_seed: int = 0
 
 func _ready() -> void:
 	call_deferred("_activate")
@@ -165,11 +278,12 @@ func _activate() -> void:
 	if world.has_method("ensure_minewars_motherlodes"):
 		world.ensure_minewars_motherlodes()
 	world.current_wave_number = stage_number
-	world.enemies_per_wave = int(STAGE_ENEMY_COUNTS.get(stage_number, 3))
 	first_expedition_run = Global.minewars_runs_completed == 0
 	first_run_training_active = not Global.prototype_onboarding_completed
 	world.set_meta("minewars_first_expedition", first_expedition_run)
 	world.set_meta("minewars_training_active", first_run_training_active)
+	_roll_run_variance()
+	world.enemies_per_wave = _enemy_count_for(stage_number)
 	mining_timer = _mining_window_for(stage_number)
 	_set_phase_meta("mining")
 	_ensure_surface_lanes()
@@ -185,7 +299,65 @@ func _activate() -> void:
 		if first_run_training_active:
 			hud.show_notice("MINER'S TRIAL — the assault clock is paused. Complete the five guided steps first.", 5.2)
 		else:
-			hud.show_notice("EXPEDITION I — follow the marked Rich Vein, then return before the assault.", 5.0)
+			hud.show_notice("EXPEDITION I — follow the marked %s, then return before the assault." % _objective_title(), 5.0)
+	_queue_run_modifier_announcement()
+
+## One draw per expedition: an objective for each stage and a single run-wide
+## modifier. The first expedition and the guided trial always take the authored
+## opening so onboarding never changes under a new player.
+func _roll_run_variance() -> void:
+	run_objectives.clear()
+	var authored_only := first_expedition_run or first_run_training_active
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	run_seed = rng.seed
+	for stage in STAGE_OBJECTIVE_POOLS.keys():
+		var pool: Array = STAGE_OBJECTIVE_POOLS[stage]
+		var index := 0 if authored_only or pool.is_empty() else rng.randi_range(0, pool.size() - 1)
+		run_objectives[stage] = (pool[index] as Dictionary).duplicate(true)
+	var modifier_index := 0 if authored_only else rng.randi_range(0, RUN_MODIFIERS.size() - 1)
+	run_modifier = (RUN_MODIFIERS[modifier_index] as Dictionary).duplicate(true)
+	# The modifier's ore payout is staged now so the result screen still pays it
+	# out on a loss, when this controller is long gone.
+	Global.stage_run_ore_bonus(_modifier_int("ore_bonus"))
+	world.set_meta("minewars_run_modifier", str(run_modifier.get("id", "steady")))
+	world.set_meta("minewars_run_seed", run_seed)
+
+func _modifier_int(key: String, fallback: int = 0) -> int:
+	return int(run_modifier.get(key, fallback))
+
+func _modifier_float(key: String, fallback: float = 1.0) -> float:
+	return float(run_modifier.get(key, fallback))
+
+## The omen follows the expedition banner rather than fighting it for the same
+## notice slot.
+func _queue_run_modifier_announcement() -> void:
+	if run_modifier.is_empty() or str(run_modifier.get("id", "steady")) == "steady":
+		return
+	if not is_inside_tree():
+		return
+	await get_tree().create_timer(5.2).timeout
+	if not is_inside_tree():
+		return
+	_announce_run_modifier()
+
+## Announced once the expedition UI exists, so the player reads the omen before
+## the first dig window starts.
+func _announce_run_modifier() -> void:
+	if run_modifier.is_empty() or str(run_modifier.get("id", "steady")) == "steady":
+		return
+	if hud == null or not hud.has_method("show_notice"):
+		return
+	hud.show_notice("%s — %s" % [str(run_modifier.get("title", "")), str(run_modifier.get("description", ""))], 5.6)
+
+func _enemy_count_for(stage: int) -> int:
+	return maxi(1, int(STAGE_ENEMY_COUNTS.get(stage, 3)) + _modifier_int("enemy_bonus"))
+
+## The muster window is what really limits how deep a player dares go, so both
+## the run modifier and the permanent Safe Return rank widen it.
+func _muster_time_for(stage: int) -> float:
+	var window := float(STAGE_MUSTER_TIMES.get(stage, 8.0))
+	return maxf(3.0, window * _modifier_float("muster_scale") * Global.get_permanent_muster_scale())
 
 func _spawn_base_signal(signal_color: Color, pulse_count: int = 2, radius: float = 72.0) -> void:
 	if base == null or not is_instance_valid(base):
@@ -409,7 +581,7 @@ func _ensure_surface_lanes() -> void:
 func _start_assault() -> void:
 	phase = Phase.ATTACK
 	wave_spawning = true
-	assault_muster_timer = float(STAGE_MUSTER_TIMES.get(stage_number, 8.0))
+	assault_muster_timer = _muster_time_for(stage_number)
 	assault_spawn_started = false
 	muster_arrival_announced = false
 	world.set_meta("wave_spawning", true)
@@ -516,7 +688,7 @@ func _complete_assault() -> void:
 
 	stage_number += 1
 	world.current_wave_number = stage_number
-	world.enemies_per_wave = int(STAGE_ENEMY_COUNTS.get(stage_number, 1))
+	world.enemies_per_wave = _enemy_count_for(stage_number)
 	phase = Phase.RECOVERY
 	warning_stage = -1
 	recovery_player_reached_base = false
@@ -622,25 +794,38 @@ func _award_objective_reward() -> void:
 		return
 	objective_reward_claimed = true
 	var reward_id := str(_objective_data().get("reward_id", ""))
+	# "gems_N" pays N gems; a gear reward that the hero already owns falls back to
+	# gems so a drawn objective is never worth nothing.
+	if reward_id.begins_with("gems_"):
+		_award_objective_gems(int(reward_id.trim_prefix("gems_")))
+		return
 	match reward_id:
-		"gems_2":
-			if hud and hud.has_method("add_gems"):
-				hud.add_gems(2)
-		"gems_3":
-			if hud and hud.has_method("add_gems"):
-				hud.add_gems(3)
 		"satchel":
-			var applied := false
-			if player.has_method("apply_cave_reward"):
-				applied = player.apply_cave_reward("miners_satchel")
-			if not applied and hud and hud.has_method("add_gems"):
-				hud.add_gems(2)
+			_award_objective_gear("miners_satchel", 2)
+		"pickaxe":
+			_award_objective_gear("pickaxe", 2)
+		"boots":
+			_award_objective_gear("boots", 2)
 		"pick_power":
 			var before := int(player.get("mining_power_level"))
 			if player.has_method("upgrade_mining_power"):
 				player.upgrade_mining_power()
-			if int(player.get("mining_power_level")) == before and hud and hud.has_method("add_gems"):
-				hud.add_gems(2)
+			if int(player.get("mining_power_level")) == before:
+				_award_objective_gems(2)
+
+## Objective gem payouts carry the run modifier's bonus, so a RICH SEAM run
+## really does haul more out of the same seam.
+func _award_objective_gems(amount: int) -> void:
+	var total := maxi(0, amount) + _modifier_int("gem_bonus")
+	if total > 0 and hud and hud.has_method("add_gems"):
+		hud.add_gems(total)
+
+func _award_objective_gear(reward_id: String, gem_fallback: int) -> void:
+	var applied := false
+	if player.has_method("apply_cave_reward"):
+		applied = player.apply_cave_reward(reward_id)
+	if not applied:
+		_award_objective_gems(gem_fallback)
 
 func _motherlode_remaining(stage: int) -> int:
 	var total := int(STAGE_MOTHERLODE_COUNTS.get(stage, 0))
@@ -660,7 +845,7 @@ func _motherlode_remaining(stage: int) -> int:
 	return remaining
 
 func _objective_data() -> Dictionary:
-	return STAGE_OBJECTIVES.get(stage_number, {})
+	return run_objectives.get(stage_number, {})
 
 func _objective_title() -> String:
 	return str(_objective_data().get("title", "EXPEDITION TARGET"))
@@ -672,7 +857,9 @@ func _objective_reward_text() -> String:
 	return str(_objective_data().get("reward", "bonus secured"))
 
 func _objective_target() -> int:
-	return int(_objective_data().get("target", 1))
+	var target := int(_objective_data().get("target", 1)) + _modifier_int("target_bonus")
+	# A modifier must never ask for more crystals than the seam contains.
+	return clampi(target, 1, int(STAGE_MOTHERLODE_COUNTS.get(stage_number, target)))
 
 func _set_phase_meta(phase_name: String) -> void:
 	world.set_meta("minewars_phase", phase_name)
@@ -723,7 +910,7 @@ func _update_wave_hud() -> void:
 	match phase:
 		Phase.ATTACK:
 			if assault_muster_timer > 0.0:
-				hud.update_wave_info(stage_number, assault_muster_timer, float(STAGE_MUSTER_TIMES.get(stage_number, 8.0)), is_boss)
+				hud.update_wave_info(stage_number, assault_muster_timer, _muster_time_for(stage_number), is_boss)
 			else:
 				hud.update_wave_info(stage_number, -1.0, maximum, is_boss)
 		Phase.MINING:
@@ -889,7 +1076,7 @@ func _stage_name(value: int) -> String:
 	return str(STAGE_NAMES.get(value, "UNKNOWN DEPTH"))
 
 func _mining_window_for(value: int) -> float:
-	return float(STAGE_MINING_WINDOWS.get(value, 60.0))
+	return maxf(20.0, float(STAGE_MINING_WINDOWS.get(value, 60.0)) * _modifier_float("mining_scale"))
 
 func _player_depth() -> int:
 	return maxi(block_layer.local_to_map(block_layer.to_local(player.global_position)).y, 0)

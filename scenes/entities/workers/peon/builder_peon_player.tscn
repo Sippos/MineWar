@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/systems/builder_peon_player.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://character_sprites/peon_walk_spritesheet_25d.png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://b7payklavahgh" path="res://assets/environment/lighting/player_light_gradient.tres" id="3_light"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_builder"]
 size = Vector2(30, 30)
@@ -24,21 +25,31 @@ collision_mask = 0
 script = ExtResource("1_script")
 
 [node name="Shadow" type="Sprite2D" parent="."]
-position = Vector2(0, 2)
 texture = SubResource("GradientTexture2D_shadow")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -17)
+position = Vector2(0, -6)
 scale = Vector2(0.56, 0.56)
 texture = ExtResource("2_tex")
 hframes = 8
 vframes = 8
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -16)
 shape = SubResource("RectangleShape2D_builder")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(0, -20)
+position = Vector2(0, -16)
 zoom = Vector2(1.35, 1.35)
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
+
+[node name="PointLight2D" type="PointLight2D" parent="."]
+position = Vector2(0, -16)
+color = Color(1, 0.84, 0.66, 1)
+energy = 1.15
+shadow_enabled = true
+shadow_color = Color(0, 0, 0, 0.72)
+shadow_filter = 1
+texture = ExtResource("3_light")
+texture_scale = 1.25

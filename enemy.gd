@@ -39,6 +39,8 @@ var sprite_rest_position := Vector2.ZERO
 var hit_reaction_tween: Tween
 var emergence_tween: Tween
 var emergence_timer := 0.0
+var sleep_timer := 0.0
+var sleep_particles: CPUParticles2D
 var stored_collision_layer := 4
 var lane_bias := 0.0
 var lane_phase := 0.0
@@ -175,6 +177,33 @@ func _physics_process(delta: float):
 		if emergence_timer <= 0.0:
 			collision_layer = stored_collision_layer
 		return
+		
+	if sleep_timer > 0.0:
+		sleep_timer -= delta
+		velocity = Vector2.ZERO
+		
+		# Show sleep particles
+		if sleep_particles == null:
+			sleep_particles = CPUParticles2D.new()
+			sleep_particles.direction = Vector2(0, -1)
+			sleep_particles.gravity = Vector2(20, -50)
+			sleep_particles.initial_velocity_min = 20.0
+			sleep_particles.initial_velocity_max = 40.0
+			sleep_particles.scale_amount_min = 3.0
+			sleep_particles.scale_amount_max = 5.0
+			sleep_particles.color = Color(0.8, 0.8, 1.0, 1.0)
+			sleep_particles.lifetime = 1.0
+			sleep_particles.amount = 4
+			add_child(sleep_particles)
+		else:
+			sleep_particles.emitting = true
+			
+		if sleep_timer <= 0.0 and sleep_particles != null:
+			sleep_particles.emitting = false
+			
+		return
+	elif sleep_particles != null:
+		sleep_particles.emitting = false
 
 	path_timer += delta
 	var world_revision := int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
@@ -219,15 +248,28 @@ func _physics_process(delta: float):
 			if "spikes_level" in base and base.spikes_level > 0:
 				take_damage(15 * base.spikes_level)
 			attack_cooldown_timer = 1.0
-	elif path.size() > 0 and current_path_index < path.size():
-		var target_pos: Vector2 = path[current_path_index]
-		var target_delta := target_pos - global_position
-		var dist := target_delta.length()
-		if dist < 13.0:
-			current_path_index += 1
-			velocity = Vector2.ZERO
-		else:
-			var dir: Vector2 = target_delta / maxf(dist, 0.001)
+	elif base != null:
+		var current_cell = tile_map.local_to_map(tile_map.to_local(global_position))
+		var dir := Vector2.ZERO
+		var target_pos := Vector2.ZERO
+		
+		# Prefer Flow Field if available
+		var has_flow = world.get("flow_field") != null and world.flow_field.has(current_cell)
+		if has_flow:
+			dir = world.flow_field[current_cell]
+		elif path.size() > 0 and current_path_index < path.size():
+			target_pos = path[current_path_index]
+			var target_delta := target_pos - global_position
+			var dist := target_delta.length()
+			if dist < 13.0:
+				current_path_index += 1
+				velocity = Vector2.ZERO
+				_update_stuck_tracking(delta, false)
+				return
+			else:
+				dir = target_delta / maxf(dist, 0.001)
+		
+		if dir != Vector2.ZERO:
 			var open_factor: float = float(world.get_enemy_open_space_factor(global_position)) if world.has_method("get_enemy_open_space_factor") else 0.0
 			var lateral: Vector2 = dir.orthogonal() * lane_bias * speed * OPEN_SPACE_LANE_STRENGTH * open_factor
 			var separation: Vector2 = _calculate_separation_velocity()
@@ -451,6 +493,12 @@ func die() -> void:
 	xp.xp_value = xp_drop
 	xp.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
 	world.call_deferred("add_child", xp)
+		
+	if str(Global.get("selected_base_id")) == "undead_king_base" and randf() < 0.35:
+		var skel_scene = preload("res://scenes/entities/workers/skeleton/skeleton_carrier.tscn")
+		var skel = skel_scene.instantiate()
+		skel.global_position = global_position
+		world.call_deferred("add_child", skel)
 		
 	if is_boss_enemy:
 		Global.unlock_hero("Mech")

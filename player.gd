@@ -42,6 +42,13 @@ var death_count = 0
 var respawn_timer = 0.0
 var invulnerability_timer = 0.0
 
+# Mining is the other half of the game, so it pays experience too. Combat alone
+# tops out around level 4 across a four-stage expedition, which put the level-6
+# ultimates out of reach in the mode they were written for.
+const DIG_BLOCK_XP := 3
+const GEM_BLOCK_XP := 14
+const XP_CURVE_GROWTH := 1.38
+
 var level = 1
 var xp = 0
 var max_xp = 100
@@ -134,13 +141,14 @@ const HERO_VISUALS = {
 		"sprite_position": Vector2(0, -24)
 	},
 	"Shaman": {
-		# Shaman keeps its calibrated humanoid walk fit and uses a dedicated
-		# staff-swing attack authored from the Shaman rig; both sheets share the
-		# same camera and foot line.
+		# Shaman keeps its calibrated humanoid walk fit, but the staff-swing sheet
+		# renders the figure at roughly 55 px inside its 128 px frame against the
+		# walk sheet's ~92 px, so the swing needs its own corrective scale and
+		# foot anchor to stop the hero shrinking mid-attack.
 		"walk_scale": Vector2(0.64, 0.64),
-		"attack_scale": Vector2(0.64, 0.64),
+		"attack_scale": Vector2(1.07, 1.07),
 		"walk_position": Vector2(0, -5),
-		"attack_position": Vector2(0, -5),
+		"attack_position": Vector2(0, 3),
 		"sprite_position": Vector2(0, -5)
 	},
 	"Nerubian": {
@@ -365,8 +373,9 @@ func deposit_gems() -> int:
 			if gem.has_method("should_deposit_as_gem") and not gem.should_deposit_as_gem():
 				remaining_items.append(gem)
 			else:
+				var val = int(gem.get_meta("gem_value", 1))
 				gem.queue_free()
-				deposited += 1
+				deposited += val
 	carried_gems = remaining_items
 	return deposited
 
@@ -718,13 +727,18 @@ func _reset_action_animation() -> void:
 			$Sprite2D.flip_h = false
 			$Sprite2D.frame = current_anim_row * walk_frames
 
-func get_block_hardness_multiplier(block_id: int) -> float:
+func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO) -> float:
 	var tier := clampi(mining_power_level, 0, 3)
+	var base_mult := 1.0
 	if block_id == 2:
-		return [4.0, 2.5, 1.55, 1.0][tier]
-	if block_id == 3:
-		return [14.0, 7.0, 3.4, 1.6][tier]
-	return 1.0
+		base_mult = [4.0, 2.5, 1.55, 1.0][tier]
+	elif block_id == 3:
+		base_mult = [14.0, 7.0, 3.4, 1.6][tier]
+		
+	var depth = max(0.0, float(cell.y))
+	var depth_mult = 1.0 + clamp(depth / 30.0, 0.0, 2.0)
+	
+	return base_mult * depth_mult
 
 func get_mining_power_level() -> int:
 	return mining_power_level
@@ -801,7 +815,7 @@ func handle_digging(delta: float) -> void:
 					# animation cycle.
 					current_dig_swing_time = calculated_dig_time
 					var block_id := tile_map.get_cell_source_id(cell)
-					var hardness_multiplier := get_block_hardness_multiplier(block_id)
+					var hardness_multiplier := get_block_hardness_multiplier(block_id, cell)
 					if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
 						hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
 					var current_target_dig_time: float = calculated_dig_time * hardness_multiplier
@@ -905,7 +919,7 @@ func _finish_queued_dig_at_contact() -> void:
 	if block_id == -1:
 		_stop_digging()
 		return
-	var below_cell := Vector2i(cell.x, cell.y + 1)
+	var below_cell: Vector2i = Vector2i(cell.x, cell.y + 1)
 	var world := get_parent()
 	var cell_had_gem := bool(world.has_gem(cell))
 	_emit_dig_impact(true, cell, block_id, cell_had_gem)
@@ -923,7 +937,10 @@ func _finish_queued_dig_at_contact() -> void:
 	var gems_to_spawn := 1 if cell_had_gem else 0
 	if _roll_shaman_gem_bonus():
 		gems_to_spawn += 1
+	if cell_had_gem and _roll_intelligence_gem_bonus():
+		gems_to_spawn += 1
 	_spawn_dug_gems(cell, gems_to_spawn)
+	add_xp(GEM_BLOCK_XP if cell_had_gem else DIG_BLOCK_XP)
 	currently_digging_cell = null
 	dig_timer = 0.0
 	current_dig_target_time = 0.0
@@ -1081,13 +1098,32 @@ func _roll_shaman_gem_bonus() -> bool:
 			return randf() < 0.35
 	return false
 
+func _roll_intelligence_gem_bonus() -> bool:
+	var rpg: Node = _rpg_controller()
+	if rpg == null or not rpg.has_method("get_bonus_gem_chance"):
+		return false
+	return randf() < float(rpg.call("get_bonus_gem_chance"))
+
 func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
 	if count <= 0:
 		return
 	var spawn_pos = tile_map.to_global(tile_map.map_to_local(cell))
+	var depth = cell.y
 	for i in range(count):
 		var gem = GEM_SCENE.instantiate()
 		gem.global_position = spawn_pos + Vector2(randf_range(-12, 12), randf_range(-8, 8))
+		
+		var gem_val = 1
+		if depth >= 28:
+			gem_val = 3
+			var sprite = gem.get_node_or_null("Sprite2D")
+			if sprite: sprite.modulate = Color(0.9, 0.4, 0.9)
+		elif depth >= 18:
+			gem_val = 2
+			var sprite = gem.get_node_or_null("Sprite2D")
+			if sprite: sprite.modulate = Color(0.6, 0.9, 1.0)
+		gem.set_meta("gem_value", gem_val)
+		
 		if get_parent().has_method("notify_tutorial_gem_spawned"):
 			get_parent().notify_tutorial_gem_spawned(gem)
 		get_parent().call_deferred("add_child", gem)
@@ -1163,7 +1199,7 @@ func level_up() -> void:
 		level_sound_fx.play_level_up()
 	xp -= max_xp
 	level += 1
-	max_xp = int(max_xp * 1.5)
+	max_xp = int(max_xp * XP_CURVE_GROWTH)
 	health = max_health
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("update_player_health"):

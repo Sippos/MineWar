@@ -224,7 +224,7 @@ func _current_dig_duration() -> float:
 		duration *= 0.55
 	var hardness := 1.0
 	if player.has_method("get_block_hardness_multiplier"):
-		hardness = float(player.call("get_block_hardness_multiplier", 2))
+		hardness = float(player.call("get_block_hardness_multiplier", 2, Vector2i.ZERO))
 	if rpg != null and rpg.has_method("get_mining_force_multiplier"):
 		hardness *= float(rpg.call("get_mining_force_multiplier", 2))
 	return clampf(duration * hardness, 0.18, 2.8)

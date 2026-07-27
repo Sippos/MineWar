@@ -45,3 +45,6 @@ platform/*/doc_classes/
 # generate_main_menu_background.gd) was never in the repo and no longer exists
 # on disk, so exporting it fails resource loading. Nothing loads this scene.
 background_generator.tscn
+
+# Local Godot check output
+godot_check.log

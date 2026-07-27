@@ -8,15 +8,27 @@ const BASE_INTERACT_DISTANCE := 96.0
 const LOCAL_COOP_SCENE := "res://local_coop_mode.tscn"
 const MAIN_MENU_SCENE := "res://scenes/menus/main/menu.tscn"
 const READY_COUNTDOWN := 1.35
-const COOP_READY_ZONE := Rect2(-126.0, 246.0, 252.0, 270.0)
-const VS_READY_ZONE := Rect2(-126.0, -516.0, 252.0, 270.0)
-const HUB_CAMERA_ZOOM := Vector2(1.0, 1.0)
-const CAMERA_X_LIMIT := 92.0
-const CAMERA_Y_MIN := -255.0
-const CAMERA_Y_MAX := 255.0
+# Both mine entrances are two tiles wide and centred on x = 0, so the start boxes
+# are sized and centred to sit exactly inside the tunnel mouth.
+const COOP_READY_ZONE := Rect2(-56.0, 216.0, 112.0, 176.0)
+const VS_READY_ZONE := Rect2(-56.0, -392.0, 112.0, 176.0)
+const HUB_CAMERA_ZOOM := Vector2(1.3, 1.3)
+const CAMERA_X_LIMIT := 24.0
+const CAMERA_Y_MIN := -190.0
+const CAMERA_Y_MAX := 190.0
+# Damped vertical follow: moving around the room barely shifts the frame, so the
+# shrine columns stay fully on screen, but a walk into either tunnel still pans
+# far enough to show the start box.
+const CAMERA_Y_FOLLOW := 0.5
 
-const VS_SELECT_TUNNEL_ZONE := Rect2(-90.0, -210.0, 60.0, 60.0)
-const VS_SELECT_MAZE_ZONE := Rect2(30.0, -210.0, 60.0, 60.0)
+# The two battlefield plates flank the VS tunnel mouth, so the pair walks between
+# them on the way up and the last plate touched is the map they take in.
+const VS_SELECT_TUNNEL_ZONE := Rect2(-140.0, -172.0, 104.0, 72.0)
+const VS_SELECT_MAZE_ZONE := Rect2(36.0, -172.0, 104.0, 72.0)
+const VS_SELECT_ACTIVE_FILL := Color(0.62, 0.28, 0.09, 0.92)
+const VS_SELECT_IDLE_FILL := Color(0.14, 0.17, 0.23, 0.82)
+const VS_SELECT_ACTIVE_EDGE := Color(1.0, 0.68, 0.28, 1.0)
+const VS_SELECT_IDLE_EDGE := Color(0.42, 0.5, 0.62, 0.75)
 
 @export var world_path: NodePath = NodePath("../Level")
 
@@ -40,6 +52,8 @@ var _selected_vs_mode: int = 0
 var _status_hold := 0.0
 var tunnel_select_bg: Polygon2D
 var maze_select_bg: Polygon2D
+var tunnel_select_edge: Line2D
+var maze_select_edge: Line2D
 var vs_mode_label: Label
 
 func _ready() -> void:
@@ -178,7 +192,7 @@ func _on_base_change_requested(base_id: String, player_id: int) -> void:
 func _create_shared_camera() -> void:
 	shared_camera = Camera2D.new()
 	shared_camera.name = "LocalHubSharedCamera"
-	shared_camera.position = Vector2(0, 24)
+	shared_camera.position = Vector2(0, 0)
 	shared_camera.zoom = HUB_CAMERA_ZOOM
 	shared_camera.position_smoothing_enabled = true
 	shared_camera.position_smoothing_speed = 7.0
@@ -191,104 +205,120 @@ func _create_single_route() -> void:
 	route_root.z_index = 18
 	world.add_child(route_root)
 
-	var glow := Polygon2D.new()
-	glow.name = "CoopDoorGlow"
-	glow.position = Vector2(0, 320)
-	glow.polygon = PackedVector2Array([
-		Vector2(-104, -38), Vector2(104, -38),
-		Vector2(104, 38), Vector2(-104, 38),
-	])
-	glow.color = Color(0.08, 0.72, 1.0, 0.25)
-	route_root.add_child(glow)
+	_create_entrance_box(
+		"CoopEntrance", COOP_READY_ZONE, Color(0.08, 0.72, 1.0, 1.0),
+		"CO-OP MINE", COOP_READY_ZONE.position.y - 34.0)
+
+	vs_mode_label = _create_entrance_box(
+		"VsEntrance", VS_READY_ZONE, Color(1.0, 0.3, 0.3, 1.0),
+		"VS MODE", VS_READY_ZONE.end.y + 8.0)
+
+	var tunnel_plate := _create_vs_select_plate(
+		"TunnelPlate", VS_SELECT_TUNNEL_ZONE, "TUNNEL", "res://character_sprites/hero_idle/dwarf_idle_front.png")
+	tunnel_select_bg = tunnel_plate["fill"]
+	tunnel_select_edge = tunnel_plate["edge"]
+
+	# The peon only fills the middle ~44% of its walk-sheet cell, so its icon is
+	# scaled and nudged off that content box instead of the empty frame.
+	var maze_plate := _create_vs_select_plate(
+		"MazePlate", VS_SELECT_MAZE_ZONE, "MAZE", "res://character_sprites/peon_walk_spritesheet_25d.png", 0.44, 17.0)
+	maze_select_bg = maze_plate["fill"]
+	maze_select_edge = maze_plate["edge"]
+
+	_update_vs_selection_visuals()
+
+# The start box is built straight from the ready rect, so what glows on the floor
+# is literally the area that arms the countdown - centred in the tunnel mouth.
+func _create_entrance_box(node_name: String, zone: Rect2, accent: Color, text: String, label_y: float) -> Label:
+	var box := Polygon2D.new()
+	box.name = node_name + "Glow"
+	box.polygon = _rect_polygon(zone)
+	box.color = Color(accent.r, accent.g, accent.b, 0.22)
+	route_root.add_child(box)
+
+	var border := Line2D.new()
+	border.name = node_name + "Border"
+	border.points = _rect_outline(zone)
+	border.width = 3.0
+	border.default_color = Color(accent.r, accent.g, accent.b, 0.75)
+	route_root.add_child(border)
+
+	var pulse := create_tween().set_loops()
+	pulse.tween_property(box, "color:a", 0.4, 1.1).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(box, "color:a", 0.18, 1.1).set_trans(Tween.TRANS_SINE)
 
 	var label := Label.new()
-	label.name = "CoopMineLabel"
-	label.position = Vector2(-150, 214)
-	label.text = "CO-OP MINE"
+	label.name = node_name + "Label"
+	label.position = Vector2(zone.get_center().x - 150.0, label_y)
+	label.size = Vector2(300, 24)
+	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 16)
-	label.add_theme_color_override("font_color", Color(0.38, 0.88, 1.0, 1.0))
+	label.add_theme_color_override("font_color", accent)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 5)
 	route_root.add_child(label)
+	return label
 
-	var vs_glow := Polygon2D.new()
-	vs_glow.name = "VsModeGlow"
-	vs_glow.position = Vector2(0, -320)
-	vs_glow.polygon = PackedVector2Array([
-		Vector2(-104, -38), Vector2(104, -38),
-		Vector2(104, 38), Vector2(-104, 38),
+func _create_vs_select_plate(node_name: String, zone: Rect2, text: String, icon_path: String, icon_content_ratio: float = 1.0, icon_frame_offset: float = 0.0) -> Dictionary:
+	var plate := Node2D.new()
+	plate.name = node_name
+	route_root.add_child(plate)
+
+	var fill := Polygon2D.new()
+	fill.name = "Fill"
+	fill.polygon = _rect_polygon(zone)
+	fill.color = VS_SELECT_IDLE_FILL
+	plate.add_child(fill)
+
+	var edge := Line2D.new()
+	edge.name = "Edge"
+	edge.points = _rect_outline(zone)
+	edge.width = 2.0
+	edge.default_color = VS_SELECT_IDLE_EDGE
+	plate.add_child(edge)
+
+	var icon := Sprite2D.new()
+	icon.name = "Icon"
+	icon.texture = load(icon_path)
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# The peon art is a walk sheet, so pull a single clean frame out of it.
+	if icon_path.ends_with("spritesheet_25d.png"):
+		icon.hframes = 8
+		icon.vframes = 8
+	var frame_height := icon.texture.get_size().y / float(maxi(icon.vframes, 1))
+	var icon_scale := 46.0 / maxf(frame_height * icon_content_ratio, 1.0)
+	icon.scale = Vector2(icon_scale, icon_scale)
+	icon.position = Vector2(zone.position.x + 28.0, zone.get_center().y + 4.0 + icon_frame_offset * icon_scale)
+	plate.add_child(icon)
+
+	var label := Label.new()
+	label.name = "Caption"
+	label.position = Vector2(zone.position.x + 44.0, zone.get_center().y - 11.0)
+	label.size = Vector2(zone.size.x - 52.0, 22)
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0, 1.0))
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	plate.add_child(label)
+
+	return {"fill": fill, "edge": edge}
+
+func _rect_polygon(zone: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([
+		zone.position,
+		Vector2(zone.end.x, zone.position.y),
+		zone.end,
+		Vector2(zone.position.x, zone.end.y),
 	])
-	vs_glow.color = Color(1.0, 0.2, 0.2, 0.25)
-	route_root.add_child(vs_glow)
 
-	var vs_label := Label.new()
-	vs_label.name = "VsModeLabel"
-	vs_label.position = Vector2(-150, -260)
-	vs_label.text = "VS MODE"
-	vs_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vs_label.add_theme_font_size_override("font_size", 16)
-	vs_label.add_theme_color_override("font_color", Color(1.0, 0.38, 0.38, 1.0))
-	vs_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	vs_label.add_theme_constant_override("outline_size", 5)
-	route_root.add_child(vs_label)
-	vs_mode_label = vs_label
-
-	tunnel_select_bg = Polygon2D.new()
-	tunnel_select_bg.polygon = PackedVector2Array([
-		Vector2(VS_SELECT_TUNNEL_ZONE.position.x, VS_SELECT_TUNNEL_ZONE.position.y),
-		Vector2(VS_SELECT_TUNNEL_ZONE.position.x + VS_SELECT_TUNNEL_ZONE.size.x, VS_SELECT_TUNNEL_ZONE.position.y),
-		Vector2(VS_SELECT_TUNNEL_ZONE.position.x + VS_SELECT_TUNNEL_ZONE.size.x, VS_SELECT_TUNNEL_ZONE.position.y + VS_SELECT_TUNNEL_ZONE.size.y),
-		Vector2(VS_SELECT_TUNNEL_ZONE.position.x, VS_SELECT_TUNNEL_ZONE.position.y + VS_SELECT_TUNNEL_ZONE.size.y)
-	])
-	tunnel_select_bg.color = Color(1.0, 0.5, 0.2, 0.8)
-	route_root.add_child(tunnel_select_bg)
-
-	var tunnel_label := Label.new()
-	tunnel_label.position = Vector2(VS_SELECT_TUNNEL_ZONE.position.x, VS_SELECT_TUNNEL_ZONE.position.y + 20)
-	tunnel_label.size = Vector2(VS_SELECT_TUNNEL_ZONE.size.x, 20)
-	tunnel_label.text = "Tunnel"
-	tunnel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tunnel_label.add_theme_font_size_override("font_size", 12)
-	tunnel_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	tunnel_label.add_theme_constant_override("outline_size", 4)
-	route_root.add_child(tunnel_label)
-
-	maze_select_bg = Polygon2D.new()
-	maze_select_bg.polygon = PackedVector2Array([
-		Vector2(VS_SELECT_MAZE_ZONE.position.x, VS_SELECT_MAZE_ZONE.position.y),
-		Vector2(VS_SELECT_MAZE_ZONE.position.x + VS_SELECT_MAZE_ZONE.size.x, VS_SELECT_MAZE_ZONE.position.y),
-		Vector2(VS_SELECT_MAZE_ZONE.position.x + VS_SELECT_MAZE_ZONE.size.x, VS_SELECT_MAZE_ZONE.position.y + VS_SELECT_MAZE_ZONE.size.y),
-		Vector2(VS_SELECT_MAZE_ZONE.position.x, VS_SELECT_MAZE_ZONE.position.y + VS_SELECT_MAZE_ZONE.size.y)
-	])
-	maze_select_bg.color = Color(0.3, 0.3, 0.3, 0.5)
-	route_root.add_child(maze_select_bg)
-
-	var maze_label := Label.new()
-	maze_label.position = Vector2(VS_SELECT_MAZE_ZONE.position.x, VS_SELECT_MAZE_ZONE.position.y + 20)
-	maze_label.size = Vector2(VS_SELECT_MAZE_ZONE.size.x, 20)
-	maze_label.text = "Maze"
-	maze_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	maze_label.add_theme_font_size_override("font_size", 12)
-	maze_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	maze_label.add_theme_constant_override("outline_size", 4)
-	route_root.add_child(maze_label)
-	
-	var tunnel_sprite := Sprite2D.new()
-	tunnel_sprite.texture = preload("res://assets/sprites/characters/dwarf/dwarf_walk_highres_spritesheet.png")
-	tunnel_sprite.hframes = 8
-	tunnel_sprite.vframes = 8
-	tunnel_sprite.scale = Vector2(0.5, 0.5)
-	tunnel_sprite.position = Vector2(VS_SELECT_TUNNEL_ZONE.position.x + 30, VS_SELECT_TUNNEL_ZONE.position.y + VS_SELECT_TUNNEL_ZONE.size.y + 12)
-	route_root.add_child(tunnel_sprite)
-
-	var maze_sprite := Sprite2D.new()
-	maze_sprite.texture = preload("res://character_sprites/peon_walk_spritesheet_25d.png")
-	maze_sprite.hframes = 8
-	maze_sprite.vframes = 8
-	maze_sprite.scale = Vector2(0.5, 0.5)
-	maze_sprite.position = Vector2(VS_SELECT_MAZE_ZONE.position.x + 30, VS_SELECT_MAZE_ZONE.position.y + VS_SELECT_MAZE_ZONE.size.y + 12)
-	route_root.add_child(maze_sprite)
+func _rect_outline(zone: Rect2) -> PackedVector2Array:
+	var points := _rect_polygon(zone)
+	points.append(points[0])
+	return points
 
 func _create_hub_hud() -> void:
 	hub_hud = HUB_HUD_SCENE.instantiate() as CanvasLayer
@@ -298,9 +328,22 @@ func _create_hub_hud() -> void:
 	status_label = hub_hud.get_node("StatusPanel/Margin/Status") as Label
 	title.text = ""
 	subtitle.text = ""
+	# The HUD ships with placeholder status text; an empty first _set_status() call
+	# short-circuits, so clear the panel here instead of leaving "Ready" on screen.
+	if status_label:
+		status_label.text = ""
+		var status_panel = status_label.get_parent().get_parent()
+		if status_panel is Control:
+			status_panel.visible = false
 	var top_panel = hub_hud.get_node_or_null("TopPanel")
 	if top_panel:
 		top_panel.visible = false
+	# The HUD ships with placeholder status text; the panel only earns screen space
+	# once the hub actually has something to say.
+	status_label.text = ""
+	var status_panel = status_label.get_parent().get_parent()
+	if status_panel is Control:
+		status_panel.visible = false
 
 func _create_player_marker(target: CharacterBody2D, text: String, color: Color) -> void:
 	if target == null:
@@ -330,9 +373,9 @@ func _process(delta: float) -> void:
 func _update_shared_camera(delta: float) -> void:
 	# Follow the pair gently, but never zoom out. The compact walls and clamped
 	# midpoint keep the stronghold intimate even after many progression unlocks.
-	var midpoint := (player_one.global_position + player_two.global_position) * 0.5 + Vector2(0, -20)
+	var midpoint := (player_one.global_position + player_two.global_position) * 0.5
 	midpoint.x = clampf(midpoint.x, -CAMERA_X_LIMIT, CAMERA_X_LIMIT)
-	midpoint.y = clampf(midpoint.y, CAMERA_Y_MIN, CAMERA_Y_MAX)
+	midpoint.y = clampf(midpoint.y * CAMERA_Y_FOLLOW - 20.0, CAMERA_Y_MIN, CAMERA_Y_MAX)
 	var camera_weight := 1.0 - exp(-7.0 * delta)
 	shared_camera.global_position = shared_camera.global_position.lerp(midpoint, camera_weight)
 	shared_camera.zoom = HUB_CAMERA_ZOOM
@@ -395,16 +438,19 @@ func _start_coop_mine() -> void:
 	get_tree().change_scene_to_file(LOCAL_COOP_SCENE)
 
 func _update_vs_selection_visuals() -> void:
-	if _selected_vs_mode == 0:
-		tunnel_select_bg.color = Color(1.0, 0.5, 0.2, 0.8)
-		maze_select_bg.color = Color(0.3, 0.3, 0.3, 0.5)
-		if vs_mode_label:
-			vs_mode_label.text = "VS MODE"
-	else:
-		tunnel_select_bg.color = Color(0.3, 0.3, 0.3, 0.5)
-		maze_select_bg.color = Color(1.0, 0.5, 0.2, 0.8)
-		if vs_mode_label:
-			vs_mode_label.text = "MAZE MODE"
+	var tunnel_active := _selected_vs_mode == 0
+	if tunnel_select_bg:
+		tunnel_select_bg.color = VS_SELECT_ACTIVE_FILL if tunnel_active else VS_SELECT_IDLE_FILL
+	if maze_select_bg:
+		maze_select_bg.color = VS_SELECT_IDLE_FILL if tunnel_active else VS_SELECT_ACTIVE_FILL
+	if tunnel_select_edge:
+		tunnel_select_edge.default_color = VS_SELECT_ACTIVE_EDGE if tunnel_active else VS_SELECT_IDLE_EDGE
+		tunnel_select_edge.width = 3.0 if tunnel_active else 2.0
+	if maze_select_edge:
+		maze_select_edge.default_color = VS_SELECT_IDLE_EDGE if tunnel_active else VS_SELECT_ACTIVE_EDGE
+		maze_select_edge.width = 2.0 if tunnel_active else 3.0
+	if vs_mode_label:
+		vs_mode_label.text = "VS MODE  •  TUNNEL" if tunnel_active else "VS MODE  •  MAZE"
 
 func _start_vs_mode() -> void:
 	if _committing:

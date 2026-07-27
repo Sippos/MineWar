@@ -9,7 +9,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 5.0,
 		"base_attack_interval": 0.78,
 		"base_armor": 1.20,
-		"base_regen": 0.18
+		"base_regen": 0.18,
+		"speed": 190.0,
+		"dig_time": 0.36
 	},
 	"Mech": {
 		"primary": "strength",
@@ -19,7 +21,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 7.0,
 		"base_attack_interval": 0.86,
 		"base_armor": 2.00,
-		"base_regen": 0.16
+		"base_regen": 0.16,
+		"speed": 176.0,
+		"dig_time": 0.34
 	},
 	"Shaman": {
 		"primary": "intelligence",
@@ -29,7 +33,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 4.0,
 		"base_attack_interval": 0.88,
 		"base_armor": 0.20,
-		"base_regen": 0.08
+		"base_regen": 0.08,
+		"speed": 205.0,
+		"dig_time": 0.42
 	},
 	"Nerubian": {
 		"primary": "agility",
@@ -39,7 +45,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 4.0,
 		"base_attack_interval": 0.60,
 		"base_armor": 0.60,
-		"base_regen": 0.12
+		"base_regen": 0.12,
+		"speed": 215.0,
+		"dig_time": 0.46
 	},
 	"Druid": {
 		"primary": "intelligence",
@@ -49,7 +57,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 4.0,
 		"base_attack_interval": 0.78,
 		"base_armor": 0.50,
-		"base_regen": 0.16
+		"base_regen": 0.16,
+		"speed": 210.0,
+		"dig_time": 0.39
 	},
 	"Undead King": {
 		"primary": "intelligence",
@@ -59,7 +69,9 @@ const HERO_PROFILES: Dictionary = {
 		"base_attack_damage": 4.0,
 		"base_attack_interval": 0.90,
 		"base_armor": 0.80,
-		"base_regen": 0.14
+		"base_regen": 0.14,
+		"speed": 195.0,
+		"dig_time": 0.43
 	}
 }
 
@@ -150,7 +162,17 @@ func _desired_permanent_stat(stat_name: String) -> int:
 	var growth: Dictionary = _growth_stats()
 	var level_steps: int = maxi(0, int(player.get("level")) - 1)
 	var growth_amount: int = int(floor(float(level_steps) * float(growth[stat_name])))
-	return int(base[stat_name]) + growth_amount + int(permanent_stat_bonuses[stat_name])
+	return int(base[stat_name]) + growth_amount + int(permanent_stat_bonuses[stat_name]) + _legacy_primary_bonus(stat_name)
+
+## Legacy Forge "Deepening" ranks start the hero deeper in the attribute their
+## profile already favours. Campaign meta never reaches a versus match, so the
+## bonus stops at the VS world boundary.
+func _legacy_primary_bonus(stat_name: String) -> int:
+	if world != null and world.get("is_vs_mode") == true:
+		return 0
+	if stat_name != get_primary_attribute():
+		return 0
+	return maxi(0, Global.get_permanent_primary_attribute_bonus())
 
 func _temporary_stat_bonus(stat_name: String) -> int:
 	var abilities: Node = player.get_node_or_null("HeroAbilities")
@@ -261,7 +283,11 @@ func get_dig_time_multiplier() -> float:
 	var strength_value: int = int(player.get("strength"))
 	var extra_agility := maxi(0, agility_value - int(base["agility"]))
 	var extra_strength := maxi(0, strength_value - int(base["strength"]))
-	var mining_speed: float = float(extra_agility) * 0.050 + float(extra_strength) * 0.012
+	# Agility still leads on raw dig tempo, but not by the old 4:1 margin that made
+	# Strength's mining contribution a rounding error next to it. The gap closes by
+	# raising Strength rather than lowering Agility, so total dig throughput - and
+	# therefore the pace of every expedition - is left where it was tuned.
+	var mining_speed: float = float(extra_agility) * 0.046 + float(extra_strength) * 0.024
 	return maxf(0.48, 1.0 / (1.0 + mining_speed))
 
 func get_mining_force_multiplier(block_id: int) -> float:
@@ -296,10 +322,21 @@ func get_build_identity() -> Dictionary:
 	var title := "PROSPECTOR" if highest < 5 else ("RUNECASTER" if highest < 8 else "ARCANE ENGINE")
 	return {"title": title, "description": "Stronger utility, shorter cooldowns, and empowered summons.", "color": Color(0.35, 0.72, 1.0)}
 
+func get_bonus_gem_chance() -> float:
+	# Intelligence had no mining role at all, which left it dead weight during the
+	# mining window that is most of an expedition. It now reads the seam: every
+	# point above the hero's base is a chance for a gem block to yield a second gem.
+	var base: Dictionary = _base_stats()
+	var extra_intelligence := maxi(0, int(player.get("intelligence")) - int(base["intelligence"]))
+	return minf(0.45, float(extra_intelligence) * 0.035)
+
 func get_armor() -> float:
+	# Armor answers to Strength, not Agility. Agility already owned dig speed,
+	# attack speed and move speed; carrying durability as well made it the correct
+	# purchase for every hero in every situation and collapsed the three-way choice.
 	var profile: Dictionary = _profile()
-	var agility_value: int = int(player.get("agility"))
-	var armor: float = float(profile["base_armor"]) + float(agility_value) * 0.18
+	var strength_value: int = int(player.get("strength"))
+	var armor: float = float(profile["base_armor"]) + float(strength_value) * 0.18
 	var abilities: Node = player.get_node_or_null("HeroAbilities")
 	if abilities != null and bool(abilities.get("avatar_active")):
 		armor += 2.5

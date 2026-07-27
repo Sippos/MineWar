@@ -10,6 +10,14 @@ const FIRST_RUN_REWARD := {
 	"title": "LEGACY FORGE AWAKENED",
 	"description": "The bastion can now spend Legacy Ore on permanent improvements."
 }
+# Expeditions the player must finish before the upper LineWars shaft breaks open.
+const LINE_WARS_UNLOCK_RUNS := 2
+const LINE_WARS_UNLOCK_REWARD := {
+	"type": "tunnel",
+	"tunnel": "line_wars",
+	"title": "THE UPPER SHAFT BREAKS OPEN",
+	"description": "A second tunnel has opened above the stronghold — LineWars: command peons, hold the lane, survive ten waves."
+}
 const MINEWARS_VICTORY_REWARDS := {
 	2: {
 		"type": "hero_base",
@@ -20,17 +28,17 @@ const MINEWARS_VICTORY_REWARDS := {
 	},
 	3: {
 		"type": "hero_base",
-		"hero": "Druid",
-		"base": "druid_base",
-		"title": "ROOTS BREAK THE STONE",
-		"description": "Druid and the Druid Grove have awakened."
-	},
-	4: {
-		"type": "hero_base",
 		"hero": "Nerubian",
 		"base": "nerubian_base",
 		"title": "THE BROOD EMERGES",
 		"description": "Nerubian and the Nerubian Nest have joined the war."
+	},
+	4: {
+		"type": "hero_base",
+		"hero": "Druid",
+		"base": "druid_base",
+		"title": "ROOTS BREAK THE STONE",
+		"description": "Druid and the Druid Grove have awakened."
 	},
 	5: {
 		"type": "hero_base",
@@ -38,6 +46,13 @@ const MINEWARS_VICTORY_REWARDS := {
 		"base": "undead_king_base",
 		"title": "THE CITADEL RISES",
 		"description": "The Undead King and his Soul Citadel have awakened."
+	},
+	6: {
+		"type": "hero_base",
+		"hero": "Mech",
+		"base": "mech_base",
+		"title": "THE WAR MECH IS YOURS",
+		"description": "The goblin frame closes the roster. Its workshop rebuilds the Mech between assaults."
 	}
 }
 const STRONGHOLD_AMBIENCE_IDS := ["dwarf_minecart"]
@@ -56,24 +71,46 @@ const SAFE_UI_SCENES = ["res://boot.tscn", "res://launch_router.tscn"]
 const DEFAULT_HERO_ID := "Dwarf"
 const DEFAULT_BASE_ID := "default_base"
 const DEFAULT_SAVE_PATH := "user://savegame.save"
+# Headless runs are tests and tools, never players. They must not be able to
+# load, sanitise or overwrite the campaign save: an autoload loads and can
+# rewrite the save in _ready, which is before any test scene gets the chance to
+# set its own override, so opting out afterwards is already too late.
+const HEADLESS_SAVE_PATH := "user://headless_sandbox.save"
 var save_path_override := ""
 
 func get_save_path() -> String:
-	return save_path_override if not save_path_override.is_empty() else DEFAULT_SAVE_PATH
+	if not save_path_override.is_empty():
+		return save_path_override
+	if OS.has_feature("headless"):
+		return HEADLESS_SAVE_PATH
+	return DEFAULT_SAVE_PATH
 
 func set_save_path_override(path: String) -> void:
 	save_path_override = path
-const PERMANENT_UPGRADE_IDS := ["reinforced_core", "starter_cache", "miners_harness"]
+const PERMANENT_UPGRADE_IDS := ["reinforced_core", "starter_cache", "miners_harness", "deepening", "safe_return"]
 const PERMANENT_UPGRADE_MAX_LEVELS := {
 	"reinforced_core": 5,
 	"starter_cache": 3,
-	"miners_harness": 4
+	"miners_harness": 4,
+	"deepening": 0,
+	"safe_return": 1
 }
+# Every capped rank together costs 37 ore, which a player clears in about seven
+# expeditions — after that Legacy Ore was a currency with nothing to buy.
+# Deepening is deliberately uncapped so the meta never runs dry, and its cost
+# keeps climbing so late ranks stay expensive.
+const PERMANENT_UPGRADE_UNCAPPED := ["deepening"]
 const PERMANENT_UPGRADE_BASE_COSTS := {
 	"reinforced_core": 1,
 	"starter_cache": 2,
-	"miners_harness": 1
+	"miners_harness": 1,
+	"deepening": 3,
+	"safe_return": 8
 }
+# The muster window a Safe Return rank buys. This one rank changes how a run is
+# played rather than padding a number: it buys depth, because getting home is
+# what limits how far down you dare go.
+const SAFE_RETURN_MUSTER_SCALE := 1.3
 
 var _game_ui_theme: Theme
 var _game_ui_theme_enabled = false
@@ -185,8 +222,12 @@ var last_unlock_rewards: Array = []
 var permanent_upgrade_levels := {
 	"reinforced_core": 0,
 	"starter_cache": 0,
-	"miners_harness": 0
+	"miners_harness": 0,
+	"deepening": 0,
+	"safe_return": 0
 }
+# Staged by the expedition's run modifier, paid out by award_run_legacy_ore.
+var pending_run_ore_bonus := 0
 
 var hero_data = {
 	"Dwarf": {
@@ -348,6 +389,8 @@ func get_permanent_upgrade_cost(upgrade_id: String) -> int:
 	return int(PERMANENT_UPGRADE_BASE_COSTS[upgrade_id]) * (level + 1)
 
 func is_permanent_upgrade_maxed(upgrade_id: String) -> bool:
+	if PERMANENT_UPGRADE_UNCAPPED.has(upgrade_id):
+		return false
 	return get_permanent_upgrade_level(upgrade_id) >= int(PERMANENT_UPGRADE_MAX_LEVELS.get(upgrade_id, 0))
 
 func purchase_permanent_upgrade(upgrade_id: String) -> bool:
@@ -361,10 +404,18 @@ func purchase_permanent_upgrade(upgrade_id: String) -> bool:
 	save_game()
 	return true
 
+## A run modifier stages its ore payout when the expedition starts, so the
+## result screen still pays it out on a loss, after the expedition controller
+## is gone.
+func stage_run_ore_bonus(amount: int) -> void:
+	pending_run_ore_bonus = maxi(0, amount)
+
 func award_run_legacy_ore(wave_reached: int, victory: bool) -> int:
 	var reward := maxi(1, int(ceil(float(maxi(wave_reached, 1)) / 3.0)))
 	if victory:
 		reward += 3
+	reward += pending_run_ore_bonus
+	pending_run_ore_bonus = 0
 	legacy_ore += reward
 	last_run_legacy_ore_earned = reward
 	save_game()
@@ -378,6 +429,17 @@ func get_permanent_starting_gems() -> int:
 
 func get_permanent_carry_bonus() -> int:
 	return get_permanent_upgrade_level("miners_harness")
+
+## Deepening ranks start the hero with extra points in their primary attribute,
+## so the uncapped sink deepens the build the player already chose.
+func get_permanent_primary_attribute_bonus() -> int:
+	return get_permanent_upgrade_level("deepening")
+
+func has_permanent_safe_return() -> bool:
+	return get_permanent_upgrade_level("safe_return") > 0
+
+func get_permanent_muster_scale() -> float:
+	return SAFE_RETURN_MUSTER_SCALE if has_permanent_safe_return() else 1.0
 
 func is_hero_unlocked(hero_name: String) -> bool:
 	return unlocked_heroes.has(hero_name)
@@ -396,6 +458,9 @@ func is_stronghold_ambience_unlocked(ambience_id: String) -> bool:
 
 func is_legacy_workshop_unlocked() -> bool:
 	return minewars_runs_completed > 0
+
+func is_line_wars_unlocked() -> bool:
+	return minewars_runs_completed >= LINE_WARS_UNLOCK_RUNS
 
 func unlock_hero(hero_name: String) -> void:
 	if not hero_data.has(hero_name):
@@ -418,6 +483,8 @@ func record_minewars_result(victory: bool) -> Array:
 	last_unlock_rewards = []
 	if minewars_runs_completed == 1:
 		_queue_progression_reward(FIRST_RUN_REWARD)
+	if minewars_runs_completed == LINE_WARS_UNLOCK_RUNS:
+		_queue_progression_reward(LINE_WARS_UNLOCK_REWARD)
 	if victory:
 		minewars_victories += 1
 		var victory_hero: String = str(current_hero)
@@ -553,8 +620,13 @@ func load_game() -> void:
 				if loaded.has("permanent_upgrade_levels") and typeof(loaded["permanent_upgrade_levels"]) == TYPE_DICTIONARY:
 					var loaded_upgrades: Dictionary = loaded["permanent_upgrade_levels"]
 					for upgrade_id in PERMANENT_UPGRADE_IDS:
-						var max_level := int(PERMANENT_UPGRADE_MAX_LEVELS[upgrade_id])
-						permanent_upgrade_levels[upgrade_id] = clampi(int(loaded_upgrades.get(upgrade_id, 0)), 0, max_level)
+						var stored_level := maxi(int(loaded_upgrades.get(upgrade_id, 0)), 0)
+						# Uncapped ranks must survive the load clamp, which would
+						# otherwise read their max level of 0 and wipe them.
+						if PERMANENT_UPGRADE_UNCAPPED.has(upgrade_id):
+							permanent_upgrade_levels[upgrade_id] = stored_level
+						else:
+							permanent_upgrade_levels[upgrade_id] = mini(stored_level, int(PERMANENT_UPGRADE_MAX_LEVELS[upgrade_id]))
 				if loaded.has("pending_unlock_rewards") and typeof(loaded["pending_unlock_rewards"]) == TYPE_ARRAY:
 					pending_unlock_rewards = loaded["pending_unlock_rewards"]
 			file.close()
