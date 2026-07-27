@@ -920,12 +920,18 @@ func _relayout_unlocked_hud() -> void:
 	# XP remains a strong bottom-center anchor and never occupies the future mana slot.
 	if xp_label and xp_bar and (xp_label.visible or xp_bar.visible):
 		var xp_w := 220.0 if compact else 260.0
+		# Offsets, never position: these controls are bottom-center anchored, so a
+		# parent-space position would place the module off-screen past the top-left.
 		xp_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_bar.position = Vector2(-xp_w * 0.5, -52.0)
-		xp_bar.size = Vector2(xp_w, BAR_HEIGHT)
+		xp_bar.offset_left = -xp_w * 0.5
+		xp_bar.offset_top = -52.0
+		xp_bar.offset_right = xp_w * 0.5
+		xp_bar.offset_bottom = -52.0 + BAR_HEIGHT
 		xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		xp_label.position = Vector2(-xp_w * 0.5, -52.0)
-		xp_label.size = Vector2(xp_w, BAR_HEIGHT)
+		xp_label.offset_left = -xp_w * 0.5
+		xp_label.offset_top = -52.0
+		xp_label.offset_right = xp_w * 0.5
+		xp_label.offset_bottom = -52.0 + BAR_HEIGHT
 		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))

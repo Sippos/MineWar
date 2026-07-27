@@ -10,10 +10,13 @@ const ENEMY_SCENE := preload("res://enemy.tscn")
 
 # The upper LineWars field is a macro layer. The hero remains active in the mine
 # while a single click commissions a complete peon tunnel or radar job.
-const SURFACE_MIN_CELL := Vector2i(-10, -33)
-const SURFACE_MAX_CELL := Vector2i(10, -7)
-const SEARCH_MIN_CELL := Vector2i(-10, -33)
-const SEARCH_MAX_CELL := Vector2i(10, -7)
+# The x range must stay equal to SURFACE_FIELD_X_MIN/MAX in
+# single_player_compact_world.gd (itself matched to the VS maze band), otherwise
+# the peon is handed bounds that reach into the bedrock walls framing the field.
+const SURFACE_MIN_CELL := Vector2i(-8, -33)
+const SURFACE_MAX_CELL := Vector2i(8, -7)
+const SEARCH_MIN_CELL := Vector2i(-8, -33)
+const SEARCH_MAX_CELL := Vector2i(8, -7)
 const BASE_TARGET_CELL := Vector2i(0, -1)
 const MINE_ENTRY_CELL := Vector2i(0, 8)
 const MINE_HERO_START_CELL := Vector2i(0, 8)

@@ -28,6 +28,9 @@ var prospect_timer := 2.5
 var shaman_heal_timer := 0.8
 var druid_regen_timer := 0.0
 var druid_root_timer := 1.8
+var druid_portal_timer := 90.0
+var active_druid_portal_1: Node2D
+var active_druid_portal_2: Node2D
 var mech_turret_timer := 1.2
 var nerubian_webbed_count := 0
 var soul_charges := 0
@@ -280,6 +283,42 @@ func _process_druid(delta: float, phase: String) -> void:
 	if druid_regen_timer >= DRUID_SAFE_REGEN_INTERVAL:
 		druid_regen_timer = 0.0
 		_heal_player(1)
+		
+	# Portal Spawning Logic
+	druid_portal_timer -= delta
+	if druid_portal_timer <= 0.0:
+		druid_portal_timer = 90.0
+		_spawn_druid_portals()
+
+func _spawn_druid_portals() -> void:
+	if player.global_position.distance_to(base.global_position) < 400.0:
+		return # Player is already close to base, don't waste a portal
+		
+	if is_instance_valid(active_druid_portal_1):
+		active_druid_portal_1.queue_free()
+	if is_instance_valid(active_druid_portal_2):
+		active_druid_portal_2.queue_free()
+		
+	var portal_scene = preload("res://scenes/entities/transport/portal/vein_portal.tscn")
+	if portal_scene == null:
+		return
+		
+	active_druid_portal_1 = portal_scene.instantiate()
+	active_druid_portal_2 = portal_scene.instantiate()
+	
+	active_druid_portal_1.linked_portal = active_druid_portal_2
+	active_druid_portal_2.linked_portal = active_druid_portal_1
+	
+	active_druid_portal_1.portal_lifetime = 30.0
+	active_druid_portal_2.portal_lifetime = 30.0
+	
+	active_druid_portal_1.global_position = base.global_position + Vector2(0, 48)
+	active_druid_portal_2.global_position = player.global_position + Vector2(0, -32)
+	
+	world.call_deferred("add_child", active_druid_portal_1)
+	world.call_deferred("add_child", active_druid_portal_2)
+	
+	_show_notice("VEIN PORTAL OPENED — fast travel to the grove available for 30s!", 3.0)
 
 func _release_root_pulse() -> void:
 	var hit_count := 0

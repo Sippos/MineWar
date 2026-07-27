@@ -90,6 +90,10 @@ func configure_world_digging(world_node: Node2D, min_cell: Vector2i, max_cell: V
 	world_digging_enabled = dig_block_layer != null
 	# The continuous-world peon must collide with and mine the real TileMap.
 	collision_mask = 1
+	if dig_block_layer:
+		var top_left := dig_block_layer.to_global(dig_block_layer.map_to_local(min_cell)) - Vector2(28.0, 28.0)
+		var bottom_right := dig_block_layer.to_global(dig_block_layer.map_to_local(max_cell)) + Vector2(28.0, 28.0)
+		movement_bounds = Rect2(top_left, bottom_right - top_left)
 
 func issue_dig_order(target_cell: Vector2i) -> bool:
 	if order_active:
@@ -295,7 +299,7 @@ func _process_order_dig_cell(cell: Vector2i, delta: float) -> void:
 	if crack_overlay_manager:
 		crack_overlay_manager.set_damage(cell, progress, false)
 	if dig_front_layer:
-		var below_cell := cell + Vector2i.DOWN
+		var below_cell: Vector2i = cell + Vector2i.DOWN
 		if dig_front_layer.get_cell_source_id(below_cell) != -1:
 			if crack_overlay_manager:
 				crack_overlay_manager.set_damage(below_cell, progress, true)

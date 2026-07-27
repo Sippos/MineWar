@@ -67,6 +67,7 @@ const MAZE_POCKET_TOP_ROW := -4       # highest open row of the base pocket
 const MAZE_POCKET_HALF_WIDTH := 5     # pocket spans x = -5..5, like every mode
 const MAZE_CEILING_ROW := -5          # bedrock cap, open only at x = 0
 const MAZE_FIELD_HALF_WIDTH := 9      # peon field spans x = -8..8
+const MAZE_PEON_START_CELL := Vector2i(0, -1)  # inside the base pocket
 
 const FIRST_WAVE_DELAY := 32.0
 const STANDARD_WAVE_INTERVAL := 36.0
@@ -99,6 +100,8 @@ var wave_interval = STANDARD_WAVE_INTERVAL
 var enemies_per_wave = 1
 
 var topology_revision := 0
+var flow_field: Dictionary = {}
+var flow_field_target := Vector2i(0, -1)
 var world_generation_in_progress := false
 var dug_at_msec: Dictionary = {}
 var current_breach_cell := Vector2i.ZERO
@@ -133,6 +136,14 @@ const _FULL_GRID_ATLAS_SOURCES := [4, 5, 6, 9, 17, 22]
 ## time and work. Desktop's threaded loader recovers; Web does not. By _ready all
 ## ext_resource textures are fully loaded, so we recreate any dropped frames here.
 ## Idempotent and safe on desktop (has_tile guard makes it a no-op).
+
+var _generation_block_cache = null
+
+func _get_block_source_id(cell: Vector2i) -> int:
+	if _generation_block_cache != null:
+		return _generation_block_cache.get(cell, -1)
+	return block_layer.get_cell_source_id(cell)
+
 func _repair_atlas_tiles() -> void:
 	var ts: TileSet = null
 	if edge_layer and edge_layer.tile_set:
@@ -190,7 +201,7 @@ func _ready() -> void:
 	light_occluder_manager.setup(block_layer)
 	
 	astar = AStarGrid2D.new()
-	astar.region = Rect2i(-30, -15, 60, 60)
+	astar.region = Rect2i(-30, -40, 60, 85)
 	astar.cell_size = Vector2(64, 64)
 	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	astar.update()
@@ -292,18 +303,45 @@ func _setup_border_rim_shader() -> void:
 			corner.material = _border_rim_material
 			corner.modulate = Color.WHITE
 
+	if bg_layer:
+		var depth_shader := load("res://assets/environment/lighting/depth_tint.gdshader") as Shader
+		if depth_shader:
+			var bg_mat := ShaderMaterial.new()
+			bg_mat.shader = depth_shader
+			bg_layer.material = bg_mat
+			bg_layer.modulate = Color.WHITE
+
 func _update_border_rim_player_pos() -> void:
 	if _border_rim_material == null:
 		return
-	var player := get_node_or_null("Player") as Node2D
-	if player == null:
+	var focus := _lighting_focus_node()
+	if focus == null:
 		return
-	_border_rim_material.set_shader_parameter("player_world_pos", player.global_position)
+	_border_rim_material.set_shader_parameter("player_world_pos", focus.global_position)
+
+func _lighting_focus_node() -> Node2D:
+	# Wall faces are unshaded and lit by proximity to a single point, so that
+	# point has to be whichever unit the player is steering. In the peon maze
+	# the peon takes over the camera; without this its tunnel stayed pitch dark
+	# while the rim light kept hugging the parked hero.
+	var peon := get_node_or_null("BuilderPeon") as Node2D
+	if peon != null and bool(peon.get("controlled")):
+		return peon
+	return get_node_or_null("Player") as Node2D
 
 func on_cell_dug(cell: Vector2i) -> void:
+	if _generation_block_cache != null and _generation_block_cache.has(cell):
+		var btype = _generation_block_cache[cell]
+		# 5% chance on hard rock
+		if btype == 3 and randf() < 0.05:
+			call_deferred("_spawn_buried_threat", cell)
+
 	if not world_generation_in_progress:
 		topology_revision += 1
 		dug_at_msec[cell] = Time.get_ticks_msec()
+		if not is_queued_for_deletion():
+			call_deferred("_update_flow_field")
+			call_deferred("_check_cave_in", cell)
 	if astar.is_in_bounds(cell.x, cell.y):
 		astar.set_point_solid(cell, false)
 	
@@ -340,14 +378,14 @@ func on_cell_dug(cell: Vector2i) -> void:
 	_refresh_navigation_weights_around(cell, 2)
 
 func update_fog_mask(cell: Vector2i) -> void:
-	if block_layer.get_cell_source_id(cell) == -1:
+	if _get_block_source_id(cell) == -1:
 		if fog_layer: fog_layer.erase_cell(cell)
 		return
 		
-	var top_open = block_layer.get_cell_source_id(Vector2i(cell.x, cell.y - 1)) == -1
-	var right_open = block_layer.get_cell_source_id(Vector2i(cell.x + 1, cell.y)) == -1
-	var bottom_open = block_layer.get_cell_source_id(Vector2i(cell.x, cell.y + 1)) == -1
-	var left_open = block_layer.get_cell_source_id(Vector2i(cell.x - 1, cell.y)) == -1
+	var top_open = _get_block_source_id(Vector2i(cell.x, cell.y - 1)) == -1
+	var right_open = _get_block_source_id(Vector2i(cell.x + 1, cell.y)) == -1
+	var bottom_open = _get_block_source_id(Vector2i(cell.x, cell.y + 1)) == -1
+	var left_open = _get_block_source_id(Vector2i(cell.x - 1, cell.y)) == -1
 	
 	var index = 0
 	if top_open: index += 1
@@ -499,8 +537,10 @@ func _seed_expedition_motherlodes() -> void:
 		motherlodes[int(definition["stage"])] = center
 		for index in range(int(definition["count"])):
 			var cell := center + pattern[index % pattern.size()]
-			if block_layer.get_cell_source_id(cell) == -1:
+			if _get_block_source_id(cell) == -1:
 				block_layer.set_cell(cell, int(definition["rock"]), Vector2i.ZERO)
+				if _generation_block_cache != null:
+					_generation_block_cache[cell] = int(definition["rock"])
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 			_create_gem_block(cell)
@@ -535,14 +575,15 @@ func generate_initial_world() -> void:
 	noise.seed = DEBUG_FIXED_WORLD_SEED if DEBUG_FIXED_WORLD_SEED >= 0 else randi()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	noise.frequency = 0.1
+	_generation_block_cache = {}
 	
 	for x in range(-width / 2, width / 2):
-		for y in range(-10, depth):
+		for y in range(-35, depth):
 			var cell = Vector2i(x, y)
 			
 			var block_type = 1
 			# Map boundary and protected surface cells are unmineable bedrock
-			if x == -width / 2 or x == width / 2 - 1 or y == -10 or y == depth - 1:
+			if x == -width / 2 or x == width / 2 - 1 or y == -35 or y == depth - 1:
 				block_type = 16
 			elif is_vs_mode and GameMode.is_line_wars() and _is_maze_bedrock(x, y):
 				block_type = 16
@@ -566,6 +607,7 @@ func generate_initial_world() -> void:
 					block_type = 2
 					
 			block_layer.set_cell(cell, block_type, Vector2i(0, 0))
+			_generation_block_cache[cell] = block_type
 			if astar.is_in_bounds(cell.x, cell.y):
 				astar.set_point_solid(cell, true)
 				
@@ -578,16 +620,19 @@ func generate_initial_world() -> void:
 	print("  [PROF p%d]   motherlodes %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 	# Now that all blocks are placed, calculate masks and front walls
 	for x in range(-width / 2, width / 2):
-		for y in range(-10, depth):
+		for y in range(-35, depth):
 			update_fog_mask(Vector2i(x, y))
 			update_front_wall(Vector2i(x, y))
 			update_inside_corners(Vector2i(x, y))
 	print("  [PROF p%d]   terrain refresh pass %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 
 	for x in range(-width / 2, width / 2):
-		for y in range(-10, depth):
+		for y in range(-35, depth):
 			update_astar_weight(Vector2i(x, y))
 	print("  [PROF p%d]   astar weights %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
+	
+	_generation_block_cache = null
+
 
 	# Area around the base -- identical in every mode. The standard VS mine used
 	# to clear x -15..15 instead, which left long open surface tunnels running
@@ -635,9 +680,11 @@ func _carve_surface_breach_corridors() -> void:
 		on_cell_dug(Vector2i(x, -2))
 
 func _ensure_tutorial_gem() -> void:
-	if is_vs_mode or block_layer.get_cell_source_id(TUTORIAL_GEM_CELL) == BLOCK_GEM:
+	if is_vs_mode or _get_block_source_id(TUTORIAL_GEM_CELL) == BLOCK_GEM:
 		return
 	block_layer.set_cell(TUTORIAL_GEM_CELL, BLOCK_GEM, Vector2i.ZERO)
+	if _generation_block_cache != null:
+		_generation_block_cache[TUTORIAL_GEM_CELL] = BLOCK_GEM
 	if astar.is_in_bounds(TUTORIAL_GEM_CELL.x, TUTORIAL_GEM_CELL.y):
 		astar.set_point_solid(TUTORIAL_GEM_CELL, true)
 
@@ -679,18 +726,9 @@ func _begin_player_journey_impl() -> void:
 			# which the arrow keys fire -- so player two's arrows steered player
 			# one's peon as well whenever player one's own keys were idle.
 			peon.allow_ui_movement_fallback = false
-			
-			var peon_light := PointLight2D.new()
-			peon_light.texture = preload("res://assets/environment/lighting/player_light_gradient.tres")
-			peon_light.color = Color(1.0, 0.84, 0.66, 1.0)
-			peon_light.energy = 1.0
-			peon_light.texture_scale = 1.15
-			peon_light.shadow_enabled = true
-			peon_light.shadow_color = Color.BLACK
-			peon_light.position = Vector2(0, -24)
-			peon.add_child(peon_light)
-			
-			peon.global_position = block_layer.map_to_local(Vector2i(0, -1))
+			# The peon carries its own miner's lamp in builder_peon_player.tscn,
+			# matching the hero's PointLight2D.
+			peon.global_position = block_layer.to_global(block_layer.map_to_local(MAZE_PEON_START_CELL))
 			add_child(peon)
 			peon.configure_world_digging(self, Vector2i(-20, -10), Vector2i(19, -1))
 
@@ -959,7 +997,7 @@ func _process(delta: float) -> void:
 	var hud = get_node_or_null("HUD")
 	if hud and hud.has_method("update_wave_info"):
 		var displayed_wave: int = int(get_meta("active_wave_number", current_wave_number)) if wave_active else int(current_wave_number)
-		var is_boss: bool = displayed_wave % 10 == 0
+		var is_boss: bool = _is_boss_wave(displayed_wave)
 		var max_wave_time: float = float(wave_interval if displayed_wave > 1 else FIRST_WAVE_DELAY)
 		
 		if wave_active:
@@ -975,6 +1013,12 @@ func _process(delta: float) -> void:
 		wave_timer = wave_interval
 		current_wave_number += 1
 		enemies_per_wave += 1
+
+func _is_boss_wave(wave_number: int) -> bool:
+	# SiegeModeController drives its own boss for the expedition. This fallback
+	# loop (enemy approach prototype, keeper mode) used to test wave % 10, so a
+	# run that ended before wave 10 simply never produced a boss.
+	return wave_number >= MatchFlow.FINAL_WAVE
 
 func _get_cardinal_neighbors(cell: Vector2i) -> Array[Vector2i]:
 	return [cell + Vector2i.RIGHT, cell + Vector2i.LEFT, cell + Vector2i.DOWN, cell + Vector2i.UP]
@@ -1221,7 +1265,7 @@ func get_farthest_open_cell() -> Vector2i:
 	# counts; in every other mode they come out of the mine below it. The search
 	# itself still walks the whole map -- only candidacy is restricted.
 	var maze_mode := is_vs_mode and GameMode.is_line_wars()
-	var min_y := -10 if maze_mode else 0
+	var min_y := -35 if maze_mode else 0
 	var max_y := -1 if maze_mode else 29
 
 	while queue.size() > 0:
@@ -1243,7 +1287,7 @@ func get_farthest_open_cell() -> Vector2i:
 		
 		for n in neighbors:
 			# Only traverse within the playable area
-			if n.x >= -20 and n.x < 20 and n.y >= -10 and n.y < 30:
+			if n.x >= -20 and n.x < 20 and n.y >= -35 and n.y < 30:
 				if not astar.is_point_solid(n) and not visited.has(n):
 					visited[n] = dist + 1
 					queue.append(n)
@@ -1336,7 +1380,7 @@ func spawn_wave(wave_number: int) -> void:
 	_prepare_breach_for_wave(wave_number)
 	var target_cell := current_breach_cell
 	var spawn_pos := block_layer.to_global(block_layer.map_to_local(target_cell))
-	var is_boss := wave_number % 10 == 0
+	var is_boss := _is_boss_wave(wave_number)
 	var hud := get_node_or_null("HUD")
 	var spawn_count: int = 1 if is_boss else enemies_per_wave
 	var spawn_cells := _get_breach_spawn_cells(spawn_count)
@@ -1371,12 +1415,12 @@ func _front_variant_for(base_id: int, round_left: bool, round_right: bool) -> in
 	return int(variants["L"]) if round_left else int(variants["R"])
 
 func update_front_wall(cell: Vector2i) -> void:
-	var block_id = block_layer.get_cell_source_id(cell)
+	var block_id = _get_block_source_id(cell)
 	var below_cell = Vector2i(cell.x, cell.y + 1)
 	
 	if block_id != -1:
 		# If cell is solid, check if below is empty
-		if block_layer.get_cell_source_id(below_cell) == -1:
+		if _get_block_source_id(below_cell) == -1:
 			var front_id = 10 # Easy Front
 			if block_id == 2: front_id = 11
 			elif block_id == 3: front_id = 12
@@ -1387,8 +1431,8 @@ func update_front_wall(cell: Vector2i) -> void:
 			# block's SIDE neighbour is open, so the block juts into the tunnel and its
 			# front wraps a convex corner. Everything else stays square - straight runs,
 			# ledges ending into solid (inlaid), and a 1-wide shaft cap (solid sides).
-			var round_left := block_layer.get_cell_source_id(cell + Vector2i.LEFT) == -1
-			var round_right := block_layer.get_cell_source_id(cell + Vector2i.RIGHT) == -1
+			var round_left := _get_block_source_id(cell + Vector2i.LEFT) == -1
+			var round_right := _get_block_source_id(cell + Vector2i.RIGHT) == -1
 			front_id = _front_variant_for(front_id, round_left, round_right)
 
 			if front_layer: front_layer.set_cell(below_cell, front_id, Vector2i(0, 0))
@@ -1610,7 +1654,7 @@ func refresh_minecart_paths() -> void:
 			cart.refresh_rail_path()
 
 func _is_solid(cell: Vector2i) -> bool:
-	return block_layer.get_cell_source_id(cell) != -1
+	return _get_block_source_id(cell) != -1
 
 func _get_inside_corner_source(cell: Vector2i) -> int:
 	# The three ROCK tiers (Easy=1, Medium=2, Hard=3) have structurally identical
@@ -1620,7 +1664,7 @@ func _get_inside_corner_source(cell: Vector2i) -> int:
 	# from each tier's own flat EdgeLayer interior; only the shared corner is unified.
 	# Unmineable (16) and Gems keep their OWN corner - those are genuine material
 	# boundaries you WANT to see, not seams to hide.
-	var id = block_layer.get_cell_source_id(cell)
+	var id = _get_block_source_id(cell)
 	if id == 16: return 28
 	# Gems now round with the shared rock rim (25), like Easy/Medium/Hard - the gem
 	# identity lives in the flat face/interior inclusion, not the corner. This drops
@@ -1634,9 +1678,9 @@ func _inside_corner_source_for(diagonal: Vector2i, orth_a: Vector2i, orth_b: Vec
 	# connects (the material the player digs INTO), not the diagonal behind them, so
 	# a boundary corner agrees with the flat border beside it and with the tile that
 	# appears when you dig further along.
-	var diag_id := block_layer.get_cell_source_id(diagonal)
-	var a_id := block_layer.get_cell_source_id(orth_a)
-	var b_id := block_layer.get_cell_source_id(orth_b)
+	var diag_id := _get_block_source_id(diagonal)
+	var a_id := _get_block_source_id(orth_a)
+	var b_id := _get_block_source_id(orth_b)
 
 	# Both faces agree -> unambiguously the tier the player sees and digs.
 	if a_id == b_id:
@@ -1650,7 +1694,7 @@ func _inside_corner_source_for(diagonal: Vector2i, orth_a: Vector2i, orth_b: Vec
 	return _get_inside_corner_source(orth_a)
 
 func update_inside_corners(cell: Vector2i) -> void:
-	if block_layer and block_layer.get_cell_source_id(cell) != -1:
+	if block_layer and _get_block_source_id(cell) != -1:
 		if inside_corner_tl: inside_corner_tl.erase_cell(cell)
 		if inside_corner_tr: inside_corner_tr.erase_cell(cell)
 		if inside_corner_bl: inside_corner_bl.erase_cell(cell)
@@ -1685,3 +1729,119 @@ func update_inside_corners(cell: Vector2i) -> void:
 		if inside_corner_br: inside_corner_br.set_cell(cell, _inside_corner_source_for(cell + Vector2i(1, 1), cell + Vector2i(0, 1), cell + Vector2i(1, 0)), Vector2i(0, 1))
 	else:
 		if inside_corner_br: inside_corner_br.erase_cell(cell)
+
+func _update_flow_field() -> void:
+	flow_field.clear()
+	var queue: Array[Vector2i] = [flow_field_target]
+	var visited: Dictionary = {flow_field_target: 0}
+	
+	var head := 0
+	while head < queue.size():
+		var current = queue[head]
+		head += 1
+		var current_dist: int = visited[current]
+		
+		# Orthogonal directions for BFS expansion
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var neighbor = current + d
+			if astar.is_in_bounds(neighbor.x, neighbor.y) and not astar.is_point_solid(neighbor):
+				if not visited.has(neighbor):
+					visited[neighbor] = current_dist + 1
+					queue.append(neighbor)
+	
+	for cell in visited:
+		if cell == flow_field_target:
+			continue
+		var best_dir := Vector2.ZERO
+		var min_dist: int = visited[cell]
+		# Check all 8 directions to give smooth diagonals if possible
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]:
+			var neighbor = cell + d
+			if visited.has(neighbor) and visited[neighbor] < min_dist:
+				min_dist = visited[neighbor]
+				best_dir = Vector2(d.x, d.y)
+		if best_dir != Vector2.ZERO:
+			flow_field[cell] = best_dir.normalized()
+
+var _last_cave_in_msec: int = 0
+const CAVE_IN_COOLDOWN_MSEC := 5000
+
+func _check_cave_in(center_cell: Vector2i) -> void:
+	if is_vs_mode or preparation_active:
+		return
+	if Time.get_ticks_msec() - _last_cave_in_msec < CAVE_IN_COOLDOWN_MSEC:
+		return
+		
+	# Check a 5x5 area around the center_cell. If all are empty, trigger cave-in.
+	var is_empty := true
+	for x in range(center_cell.x - 2, center_cell.x + 3):
+		for y in range(center_cell.y - 2, center_cell.y + 3):
+			var c := Vector2i(x, y)
+			if astar.is_in_bounds(c.x, c.y) and astar.is_point_solid(c):
+				is_empty = false
+				break
+		if not is_empty:
+			break
+			
+	if is_empty:
+		_last_cave_in_msec = Time.get_ticks_msec()
+		var cave_in = load("res://scripts/gameplay/hazards/cave_in.gd").new()
+		cave_in.world = self
+		cave_in.global_position = block_layer.to_global(block_layer.map_to_local(center_cell))
+		add_child(cave_in)
+
+func spawn_rubble(world_pos: Vector2, radius: int) -> void:
+	var center_cell = block_layer.local_to_map(block_layer.to_local(world_pos))
+	for x in range(center_cell.x - radius, center_cell.x + radius + 1):
+		for y in range(center_cell.y - radius, center_cell.y + radius + 1):
+			var c = Vector2i(x, y)
+			# Do not spawn rubble in the base or above ground
+			if c.y < 0 or c.distance_to(BASE_TARGET_CELL) < 3.0:
+				continue
+			if astar.is_in_bounds(c.x, c.y) and not astar.is_point_solid(c):
+				# Spawn Hard Rock (block_type = 3)
+				block_layer.set_cell(c, 3, Vector2i(0, 0))
+				astar.set_point_solid(c, true)
+				update_fog_mask(c)
+				update_front_wall(c)
+				update_inside_corners(c)
+				if _generation_block_cache != null:
+					_generation_block_cache[c] = 3
+	topology_revision += 1
+	_update_flow_field()
+
+func _spawn_buried_threat(cell: Vector2i) -> void:
+	if ENEMY_SCENE == null:
+		return
+	var enemy = ENEMY_SCENE.instantiate()
+	var enemy_types = [1, 1, 1, 3, 4] # mostly spiders (1), some troggs (3) and orcs (4)
+	enemy.enemy_type = enemy_types[randi() % enemy_types.size()]
+	enemy.sleep_timer = 2.0
+	
+	# Try to scale the enemy based on depth
+	var depth = cell.y
+	enemy.health = int(enemy.base_hp * (1.0 + depth * 0.05))
+	enemy.max_health = enemy.health
+	enemy.damage = int(enemy.base_dmg + depth * 0.1)
+	enemy.gold_drop = int(enemy.base_gold + depth * 0.2)
+	enemy.xp_drop = int(enemy.base_xp + depth * 0.5)
+	
+	enemy.global_position = block_layer.to_global(block_layer.map_to_local(cell))
+	add_child(enemy)
+	
+	# Simple visual pop
+	var burst := CPUParticles2D.new()
+	burst.emitting = true
+	burst.one_shot = true
+	burst.explosiveness = 0.9
+	burst.direction = Vector2(0, -1)
+	burst.spread = 60
+	burst.initial_velocity_min = 80
+	burst.initial_velocity_max = 150
+	burst.scale_amount_min = 4.0
+	burst.scale_amount_max = 8.0
+	burst.color = Color(0.4, 0.3, 0.2)
+	burst.amount = 20
+	burst.position = enemy.global_position
+	add_child(burst)
+	_spawn_feedback_label(enemy.global_position, "BURIED THREAT!", Color(1.0, 0.4, 0.2), 1.5)

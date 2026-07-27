@@ -86,10 +86,10 @@ const HERO_CARD_DATA := {
 		"description": "The defeated war machine returns as a heavy miner whose pilot can eject and rebuild the frame at the bastion.",
 		"accent": Color(1.0, 0.46, 0.16, 1.0),
 		"abilities": [
-			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Armored Chassis", "description": "High health and frontline durability"},
-			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Mining Servos", "description": "Heavy frame with fast base digging"},
-			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Emergency Ejection", "description": "Pilot escapes when the frame is destroyed"},
-			{"icon": preload("res://character_sprites/hero_idle/mech_idle_front.png"), "title": "Field Rebuild", "description": "Reach the bastion to restore the Mech"},
+			{"icon": preload("res://ability_icons/placeholder_hammer.svg"), "title": "Scrap Rockets", "description": "Explosive salvo with knockback"},
+			{"icon": preload("res://ability_icons/placeholder_stomp.svg"), "title": "Drill Charge", "description": "Bores through enemies and rock"},
+			{"icon": preload("res://ability_icons/placeholder_carapace.svg"), "title": "Reinforced Plating", "description": "Self-repairing hull plates"},
+			{"icon": preload("res://ability_icons/placeholder_avatar.svg"), "title": "Siege Overdrive", "description": "Level 6 power and reload form"},
 		],
 	},
 }
@@ -197,13 +197,21 @@ func _compact_hero_choices() -> Array[String]:
 	if Global.unlocked_heroes.size() <= 1:
 		return choices
 	_add_compact_choice(choices, str(Global.selected_hero_id))
+	# A hero unlocked by the run that just ended is always the alternative on
+	# offer, so the reward is the first thing the stronghold shows.
 	var newly_unlocked: Array = world.get_meta("newly_unlocked_heroes", []) if world != null else []
 	for index in range(newly_unlocked.size() - 1, -1, -1):
 		_add_compact_choice(choices, str(newly_unlocked[index]))
-	for index in range(Global.unlocked_heroes.size() - 1, -1, -1):
-		_add_compact_choice(choices, str(Global.unlocked_heroes[index]))
+	# Otherwise the second pedestal walks the roster forward from the active hero
+	# and wraps. This used to scan the roster backwards, which always landed on
+	# the newest unlock and left every earlier hero unreachable — with a full
+	# roster the starting Dwarf could never be selected again.
+	var roster: Array = Global.unlocked_heroes
+	var active_index: int = roster.find(str(Global.selected_hero_id))
+	for step in range(1, roster.size() + 1):
 		if choices.size() >= 2:
 			break
+		_add_compact_choice(choices, str(roster[posmod(active_index + step, roster.size())]))
 	return choices
 
 func _add_compact_choice(choices: Array[String], hero_name: String) -> void:

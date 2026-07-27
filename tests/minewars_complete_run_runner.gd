@@ -131,6 +131,9 @@ func _test_build_identities() -> void:
 	_set_build_bonuses(rpg, {"strength": 5, "agility": 0, "intelligence": 0})
 	_expect(str((rpg.call("get_build_identity") as Dictionary).get("title", "")) == "EARTHBREAKER", "Five Strength upgrades should form an Earthbreaker build")
 	_expect(float(rpg.call("get_mining_force_multiplier", 3)) < 0.65, "Strength should visibly reduce ancient-rock resistance")
+	# Strength's dig-cadence contribution had no coverage, which is how it sat at a
+	# near-negligible 0.012 next to Agility's 0.050 without anything flagging it.
+	_expect(float(rpg.call("get_dig_time_multiplier")) < 0.93, "Strength should also contribute real mining cadence")
 	_set_build_bonuses(rpg, {"strength": 0, "agility": 5, "intelligence": 0})
 	_expect(str((rpg.call("get_build_identity") as Dictionary).get("title", "")) == "VEIN RUNNER", "Five Agility upgrades should form a Vein Runner build")
 	_expect(float(rpg.call("get_dig_time_multiplier")) < 0.82, "Agility should visibly improve mining cadence")

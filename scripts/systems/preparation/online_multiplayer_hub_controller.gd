@@ -18,7 +18,7 @@ const CAMERA_Y_MAX := 255.0
 const STATE_SEND_INTERVAL := 0.05
 const HERO_SELECT_DISTANCE := 56.0
 
-const HERO_ORDER: Array[String] = ["Dwarf", "Shaman", "Druid", "Nerubian", "Undead King", "Mech"]
+const HERO_ORDER: Array[String] = ["Dwarf", "Shaman", "Nerubian", "Druid", "Undead King", "Mech"]
 const HERO_TEXTURES := {
 	"Dwarf": preload("res://character_sprites/hero_idle/dwarf_idle_front.png"),
 	"Shaman": preload("res://character_sprites/hero_idle/shaman_idle_front.png"),

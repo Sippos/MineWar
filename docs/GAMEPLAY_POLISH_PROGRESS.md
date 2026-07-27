@@ -558,3 +558,79 @@ Status: `COMPLETE`
 ## Last queue update
 
 `POLISH-001` through `POLISH-020` are `COMPLETE`. POLISH-020 replaces raster upgrade icons with the authored SVG set, crops game spritesheets to single frames, and tightens the graph into cleaner icon-first paths. No later polish task is selected yet.
+
+
+## Completed task
+
+ID: `POLISH-021`
+
+Title: Give the single-player economy a cost curve, per-run variance, and an uncapped meta sink
+
+Status: `COMPLETE`
+
+### Validation record
+
+- Single-player attribute costs were a flat 1 gem at every level, so a run's haul (far more than the ~11 gems a full lane used to cost) bought every attribute automatically and purchased stats buried the authored hero profiles. Costs now climb one tier per `SP_STAT_COST_STEP` attribute points; the first point still costs a single gem so early buys stay readable.
+- The hero's primary attribute climbs on the wider `SP_STAT_COST_PRIMARY_STEP`, so each hero has a build direction that is cheaper to commit to than to spread. The primary is read from `HERO_PROFILES` rather than the live `HeroRPGController`, which has not resolved its own player when the menu builds its cards.
+- Competitive pricing is untouched: VS still uses `(level * 2) - 1`.
+- `STAGE_OBJECTIVES` became `STAGE_OBJECTIVE_POOLS` — three objectives per stage, drawn per run — plus five run-wide `RUN_MODIFIERS` that scale the dig window, muster time, assault size, objective targets, and gem payouts. Index 0 of every pool is the original authored objective, and the first expedition and guided trial always draw index 0 with the no-op `steady` modifier, so onboarding is unchanged word for word.
+- Objective rewards generalised: `gems_N` is parsed numerically, gear rewards fall back to gems when the hero already owns the item, and modifier gem bonuses ride along. `_objective_target()` clamps a modifier's target bonus to the seam's crystal count so a drawn objective is never impossible.
+- Legacy Ore had 37 ore of capped ranks total — roughly seven expeditions — after which the currency had nothing to buy. Added `deepening` (uncapped, +1 starting point in the hero's primary attribute per rank, cost climbing forever) and `safe_return` (one rank, +30% muster time). Safe Return is deliberately a rule change rather than a stat pad: it buys depth by changing what "too far from home" means.
+- The save-load path clamped every rank to its max level, which is 0 for an uncapped upgrade and would have wiped Deepening on load; uncapped ids are now exempt from that clamp and covered by a round-trip test.
+- The Legacy Forge grew from three pads to five and now wraps at three per row, so it still fits the compact first-run stronghold. Uncapped pads show `Lv N` instead of `Lv N / 0`.
+- New suite `tests/run_variance_economy_runner.tscn` passes: cost curve climbs, primary lane is the cheap lane and follows the hero, VS pricing unchanged, every pooled objective is diggable from its seam, modifier ids are unique and each non-steady modifier has a real effect, Deepening never maxes and its ranks reach the hero's primary attribute without double-counting on re-sync, uncapped ranks survive a save round trip, and a modifier's staged ore bonus reaches the result screen exactly once.
+- Regression: `legacy_forge_smoke_runner`, `minewars_complete_run_runner` (99 checks), `minewars_four_stage_balance_runner` (32 checks), `hero_rpg_system_runner`, `hero_balance_smoke_runner` and `line_wars_unlock_smoke_runner` all pass. `stronghold_practice_gem_smoke_runner` fails on `_create_practice_gem_station` never being called — that is pre-existing at HEAD and untouched here.
+- Files modified: `upgrade_menu.gd`, `global.gd`, `hero_rpg_controller.gd`, `scripts/systems/stronghold_legacy_forge.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `tests/run_variance_economy_runner.gd`, `tests/run_variance_economy_runner.tscn`, and this progress document.
+
+## Last queue update
+
+`POLISH-001` through `POLISH-021` are `COMPLETE`. POLISH-021 replaces the flat single-player stat price with a hero-aware cost curve, draws stage objectives and one run modifier per expedition, and gives Legacy Ore an uncapped sink so the meta no longer ends after about seven runs. No later polish task is selected yet.
+
+
+## Completed task
+
+ID: `POLISH-022`
+
+Title: Keep stronghold furniture and the LineWars shaft out of the expedition, and relay the forge row
+
+Status: `COMPLETE`
+
+### Validation record
+
+- The Legacy Forge, the stronghold ambience and the practice yard are added to the world, not to the hub controller, so `_prepare_world_for_run` left all three parked on the expedition arena — five glowing pads and their labels sat across the Base during the MineWars recovery phase. They are now freed when a run starts.
+- The upper LineWars shaft is carved once in `generate_initial_world` and stayed an open hole in the expedition's ceiling, because MineWars and LineWars share one room. `activate_minewars_tunnel` now bricks the shaft back to bedrock and refreshes the fog, front-wall, corner and A* layers around it.
+- The forge pads wrapped onto a second row whose labels ran through the first row's, and the wrap put Safe Return and Deepening above the Core in reading order. Pads are now a single row centred on the room, in `PAD_ORDER`, so the row reads Core → Cache → Harness → Return → Deepen. Radius dropped to 30 and spacing to 76 to fit the row at the compact Burrow tier.
+- Per-pad cost labels are gone: each pad carries its name and rank above the disc only, and the single status line carries the ore total, the selected rank's cost and its effect. Nothing is drawn below a pad any more, which is what used to run into the floor.
+- The hearth moved from behind the pads to the head of the row, so it no longer sits over the middle of the room.
+- The forge prompt read `E / Y  •  FORGE`, which is the Base's own upgrade-menu prompt verbatim; it now reads `E / Y  •  TEMPER <RANK>` so the two interactions are not confusable.
+- `legacy_forge_smoke_runner` now covers all five pads instead of the first three, and asserts every pad stays on the one floor row at the Burrow, Cave and Stronghold tiers.
+- New suite `tests/hub_furniture_cleanup_runner.tscn` opens a real hub with the shaft unlocked, starts a run, and asserts the forge and ambience are gone and every shaft cell is bedrock again.
+- Regression: `legacy_forge_smoke_runner`, `run_variance_economy_runner`, `hub_furniture_cleanup_runner`, `minewars_complete_run_runner`, `minewars_four_stage_balance_runner`, `line_wars_unlock_smoke_runner` and `hero_rpg_system_runner` all pass.
+- Files modified: `scripts/systems/stronghold_legacy_forge.gd`, `scripts/systems/single_player_world_controller.gd`, `scripts/systems/preparation/single_player_compact_world.gd`, `tests/legacy_forge_smoke_runner.gd`, `tests/hub_furniture_cleanup_runner.gd`, `tests/hub_furniture_cleanup_runner.tscn`, and this progress document.
+
+## Last queue update
+
+`POLISH-001` through `POLISH-022` are `COMPLETE`. POLISH-022 stops stronghold furniture and the LineWars shaft leaking into the expedition and relays the forge as a single readable row. No later polish task is selected yet.
+
+
+## Completed task
+
+ID: `POLISH-023`
+
+Title: Replace the Legacy Forge floor pads with a single interactable and a proper menu
+
+Status: `COMPLETE`
+
+### Validation record
+
+- The forge was one floor pad per upgrade. That spent the stronghold's entire floor on five discs, could not fit the compact Burrow tier without collisions, and could not grow past five ranks — Deepening is uncapped, so the list has to grow. The forge is now a single hearth against the left wall that the player stands at.
+- Standing within `INTERACT_RADIUS` shows an `E / Y  •  LEGACY FORGE  •  N ORE` prompt; pressing interact opens the rank list. Out of range the hearth is scenery.
+- New scenes: `scenes/ui/overlays/legacy_forge/legacy_forge_menu.tscn` holds the frame with stable node names (Header/Title, Header/Ore, Rows, Effect, Hint), and `legacy_forge_row.tscn` is the row template. Rows are instanced per upgrade so the list follows `UPGRADE_ORDER` rather than a hand-placed control per rank, which is what lets the uncapped rank live in the same list.
+- Rows are Buttons, so keyboard, gamepad and mouse all work: W/S or up/down moves the selection, E/A or accept forges the selected rank, Esc/B leaves. The selected row takes the upgrade's accent colour and the effect line explains the cost and what the rank does.
+- The menu holds the hero still via `player.can_move` while it is open and gives them back on close. Walking out of range closes it, and `_exit_tree` releases the lock too, so a forge freed mid-menu — which is exactly what run start does — cannot strand the hero unable to move.
+- `legacy_forge_smoke_runner` was rewritten off the pads: it now checks the hearth sits inside the room clear of the base, spawn and shrines at all three hub tiers; that it does not open from across the room or by itself; that opening locks the hero and lists every upgrade; that a rank is refused without ore, bought with it, and reaches the run; that a maxed rank refuses further ore while the uncapped rank still sells at 9999; and that both closing and walking away give the hero their legs back.
+- Files modified: `scripts/systems/stronghold_legacy_forge.gd`, `scripts/ui/menus/legacy_forge/legacy_forge_menu.gd`, `scenes/ui/overlays/legacy_forge/legacy_forge_menu.tscn`, `scenes/ui/overlays/legacy_forge/legacy_forge_row.tscn`, `tests/legacy_forge_smoke_runner.gd`, and this progress document.
+
+## Last queue update
+
+`POLISH-001` through `POLISH-023` are `COMPLETE`. POLISH-023 turns the Legacy Forge from five floor pads into one interactable plus a scene-defined menu whose rows follow the upgrade data. No later polish task is selected yet.

@@ -21,11 +21,16 @@ Thumbs.db
 build/
 
 # Local toolchain: the CI Godot download (75 MB zip + extracted binary) and the
-# godot-ai MCP server's per-session script backups. The addons/godot_ai plugin
-# itself IS tracked -- project.godot enables it and autoloads its runtime.
+# godot-ai MCP server's per-session script backups.
 .ci/godot/
 .ci/godot.zip
 .godot-mcp/
+
+# The godot-ai editor addon is local tooling, not game content. The repository
+# hygiene workflow rejects it outright, export_presets.cfg excludes it from the
+# build, and deploy.yml strips its project.godot hooks in CI.
+addons/godot_ai/
+godot-ai-LICENSE.txt
 
 # Godot engine class-reference XML, extracted locally for editor tooling.
 # These are engine sources, not part of this game.
@@ -40,3 +45,6 @@ platform/*/doc_classes/
 # generate_main_menu_background.gd) was never in the repo and no longer exists
 # on disk, so exporting it fails resource loading. Nothing loads this scene.
 background_generator.tscn
+
+# Local Godot check output
+godot_check.log

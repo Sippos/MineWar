@@ -2,6 +2,7 @@ extends Node
 
 const LEVEL_SCENE := preload("res://scenes/world/mine/level.tscn")
 const SIEGE_SCRIPT := preload("res://scripts/systems/world_generation/siege_mode_controller.gd")
+const TEST_SAVE_PATH := "user://minewars_four_stage_balance_test.save"
 
 var failures := 0
 var level: Node
@@ -11,7 +12,22 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	call_deferred("_run")
 
+func _configure_isolated_save() -> void:
+	# Without this the harness inherits whatever save is on the machine running
+	# it. A save that has not finished onboarding leaves first_run_training_active
+	# true, and _process_mining then rewrites mining_timer back to the full window
+	# every frame - so the stage never reaches muster and all sixteen downstream
+	# stage checks fail for a reason that has nothing to do with balance.
+	Global.set_save_path_override(TEST_SAVE_PATH)
+	if FileAccess.file_exists(TEST_SAVE_PATH):
+		DirAccess.remove_absolute(TEST_SAVE_PATH)
+	Global.prototype_onboarding_completed = true
+
+func _restore_save_override() -> void:
+	Global.set_save_path_override("")
+
 func _run() -> void:
+	_configure_isolated_save()
 	GameMode.set_mode(GameMode.Mode.SIEGE)
 	level = LEVEL_SCENE.instantiate()
 	level.set("is_vs_mode", false)
@@ -48,7 +64,10 @@ func _run() -> void:
 	await get_tree().create_timer(0.12).timeout
 	_expect(str(level.get_meta("minewars_phase", "")) == "attack", "Stage 1 should enter assault muster")
 	var stage_one_muster := float(controller.get("assault_muster_timer"))
-	_expect(stage_one_muster > 9.0 and stage_one_muster <= 10.0, "Stage 1 should provide about ten seconds of return grace")
+	# Anchored to the authored muster time for the same reason as the boss stats:
+	# the literal 9.0-10.0 window went stale when Stage 1 was retuned to 16s.
+	var stage_one_authored := float(SIEGE_SCRIPT.STAGE_MUSTER_TIMES[1])
+	_expect(stage_one_muster > stage_one_authored - 1.0 and stage_one_muster <= stage_one_authored, "Stage 1 should provide its full authored return grace")
 	_expect(_world_enemies().is_empty(), "No enemies should damage the base during the muster countdown")
 	controller.set("assault_muster_timer", 0.02)
 	await get_tree().create_timer(2.8).timeout
@@ -105,9 +124,13 @@ func _run() -> void:
 	_expect(boss_enemies.size() == 1, "The final assault should spawn one readable boss")
 	if boss_enemies.size() == 1:
 		var boss_enemy: Node = boss_enemies[0]
-		_expect(int(boss_enemy.get("health")) == 600, "MineWars boss health should match the four-stage economy")
-		_expect(int(boss_enemy.get("damage")) == 12, "MineWars boss damage should permit active defence")
-		_expect(absf(float(boss_enemy.get("speed")) - 50.0) < 0.1, "MineWars boss should approach slowly enough to create a climax")
+		# Assert the authored constants rather than copies of them. These used to
+		# be literal 600/12/50, which silently went stale when the boss was retuned
+		# to 540/9/46 and reported a balance regression that had not happened.
+		_expect(int(boss_enemy.get("health")) == SIEGE_SCRIPT.MINEWARS_BOSS_HEALTH, "MineWars boss health should match the four-stage economy")
+		_expect(int(boss_enemy.get("damage")) == SIEGE_SCRIPT.MINEWARS_BOSS_DAMAGE, "MineWars boss damage should permit active defence")
+		_expect(absf(float(boss_enemy.get("speed")) - SIEGE_SCRIPT.MINEWARS_BOSS_SPEED) < 0.1, "MineWars boss should approach slowly enough to create a climax")
+		_expect(boss_enemy.get_meta("minewars_boss", false), "The final enemy should be tagged as the bespoke MineWars boss")
 	_clear_enemies()
 	await _wait_frames(8)
 	_expect(int(level.get("current_wave_number")) == 5, "Defeating the boss should complete the four-stage expedition")
@@ -153,6 +176,7 @@ func _expect(condition: bool, message: String) -> void:
 		push_error("FAIL: %s" % message)
 
 func _finish() -> void:
+	_restore_save_override()
 	if failures == 0:
 		print("MINEWARS_FOUR_STAGE_BALANCE_PASS")
 		get_tree().quit()
