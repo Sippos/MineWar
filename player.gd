@@ -815,7 +815,7 @@ func handle_digging(delta: float) -> void:
 					# Harder blocks consume more contacts, rather than stretching this
 					# animation cycle.
 					current_dig_swing_time = calculated_dig_time
-					var block_id := tile_map.get_cell_source_id(cell)
+					block_id = tile_map.get_cell_source_id(cell)
 					var hardness_multiplier := get_block_hardness_multiplier(block_id, cell)
 					if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
 						hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
