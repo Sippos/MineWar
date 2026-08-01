@@ -18,6 +18,9 @@ func _register_player_one() -> void:
 	_ensure_key("p1_grab", KEY_SPACE)
 	_ensure_key("p1_drop", KEY_Q)
 	_ensure_key("p1_stomp", KEY_R)
+	# The war horn ends an expedition's dig window early for a bounty. It needs its
+	# own binding: interact is the forge/deposit key and must stay harmless.
+	_ensure_key("p1_horn", KEY_G)
 	_ensure_joy_axis("p1_left", 0, JOY_AXIS_LEFT_X, -1.0)
 	_ensure_joy_axis("p1_right", 0, JOY_AXIS_LEFT_X, 1.0)
 	_ensure_joy_axis("p1_up", 0, JOY_AXIS_LEFT_Y, -1.0)
@@ -30,6 +33,7 @@ func _register_player_one() -> void:
 	_ensure_joy_button("p1_grab", 0, JOY_BUTTON_A)
 	_ensure_joy_button("p1_drop", 0, JOY_BUTTON_B)
 	_ensure_joy_button("p1_stomp", 0, JOY_BUTTON_X)
+	_ensure_joy_button("p1_horn", 0, JOY_BUTTON_BACK)
 
 func _register_player_two() -> void:
 	_ensure_key("p2_left", KEY_LEFT)

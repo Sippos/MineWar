@@ -130,9 +130,9 @@ func _on_send_enemy(enemy_type: int, sender_id: int) -> void:
 	var block_layer = target.block_layer
 	if block_layer == null or not target.has_method("get_farthest_open_cell"):
 		return
-	var e = target.ENEMY_SCENE.instantiate()
+	var e = preload("res://enemy.tscn").instantiate()
 	var target_cell = target.get_farthest_open_cell()
-	e.global_position = block_layer.to_global(block_layer.map_to_local(target_cell))
+	e.position = block_layer.map_to_local(target_cell)
 	target.add_child(e)
 	if e.has_method("initialize"):
 		e.initialize(1, false, enemy_type)

@@ -501,9 +501,9 @@ func _format_elapsed_time(hud: Node) -> String:
 
 func _make_flat_panel_style(background: Color, border: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = background
-	style.border_color = border
-	style.set_border_width_all(2)
+	style.bg_color = Color.TRANSPARENT
+	style.border_color = Color.TRANSPARENT
+	style.set_border_width_all(0)
 	style.set_corner_radius_all(8)
 	style.content_margin_left = 10
 	style.content_margin_right = 10

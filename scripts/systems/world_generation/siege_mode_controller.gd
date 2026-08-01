@@ -6,6 +6,7 @@ extends Node2D
 
 const ENEMY_SCENE := preload("res://enemy.tscn")
 const BOSS_BEHAVIOR := preload("res://scripts/systems/world_generation/minewars_boss_behavior.gd")
+const SEALED_CACHE_SCRIPT := preload("res://scripts/gameplay/collectibles/rewards/sealed_cache.gd")
 const FIXED_ENTRANCE_CELL := Vector2i(12, 0)  # Right tunnel endpoint
 const SECONDARY_ENTRANCE_CELL := Vector2i(12, 0)
 const SPAWN_GAP := 0.42
@@ -201,6 +202,16 @@ const RUN_MODIFIERS := [
 		"target_bonus": 1,
 	},
 ]
+# The war horn. The dig window used to be the only thing that decided when a
+# stage ended, so greed had no mechanical expression: the clock returned the
+# player, the player never chose to return. The horn is the choice — end the
+# window early and the bastion pays for the time it did not have to hold. It is
+# deliberately a separate action from interact, because banking gems must stay
+# free: a player who walks home with one gem is not committing to anything.
+const HORN_RADIUS := 128.0
+const HORN_SECONDS_PER_GEM := 20.0
+const HORN_SECONDS_PER_ORE := 30.0
+
 const MOTHERLODE_PATTERN: Array[Vector2i] = [
 	Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN,
 	Vector2i(-1, 1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1),
@@ -241,6 +252,11 @@ var secondary_entrance_marker: Node2D
 var first_run_training_active := false
 var first_expedition_run := false
 var muster_arrival_announced := false
+var horn_marker: Node2D
+var horn_label: Label
+var horn_sounded := false
+var reward_caches: Array = []
+var reward_caches_open := false
 # Per-run variance: one objective drawn per stage plus a single run-wide modifier.
 var run_objectives: Dictionary = {}
 var run_modifier: Dictionary = {}
@@ -288,6 +304,7 @@ func _activate() -> void:
 	_set_phase_meta("mining")
 	_ensure_surface_lanes()
 	_create_ui()
+	_create_horn_marker()
 	_create_primary_entrance_marker()
 	_initialize_stage_objective()
 	_update_ui()
@@ -521,8 +538,83 @@ func _process_mining(delta: float) -> void:
 	_update_stage_objective()
 	_update_warning_stage()
 	_sync_return_guidance()
+	_update_horn_prompt()
 	if mining_timer <= 0.0 and not wave_spawning:
 		_start_assault()
+
+## The horn stands at the bastion and only answers during the dig window. Its
+## label carries the live bounty so the trade is priced before it is taken.
+func _create_horn_marker() -> void:
+	if base == null or not is_instance_valid(base):
+		return
+	horn_marker = Node2D.new()
+	horn_marker.name = "WarHornPrompt"
+	horn_marker.z_index = 9
+	horn_marker.visible = false
+	world.add_child(horn_marker)
+	horn_label = Label.new()
+	horn_label.position = Vector2(-150, -108)
+	horn_label.size = Vector2(300, 22)
+	horn_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	horn_label.add_theme_font_size_override("font_size", 13)
+	horn_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.26, 1.0))
+	horn_label.add_theme_color_override("font_outline_color", Color(0.03, 0.02, 0.01, 0.96))
+	horn_label.add_theme_constant_override("outline_size", 5)
+	horn_marker.add_child(horn_label)
+
+func _update_horn_prompt() -> void:
+	if horn_marker == null or not is_instance_valid(horn_marker):
+		return
+	if base == null or not is_instance_valid(base) or player == null or not is_instance_valid(player):
+		horn_marker.visible = false
+		return
+	horn_marker.global_position = base.global_position
+	var in_range := player.global_position.distance_to(base.global_position) <= HORN_RADIUS
+	horn_marker.visible = in_range and _horn_available()
+	if horn_marker.visible:
+		var gems := _horn_gem_bounty()
+		var ore := _horn_ore_bounty()
+		horn_label.text = "G / SELECT  •  SOUND THE HORN   +%d ◇   +%d ORE" % [gems, ore]
+
+func _horn_available() -> bool:
+	return phase == Phase.MINING and not wave_spawning and not horn_sounded and not first_run_training_active
+
+func _horn_gem_bounty() -> int:
+	return int(floor(mining_timer / HORN_SECONDS_PER_GEM))
+
+func _horn_ore_bounty() -> int:
+	return int(floor(mining_timer / HORN_SECONDS_PER_ORE))
+
+func _input(event: InputEvent) -> void:
+	if not event.is_action_pressed("p1_horn") or not _horn_available():
+		return
+	if base == null or player == null or not is_instance_valid(base) or not is_instance_valid(player):
+		return
+	if player.global_position.distance_to(base.global_position) > HORN_RADIUS:
+		return
+	_sound_the_horn()
+
+func _sound_the_horn() -> void:
+	horn_sounded = true
+	var gems := _horn_gem_bounty()
+	var ore := _horn_ore_bounty()
+	if gems > 0 and hud and hud.has_method("add_gems"):
+		hud.add_gems(gems)
+	if ore > 0:
+		# stage_run_ore_bonus assigns rather than accumulates, so the modifier's
+		# own staged bonus has to be carried forward here.
+		Global.stage_run_ore_bonus(int(Global.pending_run_ore_bonus) + ore)
+	if horn_marker and is_instance_valid(horn_marker):
+		horn_marker.visible = false
+	mining_timer = 0.0
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_upgrade"):
+		sound_fx.play_upgrade()
+	_spawn_base_signal(Color(1.0, 0.72, 0.26, 0.95), 3, 96.0)
+	_shake_camera(5.0)
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("THE HORN SOUNDS — you called them early. +%d gems, +%d Legacy Ore." % [gems, ore], 3.6)
+	_start_assault()
 
 func _process_attack() -> void:
 	_sync_return_guidance()
@@ -580,6 +672,8 @@ func _ensure_surface_lanes() -> void:
 
 func _start_assault() -> void:
 	phase = Phase.ATTACK
+	if horn_marker and is_instance_valid(horn_marker):
+		horn_marker.visible = false
 	wave_spawning = true
 	assault_muster_timer = _muster_time_for(stage_number)
 	assault_spawn_started = false
@@ -717,6 +811,7 @@ func _begin_next_expedition() -> void:
 	recovery_player_reached_base = false
 	recovery_arrival_announced = false
 	recovery_upgrade_opened = false
+	horn_sounded = false
 	_initialize_stage_objective()
 	_set_phase_meta("mining")
 	_spawn_base_signal(Color(0.28, 0.88, 1.0, 0.82), 1, 58.0)
@@ -725,6 +820,8 @@ func _begin_next_expedition() -> void:
 		sound_fx.play_mine_awaken()
 
 func _reset_stage_objective_state() -> void:
+	# Caches the player never opened bury themselves when the next stage begins.
+	_collapse_reward_caches()
 	objective_progress = 0
 	objective_completed = false
 	objective_reward_claimed = false
@@ -783,17 +880,153 @@ func _complete_stage_objective() -> void:
 		return
 	objective_completed = true
 	world.set_meta("minewars_objective_complete", true)
-	_award_objective_reward()
+	_open_reward_caches()
 	_play_objective_completion_feedback()
 	var sound_fx := get_node_or_null("/root/SoundFX")
 	if sound_fx and sound_fx.has_method("play_upgrade"):
 		sound_fx.play_upgrade()
 
-func _award_objective_reward() -> void:
+## The stage reward is no longer handed over: three sealed caches open in the
+## seam, each showing what it holds, and taking one collapses the rest. The
+## decision is made by walking, inside the dig clock, which keeps the reward in
+## the mine instead of moving it onto a menu.
+func _open_reward_caches() -> void:
+	if objective_reward_claimed or reward_caches_open:
+		return
+	var choices := _reward_cache_choices()
+	var cells := _reward_cache_cells(choices.size())
+	if choices.size() < 2 or cells.size() < 2:
+		# Nowhere sensible to place them — pay the authored reward directly rather
+		# than dropping a stage reward on the floor.
+		_award_objective_reward()
+		return
+	# The authored reward is index 0, so a short placement list never drops it.
+	choices.resize(mini(choices.size(), cells.size()))
+	reward_caches_open = true
+	for index in range(choices.size()):
+		var choice: Dictionary = choices[index]
+		var cache := Area2D.new()
+		cache.name = "SealedCache%d" % index
+		cache.set_script(SEALED_CACHE_SCRIPT)
+		world.add_child(cache)
+		cache.global_position = _cell_world_position(cells[index])
+		cache.configure(str(choice.get("reward_id", "")), str(choice.get("title", "CACHE")), choice.get("colour", Color(1.0, 0.78, 0.32, 1.0)))
+		cache.claimed.connect(_on_reward_cache_claimed)
+		reward_caches.append(cache)
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("THE SEAM OPENS — three caches, one choice. Taking one buries the others.", 4.0)
+
+func _on_reward_cache_claimed(reward_id: String) -> void:
+	_collapse_reward_caches()
+	_award_objective_reward(reward_id)
+
+func _collapse_reward_caches() -> void:
+	for cache_value in reward_caches:
+		var cache := cache_value as Node
+		if cache == null or not is_instance_valid(cache):
+			continue
+		if cache.has_method("collapse"):
+			cache.collapse()
+	reward_caches.clear()
+	reward_caches_open = false
+
+## The stage's authored reward is always one of the three, so a drawn objective
+## still pays what it advertised. The other two are drawn from rewards the hero
+## can still use, which keeps a gear cache from offering gear already worn.
+func _reward_cache_choices() -> Array:
+	var authored := str(_objective_data().get("reward_id", ""))
+	var choices: Array = [_reward_cache_entry(authored)]
+	var pool := ["satchel", "boots", "pickaxe", "pick_power", "gems_3", "gems_5"]
+	var taken := [authored]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = run_seed + stage_number * 7717
+	pool.shuffle()
+	for candidate in pool:
+		if choices.size() >= 3:
+			break
+		if taken.has(candidate) or not _reward_still_useful(candidate):
+			continue
+		taken.append(candidate)
+		choices.append(_reward_cache_entry(candidate))
+	return choices
+
+func _reward_still_useful(reward_id: String) -> bool:
+	match reward_id:
+		"satchel":
+			return not _hero_owns_gear("miners_satchel")
+		"boots":
+			return not _hero_owns_gear("boots")
+		"pickaxe":
+			return not _hero_owns_gear("pickaxe")
+		"pick_power":
+			return int(player.get("mining_power_level")) < 3
+	return true
+
+func _hero_owns_gear(gear_id: String) -> bool:
+	var owned: Variant = player.get("cave_reward_ids")
+	return owned is Array and (owned as Array).has(gear_id)
+
+func _reward_cache_entry(reward_id: String) -> Dictionary:
+	if reward_id.begins_with("gems_"):
+		return {"reward_id": reward_id, "title": "%s GEMS" % reward_id.trim_prefix("gems_"), "colour": Color(0.45, 0.85, 1.0, 1.0)}
+	match reward_id:
+		"satchel":
+			return {"reward_id": reward_id, "title": "MINER'S SATCHEL", "colour": Color(0.62, 0.86, 0.45, 1.0)}
+		"boots":
+			return {"reward_id": reward_id, "title": "PROSPECTOR'S BOOTS", "colour": Color(0.62, 0.86, 0.45, 1.0)}
+		"pickaxe":
+			return {"reward_id": reward_id, "title": "SHARPENED PICK", "colour": Color(1.0, 0.72, 0.30, 1.0)}
+		"pick_power":
+			return {"reward_id": reward_id, "title": "+1 PICK POWER", "colour": Color(1.0, 0.72, 0.30, 1.0)}
+	return {"reward_id": reward_id, "title": "SEALED CACHE", "colour": Color(1.0, 0.78, 0.32, 1.0)}
+
+## Caches are spread around the seam the player just cleared, far enough apart
+## that reaching a second one costs real time. A cell qualifies if it is already
+## open or if it is rock touching open ground: the mine is mostly solid, so
+## requiring open cells alone would leave nowhere to put them, and a cache one
+## dig away still reads as buried treasure rather than a floor pickup.
+func _reward_cache_cells(wanted: int) -> Array[Vector2i]:
+	var placed: Array[Vector2i] = []
+	var motherlodes_value: Variant = world.get("minewars_motherlodes")
+	if not motherlodes_value is Dictionary or not (motherlodes_value as Dictionary).has(stage_number):
+		return placed
+	var center: Vector2i = (motherlodes_value as Dictionary)[stage_number]
+	for radius in [3, 5, 7, 9, 11]:
+		var offsets: Array[Vector2i] = []
+		for dx in range(-radius, radius + 1):
+			for dy in range(-radius, radius + 1):
+				if absi(dx) != radius and absi(dy) != radius:
+					continue
+				offsets.append(Vector2i(dx, dy))
+		offsets.shuffle()
+		for offset in offsets:
+			if placed.size() >= wanted:
+				return placed
+			var cell: Vector2i = center + offset
+			if not _is_cache_placeable(cell):
+				continue
+			var too_close := false
+			for existing in placed:
+				if absi(existing.x - cell.x) + absi(existing.y - cell.y) < 5:
+					too_close = true
+					break
+			if not too_close:
+				placed.append(cell)
+	return placed
+
+func _is_cache_placeable(cell: Vector2i) -> bool:
+	if block_layer.get_cell_source_id(cell) == -1:
+		return true
+	for neighbour in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		if block_layer.get_cell_source_id(cell + neighbour) == -1:
+			return true
+	return false
+
+func _award_objective_reward(override_reward_id: String = "") -> void:
 	if objective_reward_claimed:
 		return
 	objective_reward_claimed = true
-	var reward_id := str(_objective_data().get("reward_id", ""))
+	var reward_id := override_reward_id if override_reward_id != "" else str(_objective_data().get("reward_id", ""))
 	# "gems_N" pays N gems; a gear reward that the hero already owns falls back to
 	# gems so a drawn objective is never worth nothing.
 	if reward_id.begins_with("gems_"):

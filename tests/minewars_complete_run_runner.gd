@@ -164,6 +164,28 @@ func _complete_stage_objective(stage: int) -> void:
 	_expect(bool(controller.get("objective_completed")), "Expedition %d objective should complete at its authored target" % stage)
 	_expect(bool(level.get_meta("minewars_objective_complete", false)), "Objective completion should be exposed to the run state")
 	_expect(controller.get("ui_layer").get_child_count() > ui_children_before, "Objective completion should create a visible reward burst")
+	await _claim_authored_reward_cache(stage)
+
+## The stage reward now waits in one of three sealed caches. The authored reward
+## is always the first cache, so this walks the hero into it and leaves the run
+## paying exactly what the objective advertised.
+func _claim_authored_reward_cache(stage: int) -> void:
+	var caches: Array = controller.get("reward_caches")
+	_expect(caches.size() >= 2, "Expedition %d completion should open a sealed-cache choice" % stage)
+	if caches.is_empty():
+		return
+	var authored_id := str(controller.call("_objective_data").get("reward_id", ""))
+	var authored_cache: Node = caches[0]
+	_expect(str(authored_cache.get("reward_id")) == authored_id, "The authored stage reward should always be one of the caches")
+	var others: Array = caches.slice(1)
+	# The caches arm themselves shortly after spawning so one cannot claim itself
+	# under a hero who is already standing there.
+	await get_tree().create_timer(0.6).timeout
+	authored_cache.call("_on_body_entered", player)
+	await _wait_frames(3)
+	_expect(bool(controller.get("objective_reward_claimed")), "Claiming a cache should pay the stage reward")
+	for other in others:
+		_expect(not is_instance_valid(other) or bool(other.get("collapsing")), "Claiming one cache should collapse the others")
 
 func _clear_standard_assault(stage: int, expected_count: int, expected_types: Array, expected_muster: float) -> void:
 	controller.set("mining_timer", 0.01)

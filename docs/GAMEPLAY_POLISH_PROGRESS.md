@@ -634,3 +634,62 @@ Status: `COMPLETE`
 ## Last queue update
 
 `POLISH-001` through `POLISH-023` are `COMPLETE`. POLISH-023 turns the Legacy Forge from five floor pads into one interactable plus a scene-defined menu whose rows follow the upgrade data. No later polish task is selected yet.
+
+
+## Completed task
+
+ID: `POLISH-024`
+
+Title: Make every unlocked hero reachable in the stronghold, and stop headless runs touching the campaign save
+
+Status: `COMPLETE`
+
+### Validation record
+
+- The compact stronghold shows two pedestals: the active hero and one alternative. The alternative was chosen by scanning `Global.unlocked_heroes` backwards, so it always resolved to the newest unlock. With a full roster that meant the second pedestal was permanently the Mech and every earlier hero — the starting Dwarf above all — could never be selected again.
+- The alternative pedestal now walks the roster forward from the active hero and wraps, so stepping between pedestals reaches every unlocked hero and returns to the Dwarf from the last unlock. A hero unlocked by the run that just ended still takes priority, so the reward is the first thing the stronghold offers.
+- `Global` is an autoload: its `_ready` calls `load_game()` and then `_sanitize_unlock_progress()`, which can `save_game()` — all against the campaign save, and all before any test scene gets the chance to call `set_save_path_override`. Every headless suite was therefore loading and potentially rewriting the player's real save on boot no matter what override it set afterwards.
+- `get_save_path()` now resolves to a sandbox path whenever the display server is headless, so a test or tool run can never read or overwrite the campaign save. An explicit override still wins. Note `OS.has_feature("headless")` is false under `--headless`; `DisplayServer.get_name()` is what actually reports it.
+- Verified directly: the campaign save's md5 and mtime are unchanged after a full eight-suite sweep.
+- Worth recording for whoever hits this next: `_sanitize_unlock_progress()` rebuilds `unlocked_heroes` purely from `minewars_victories` and writes the result back. Any hero unlocked without a matching recorded victory is silently deleted on the next launch, in normal play as well as in tests.
+- New suite `tests/hero_gallery_reachability_runner.tscn` walks the gallery across a full roster and asserts every hero is reached, that the roster wraps from the newest unlock back to the Dwarf, that a one-hero stronghold still shows no pedestals, that a fresh unlock is offered first, and that a headless run never resolves to the campaign save.
+- Regression: all eight suites pass — `hero_gallery_reachability_runner`, `legacy_forge_smoke_runner`, `hub_furniture_cleanup_runner`, `run_variance_economy_runner`, `minewars_complete_run_runner`, `minewars_four_stage_balance_runner`, `line_wars_unlock_smoke_runner`, `hero_rpg_system_runner`.
+- Files modified: `scripts/systems/preparation/in_world_hero_selector.gd`, `global.gd`, `tests/hero_gallery_reachability_runner.gd`, `tests/hero_gallery_reachability_runner.tscn`, and this progress document.
+
+## Last queue update
+
+`POLISH-001` through `POLISH-024` are `COMPLETE`. POLISH-024 makes the whole unlocked roster reachable from the stronghold pedestals and stops headless runs from reading or rewriting the campaign save. No later polish task is selected yet.
+
+
+## Completed task
+
+ID: `POLISH-025`
+
+Title: Give the expedition a greed decision, put the stage reward back in the mine, and rebuild the upgrade board as a bottom command panel
+
+Status: `COMPLETE`
+
+### Validation record
+
+Three changes, all aimed at the same gap: the run had no moment the player owned.
+
+**The war horn.** `STAGE_MINING_WINDOWS` was the only thing that ended a dig window, so the loop the vision document describes — dig, become greedy, *decide* when to return — had no decision in it: the clock returned the player, the player never chose. Standing at the bastion during MINING now offers `G / SELECT • SOUND THE HORN`, which ends the window immediately and pays one gem per 20 unspent seconds plus one Legacy Ore per 30. The prompt prices the bounty live, so the trade is known before it is taken. It is deliberately a separate binding from interact: banking gems has to stay free, or walking home with one gem becomes a commitment the player never meant to make. `p1_horn` is registered in `game_input_bootstrap.gd` (G, and BACK on pad 0) because R/F/T and the four face buttons are already hero abilities. The horn answers once per stage and re-arms on the next expedition. Note `Global.stage_run_ore_bonus()` assigns rather than accumulates, so the horn adds to `pending_run_ore_bonus` explicitly — otherwise it would silently delete the run modifier's own staged ore.
+
+**Sealed caches.** `_complete_stage_objective()` used to hand the reward over on the last crystal, which made the objective something that happened to the player. Three caches now open in the seam, each captioned with what it holds; walking into one claims it and collapses the other two. The authored stage reward is always cache index 0, so a drawn objective still pays exactly what it advertised, and the two alternatives are filtered against gear the hero already owns so a cache never offers a second pair of boots. Placement walks rings 3/5/7/9/11 around the motherlode and accepts a cell that is open *or* rock touching open ground — the mine is mostly solid, so requiring open cells would have left nowhere to put them, and a cache one dig away still reads as buried. Caches are kept at least five cells apart so reaching a second one costs real time, they survive the assault, and they bury themselves when the next stage begins. If placement fails entirely the authored reward is paid directly, so a stage reward can never be lost.
+
+**Bottom command panel.** The board was a centred dialog that covered about 70% of the screen and left a useless sliver of world. Worse, `UPGRADE_TREE_DEPTH_STEP` was 126 against 130-wide cards, so every child overlapped its own parent, and the 530-wide canvas clipped the third depth level outright — both visible in any screenshot of the old board. Single player now draws the tree as a Warcraft-style command strip across the bottom 56% of the screen: branches sit side by side in their own vertical bands, the board scrolls sideways, the depth step clears a full card, and band height is derived from the widest branch so nothing falls outside the scroll region. Quick Stats and the detail line share one footer row, which is where the 126 vertical pixels needed to fit every card came from. The camera now lifts the hero and base into the clear band above the strip instead of sliding them sideways. VS keeps the old centred board inside its subviewport.
+
+Because the mine is now visible while spending, the forced `get_tree().paused = true` is gone — an approaching enemy is something the player *sees*. The hero still cannot move with the board open, so `_check_upgrade_menu_enemy_alert()` closes the board and hands the hero back when anything comes within 460 px.
+
+Click feedback: currency sprites arc from the resource counter into the purchased card, the dashes leading to each newly reachable child sweep gold→white outward, and a refused purchase shakes the card and flashes its price red instead of going dead.
+
+- New suite `tests/expedition_horn_cache_runner.tscn` passes: the reward waits in a cache instead of paying itself, three distinct captioned caches open, the authored reward is always among them, they are spread far enough apart to cost time, claiming one pays exactly the authored reward and collapses the rest; and the horn prices its bounty, stays hidden away from the bastion, pays gems and stages ore on top of the modifier's own bonus, starts the assault, answers once per stage, and re-arms next expedition.
+- `tests/minewars_complete_run_runner.gd` now walks the hero into the authored cache at every stage rather than expecting the reward on the last crystal. Full run passes.
+- Regression: `run_variance_economy_runner`, `minewars_four_stage_balance_runner`, `legacy_forge_smoke_runner`, `hero_rpg_system_runner`, `hero_balance_smoke_runner`, `line_wars_unlock_smoke_runner`, `hub_furniture_cleanup_runner` and `hero_gallery_reachability_runner` all pass. `minewars_four_stage_balance_runner` failed once while a headed Godot was running on the same machine and passes consistently in isolation — it is timing-sensitive under load, not broken.
+- The three source-assertion suites were updated to the new design. Two of their assertions had been failing since POLISH-019/020 and were repaired at the same time: `test_upgrade_tree_ui` still expected `Vector2(860.0` for the canvas and a `"Gems %d   Gold %d"` header line that became icon-first three tasks ago.
+- Verified live at 1152x648: board fits with no vertical scrollbar and no card overlap, mine and base stay visible above it, the horn prompt reads and prices correctly at the bastion, and claiming a cache moved gems 0 → 2 with the other two collapsing.
+- Files: `scripts/systems/world_generation/siege_mode_controller.gd`, `scripts/gameplay/collectibles/rewards/sealed_cache.gd` (new), `upgrade_menu.gd`, `game_input_bootstrap.gd`, `tests/expedition_horn_cache_runner.gd`/`.tscn` (new), `tests/minewars_complete_run_runner.gd`, `tests/test_upgrade_tree_ui.gd`, `tests/test_upgrade_tree_layout.gd`, and this progress document.
+
+## Last queue update
+
+`POLISH-001` through `POLISH-025` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. No later polish task is selected yet.

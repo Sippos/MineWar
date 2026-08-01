@@ -6,6 +6,7 @@ const LINE_WARS_CONTROLLER_SCRIPT := preload("res://scripts/systems/continuous_l
 const STRONGHOLD_AMBIENCE_SCRIPT := preload("res://scripts/systems/stronghold_ambience_controller.gd")
 const STRONGHOLD_PRACTICE_GEM_SCRIPT := preload("res://scripts/systems/stronghold_practice_gem_controller.gd")
 const LEGACY_FORGE_SCRIPT := preload("res://scripts/systems/stronghold_legacy_forge.gd")
+const BASE_SWITCH_POPUP_SCRIPT := preload("res://scripts/systems/preparation/base_switch_popup.gd")
 
 const LINE_WARS_ENTRY_Y := -6
 const ROUTE_X_MIN := -1
@@ -35,6 +36,7 @@ var first_run_guide_layer: CanvasLayer
 var first_run_route_marker: Node2D
 var line_wars_route_marker: Node2D
 var legacy_forge: Node2D
+var base_popup: Node2D
 
 func _ready() -> void:
 	world = get_node_or_null(world_path) as Node2D
@@ -76,6 +78,7 @@ func _ready() -> void:
 	if base.has_method("refresh_base_sprite"):
 		base.refresh_base_sprite()
 	_refresh_stronghold_ambience()
+	_setup_base_interaction()
 
 	player_camera = player.get_node_or_null("Camera2D") as Camera2D
 	if player_camera:
@@ -290,11 +293,21 @@ func _process(_delta: float) -> void:
 		return
 	if Global.selected_base_id != _last_ambience_base_id:
 		_refresh_stronghold_ambience()
+	if base_popup and is_instance_valid(base_popup) and base and is_instance_valid(base):
+		var at_base = player.global_position.distance_to(base.global_position) <= 96.0
+		base_popup.visible = at_base
 	var cell := block_layer.local_to_map(block_layer.to_local(player.global_position))
 	if cell == world.get_minewars_entrance():
 		_activate_standard_mode(GameMode.Mode.SIEGE, "MineWars active — mine, return resources, and survive the assault.")
 	elif world.is_top_tunnel_unlocked() and cell == world.get_top_tunnel_entrance():
 		_activate_line_wars()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _committing:
+		return
+	if event.is_action_pressed("p1_interact") and base_popup and is_instance_valid(base_popup) and base_popup.visible:
+		base_popup.call("cycle_next")
+		get_viewport().set_input_as_handled()
 
 
 func _advanced_modes_unlocked() -> bool:
@@ -532,3 +545,32 @@ func _ping_mode_bootstraps() -> void:
 	ping.name = "ModeBootstrapPing"
 	world.add_child(ping)
 	ping.queue_free()
+
+func _setup_base_interaction() -> void:
+	if base == null or not is_instance_valid(base):
+		return
+	base.set_process(false)
+	base.set_process_input(false)
+	var own_prompt := base.get_node_or_null("PromptLabel") as Label
+	if own_prompt:
+		own_prompt.visible = false
+	
+	base_popup = Node2D.new()
+	base_popup.name = "BaseSwitcher"
+	base_popup.set_script(BASE_SWITCH_POPUP_SCRIPT)
+	base_popup.call("setup", 1, "STRONGHOLD  •  E / Y")
+	base_popup.position = Vector2(0, -74)
+	base_popup.visible = false
+	base.add_child(base_popup)
+	base_popup.connect("base_change_requested", _on_base_change_requested)
+
+func _on_base_change_requested(base_id: String) -> void:
+	if _committing or not Global.base_data.has(base_id):
+		return
+	Global.set_run_loadout(Global.selected_hero_id, base_id)
+	if base.has_method("refresh_base_sprite"):
+		base.refresh_base_sprite()
+	if is_instance_valid(base_popup):
+		base_popup.call("refresh")
+	_refresh_stronghold_ambience()
+	_set_status("Stronghold: %s" % str(Global.base_data[base_id]["name"]))

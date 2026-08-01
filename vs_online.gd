@@ -52,9 +52,9 @@ func receive_enemy(enemy_type: int) -> void:
 	var block_layer: TileMapLayer = level.get("block_layer")
 	if block_layer == null or not level.has_method("get_farthest_open_cell"):
 		return
-	var enemy: Node2D = level.ENEMY_SCENE.instantiate()
+	var enemy: Node2D = preload("res://enemy.tscn").instantiate()
 	var target_cell: Vector2i = level.get_farthest_open_cell()
-	enemy.global_position = block_layer.to_global(block_layer.map_to_local(target_cell))
+	enemy.position = block_layer.map_to_local(target_cell)
 	level.add_child(enemy)
 	if enemy.has_method("initialize"):
 		enemy.initialize(1, false, enemy_type)
