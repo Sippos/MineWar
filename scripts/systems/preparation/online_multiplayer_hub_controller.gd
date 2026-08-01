@@ -124,15 +124,9 @@ func _setup_profiles() -> void:
 	Global.base_p2 = _remote_base()
 
 func _host_compact_choices() -> Array[String]:
-	var choices: Array[String] = []
-	_add_host_choice(choices, str(Global.selected_hero_id))
-	for index in range(Global.unlocked_heroes.size() - 1, -1, -1):
-		_add_host_choice(choices, str(Global.unlocked_heroes[index]))
-		if choices.size() >= 2:
-			break
-	if choices.is_empty():
-		choices.append("Dwarf")
-	return choices
+	# Use the full local multiplayer hero list in online stronghold selection.
+	# This mirrors the player lobby and allows all heroes to be chosen.
+	return HERO_ORDER.duplicate()
 
 func _add_host_choice(choices: Array[String], hero_name: String) -> void:
 	if choices.size() >= 2 or hero_name.is_empty() or choices.has(hero_name):
@@ -406,10 +400,21 @@ func _build_host_shrines(choices: Array[String]) -> void:
 	shrine_root.z_index = 12
 	world.add_child(shrine_root)
 	hero_nodes.clear()
-	var positions: Array[Vector2] = [Vector2(-190, -42), Vector2(190, -42)]
-	if choices.size() == 1:
-		positions[0] = Vector2(-185, -42)
-	for index in range(mini(choices.size(), 2)):
+	var positions: Array[Vector2] = []
+	if choices.size() <= 2:
+		positions = [Vector2(-190, -42), Vector2(190, -42)]
+	elif choices.size() <= 6:
+		positions = [
+			Vector2(-200, -112), Vector2(-200, 0), Vector2(-200, 112),
+			Vector2(200, -112), Vector2(200, 0), Vector2(200, 112)
+		]
+	else:
+		var rows := 3
+		var cols := int(ceil(float(choices.size()) / float(rows)))
+		for row in range(rows):
+			for col in range(cols):
+				positions.append(Vector2(-220 + col * 160, -120 + row * 120))
+	for index in range(min(choices.size(), positions.size())):
 		_create_hero_shrine(choices[index], positions[index])
 	_refresh_shrines()
 
