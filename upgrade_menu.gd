@@ -16,16 +16,27 @@ const VS_MENU_MARGIN := 12.0
 const SINGLE_MENU_MARGIN := 12.0
 const SINGLE_MENU_MIN_SCALE := 0.34
 const SINGLE_MENU_MAX_SCALE := 0.56
-const SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.70
-const UPGRADE_TREE_DESKTOP_MAX_WIDTH := 860.0
 const UPGRADE_TREE_MAX_HEIGHT := 594.0
-const UPGRADE_TREE_WORLD_STRIP := 260.0
-const UPGRADE_TREE_CANVAS_SIZE := Vector2(530.0, 680.0)
-const UPGRADE_TREE_NODE_SIZE := Vector2(130.0, 50.0)
-const UPGRADE_TREE_ROOT_SIZE := Vector2(64.0, 64.0)
-const UPGRADE_TREE_DEPTH_STEP := 126.0
+const UPGRADE_TREE_NODE_SIZE := Vector2(130.0, 46.0)
+const UPGRADE_TREE_ROOT_SIZE := Vector2(58.0, 58.0)
+# The depth step must clear a full card or a child overlaps its own parent, which
+# is exactly what the centred board used to do at 126 against 130-wide cards.
+const UPGRADE_TREE_DEPTH_STEP := 152.0
 const UPGRADE_TREE_ROW_START_X := 140.0
 const UPGRADE_TREE_ROW_GAP := 16.0
+# Single player draws the tree as a Warcraft-style command panel across the
+# bottom of the screen: branches sit side by side in their own vertical bands and
+# the board scrolls sideways, so the mine, the base and the hero stay on screen
+# while the player spends. VS keeps the old centred board inside its subviewport.
+const UPGRADE_TREE_BAND_INSET := 92.0
+const UPGRADE_TREE_BAND_GAP := 30.0
+const UPGRADE_TREE_BAND_LABEL_HEIGHT := 24.0
+const UPGRADE_TREE_STRIP_RATIO := 0.56
+const UPGRADE_TREE_STRIP_MIN_HEIGHT := 276.0
+const UPGRADE_TREE_STRIP_MAX_HEIGHT := 380.0
+# An enemy this close to the hero closes the panel: the world keeps running while
+# the board is open, and the hero cannot move while it is.
+const UPGRADE_MENU_ALERT_DISTANCE := 460.0
 const MENU_PANEL_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/MenuPanel.png")
 const ENEMY_BUTTON_TEXTURE: Texture2D = preload("res://assets/sprites/ui/common/Button.png")
 const GOLD_ICON_TEXTURE: Texture2D = preload("res://GoldCoin.png")
@@ -65,6 +76,10 @@ var upgrade_tree_descriptions := {}
 var upgrade_tree_currency := {}
 var upgrade_tree_costs := {}
 var upgrade_tree_owned := {}
+# Connector dashes keyed by the child node they lead to, plus each node's child
+# ids, so buying a node can light the paths it just opened.
+var upgrade_tree_connectors := {}
+var upgrade_tree_children := {}
 var upgrade_camera: Camera2D
 var upgrade_camera_original_offset := Vector2.ZERO
 var upgrade_camera_tween: Tween
@@ -85,12 +100,32 @@ func _process(delta: float) -> void:
 
 	if not panel.visible or hud == null:
 		return
+	_check_upgrade_menu_enemy_alert()
 	var current_gems := int(hud.get("total_gems"))
 	var current_gold := int(hud.get("total_gold"))
 	if current_gems != last_total_gems or current_gold != last_total_gold:
 		last_total_gems = current_gems
 		last_total_gold = current_gold
 		_refresh_upgrade_tree_cards()
+
+## The hero stands still with the board open, so the board gives the hero back
+## the moment an enemy reaches them rather than letting it be hit defenceless.
+func _check_upgrade_menu_enemy_alert() -> void:
+	if _is_vs_mode() or player == null or not is_instance_valid(player):
+		return
+	for enemy_value in get_tree().get_nodes_in_group("enemies"):
+		var enemy := enemy_value as Node2D
+		if enemy == null or not is_instance_valid(enemy):
+			continue
+		if enemy.global_position.distance_to(player.global_position) > UPGRADE_MENU_ALERT_DISTANCE:
+			continue
+		hide_menu()
+		if hud and hud.has_method("show_notice"):
+			hud.show_notice("ENEMIES ON THE APPROACH — the forge closes.", 2.4)
+		var alert_sound_fx := get_node_or_null("/root/SoundFX")
+		if alert_sound_fx and alert_sound_fx.has_method("play_error"):
+			alert_sound_fx.play_error()
+		return
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -237,17 +272,20 @@ func _layout_upgrade_tree_shell(is_vs: bool) -> void:
 		return
 	var view_size: Vector2 = get_viewport().get_visible_rect().size
 	var margin: float = VS_MENU_MARGIN if is_vs else SINGLE_MENU_MARGIN
-	var width: float
-	if view_size.x >= 900.0 and not is_vs:
-		width = min(UPGRADE_TREE_DESKTOP_MAX_WIDTH, view_size.x * SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO)
-		width = min(width, view_size.x - UPGRADE_TREE_WORLD_STRIP)
+	if is_vs:
+		var vs_width: float = maxf(view_size.x - margin * 2.0, 320.0)
+		var vs_height: float = maxf(min(UPGRADE_TREE_MAX_HEIGHT, view_size.y - margin * 2.0), 300.0)
+		upgrade_tree_shell.position = Vector2(margin, (view_size.y - vs_height) * 0.5)
+		upgrade_tree_shell.size = Vector2(vs_width, vs_height)
 	else:
-		width = view_size.x - margin * 2.0
-	var height: float = min(UPGRADE_TREE_MAX_HEIGHT, view_size.y - margin * 2.0)
-	width = max(width, 320.0)
-	height = max(height, 300.0)
-	upgrade_tree_shell.position = Vector2(margin, (view_size.y - height) * 0.5)
-	upgrade_tree_shell.size = Vector2(width, height)
+		# Bottom command panel: the board owns the lower band, the mine keeps the
+		# rest, so an approaching enemy is something the player sees rather than
+		# something the HUD has to announce.
+		var height: float = clampf(view_size.y * UPGRADE_TREE_STRIP_RATIO, UPGRADE_TREE_STRIP_MIN_HEIGHT, UPGRADE_TREE_STRIP_MAX_HEIGHT)
+		height = minf(height, maxf(view_size.y - 120.0, 200.0))
+		var width: float = maxf(view_size.x - margin * 2.0, 320.0)
+		upgrade_tree_shell.position = Vector2(margin, view_size.y - height - margin)
+		upgrade_tree_shell.size = Vector2(width, height)
 	panel.position = Vector2.ZERO
 	panel.scale = Vector2.ONE
 
@@ -272,20 +310,21 @@ func _shift_camera_for_upgrade_tree() -> void:
 		upgrade_camera_shifted = true
 	_apply_upgrade_camera_target(true)
 
+## The board sits along the bottom, so the camera lifts the hero and base into
+## the clear band above it instead of sliding them sideways.
 func _apply_upgrade_camera_target(animated: bool) -> void:
 	if upgrade_camera == null or player == null or upgrade_tree_shell == null:
 		return
-	var viewport_width: float = get_viewport().get_visible_rect().size.x
-	var shell_right: float = upgrade_tree_shell.position.x + upgrade_tree_shell.size.x
-	var visible_strip_width: float = maxf(viewport_width - shell_right, 120.0)
-	var desired_player_x: float = shell_right + visible_strip_width * 0.48
-	var player_screen_x: float = player.get_global_transform_with_canvas().origin.x
-	var original_player_screen_x: float = player_screen_x + (upgrade_camera.offset.x - upgrade_camera_original_offset.x)
-	var offset_delta: float = desired_player_x - original_player_screen_x
-	var target_offset: Vector2 = upgrade_camera_original_offset - Vector2(offset_delta, 0.0)
-	var max_shift: float = minf(viewport_width * 0.34, 330.0)
-	target_offset.x = clampf(target_offset.x, upgrade_camera_original_offset.x - max_shift, upgrade_camera_original_offset.x + max_shift)
-	target_offset.y = upgrade_camera_original_offset.y
+	var viewport_height: float = get_viewport().get_visible_rect().size.y
+	var visible_band_height: float = maxf(upgrade_tree_shell.position.y, 120.0)
+	var desired_player_y: float = visible_band_height * 0.62
+	var player_screen_y: float = player.get_global_transform_with_canvas().origin.y
+	var original_player_screen_y: float = player_screen_y + (upgrade_camera.offset.y - upgrade_camera_original_offset.y)
+	var offset_delta: float = desired_player_y - original_player_screen_y
+	var target_offset: Vector2 = upgrade_camera_original_offset - Vector2(0.0, offset_delta)
+	var max_shift: float = minf(viewport_height * 0.34, 300.0)
+	target_offset.y = clampf(target_offset.y, upgrade_camera_original_offset.y - max_shift, upgrade_camera_original_offset.y + max_shift)
+	target_offset.x = upgrade_camera_original_offset.x
 	if upgrade_camera_tween and upgrade_camera_tween.is_running():
 		upgrade_camera_tween.kill()
 	if animated:
@@ -334,7 +373,7 @@ func _build_upgrade_tree_ui() -> void:
 
 	var header := HBoxContainer.new()
 	header.name = "Header"
-	header.custom_minimum_size = Vector2(0, 52)
+	header.custom_minimum_size = Vector2(0, 42)
 	header.add_theme_constant_override("separation", 12)
 	shell_box.add_child(header)
 
@@ -397,32 +436,41 @@ func _build_upgrade_tree_ui() -> void:
 	upgrade_tree_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upgrade_tree_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	upgrade_tree_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	upgrade_tree_scroll.custom_minimum_size = Vector2(0, 270)
+	upgrade_tree_scroll.custom_minimum_size = Vector2(0, 120)
 	shell_box.add_child(upgrade_tree_scroll)
 
 	upgrade_tree_canvas = Control.new()
 	upgrade_tree_canvas.name = "TreeCanvas"
-	upgrade_tree_canvas.custom_minimum_size = UPGRADE_TREE_CANVAS_SIZE
+	# _build_upgrade_tree_canvas() replaces this with the real board size.
+	upgrade_tree_canvas.custom_minimum_size = Vector2(860.0, 200.0)
 	upgrade_tree_scroll.add_child(upgrade_tree_canvas)
 
 	_build_upgrade_tree_canvas()
 
+	# Quick stats and the detail line share one short footer row. Stacking them
+	# cost 126 vertical pixels the bottom strip does not have.
+	var footer := HBoxContainer.new()
+	footer.name = "Footer"
+	footer.custom_minimum_size = Vector2(0, 52)
+	footer.add_theme_constant_override("separation", 12)
+	shell_box.add_child(footer)
+
 	upgrade_tree_stat_bar = HBoxContainer.new()
 	upgrade_tree_stat_bar.name = "QuickStats"
-	upgrade_tree_stat_bar.custom_minimum_size = Vector2(0, 78)
-	upgrade_tree_stat_bar.add_theme_constant_override("separation", 12)
-	upgrade_tree_stat_bar.alignment = BoxContainer.ALIGNMENT_CENTER
-	shell_box.add_child(upgrade_tree_stat_bar)
+	upgrade_tree_stat_bar.add_theme_constant_override("separation", 10)
+	upgrade_tree_stat_bar.alignment = BoxContainer.ALIGNMENT_BEGIN
+	footer.add_child(upgrade_tree_stat_bar)
 	_build_upgrade_tree_stat_bar()
 
 	upgrade_tree_detail = Label.new()
 	upgrade_tree_detail.name = "Detail"
-	upgrade_tree_detail.custom_minimum_size = Vector2(0, 48)
+	upgrade_tree_detail.custom_minimum_size = Vector2(180, 0)
+	upgrade_tree_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upgrade_tree_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	upgrade_tree_detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	upgrade_tree_detail.add_theme_font_size_override("font_size", 14)
 	upgrade_tree_detail.add_theme_color_override("font_color", Color(0.86, 0.88, 0.92, 1.0))
-	shell_box.add_child(upgrade_tree_detail)
+	footer.add_child(upgrade_tree_detail)
 
 	_refresh_upgrade_tree_cards()
 
@@ -446,13 +494,43 @@ func _tree_panel_style(background: Color, border: Color, border_width: int = 2, 
 	style.content_margin_bottom = 6.0
 	return style
 
+## Branches are laid out side by side, each in its own vertical band, so the board
+## is wide and short and scrolls sideways under the bottom command panel.
 func _build_upgrade_tree_canvas() -> void:
 	var graph := _upgrade_graph_definition()
-	var branch_y := 18.0
+	var band_height := _upgrade_band_height(graph)
+	var band_x := 10.0
 	for branch in graph:
-		_layout_upgrade_graph_branch(branch, branch_y)
-		branch_y += float(branch.get("height", 170.0))
-	upgrade_tree_canvas.custom_minimum_size = Vector2(530.0, maxf(branch_y + 28.0, 640.0))
+		var band_width := _branch_band_width(branch)
+		_layout_upgrade_graph_branch(branch, band_x, band_width, band_height)
+		band_x += band_width + UPGRADE_TREE_BAND_GAP
+	upgrade_tree_canvas.custom_minimum_size = Vector2(band_x + 10.0, band_height + UPGRADE_TREE_BAND_LABEL_HEIGHT + 12.0)
+
+## Every band is as tall as the widest branch needs, so no card can be pushed
+## outside the scroll region the way the old fixed row heights did.
+func _upgrade_band_height(graph: Array) -> float:
+	var most_leaves := 1
+	for branch in graph:
+		var leaves := 0
+		for child in branch.get("children", []):
+			leaves += _graph_leaf_count(child)
+		most_leaves = maxi(most_leaves, maxi(leaves, 1))
+	return float(most_leaves) * (UPGRADE_TREE_NODE_SIZE.y + 8.0)
+
+func _branch_band_width(branch: Dictionary) -> float:
+	var deepest := 0
+	for child in branch.get("children", []):
+		deepest = maxi(deepest, _graph_depth(child))
+	return UPGRADE_TREE_BAND_INSET + float(deepest) * UPGRADE_TREE_DEPTH_STEP + UPGRADE_TREE_NODE_SIZE.x
+
+func _graph_depth(definition: Dictionary) -> int:
+	var children: Array = definition.get("children", [])
+	if children.is_empty():
+		return 0
+	var deepest := 0
+	for child in children:
+		deepest = maxi(deepest, _graph_depth(child))
+	return deepest + 1
 
 func _upgrade_graph_definition() -> Array:
 	var hero_name := _get_menu_hero()
@@ -510,10 +588,12 @@ func _upgrade_graph_definition() -> Array:
 		}
 	]
 
-func _layout_upgrade_graph_branch(branch: Dictionary, branch_y: float) -> void:
-	var branch_height := float(branch.get("height", 160.0))
-	var root_pos := Vector2(48.0, branch_y + branch_height * 0.5 - UPGRADE_TREE_ROOT_SIZE.y * 0.5)
-	_create_parallel_tree_root(str(branch.get("title", "UPGRADES")), str(branch.get("title", "UPGRADES")), root_pos, str(branch.get("root_icon", "")))
+func _layout_upgrade_graph_branch(branch: Dictionary, band_x: float, band_width: float, band_height: float) -> void:
+	var branch_title := str(branch.get("title", "UPGRADES"))
+	var content_top := UPGRADE_TREE_BAND_LABEL_HEIGHT + 6.0
+	_create_tree_branch_label(branch_title, Vector2(band_x, 2.0), band_width)
+	var root_pos := Vector2(band_x + 12.0, content_top + band_height * 0.5 - UPGRADE_TREE_ROOT_SIZE.y * 0.5)
+	_create_parallel_tree_root(branch_title, branch_title, root_pos, str(branch.get("root_icon", "")))
 	var children: Array = branch.get("children", [])
 	var leaf_counts: Array[int] = []
 	var total_leaves := 0
@@ -521,11 +601,12 @@ func _layout_upgrade_graph_branch(branch: Dictionary, branch_y: float) -> void:
 		var count := _graph_leaf_count(child)
 		leaf_counts.append(count)
 		total_leaves += count
-	var slot_height := maxf(float(branch.get("height", 160.0)) - 28.0, 96.0) / maxf(float(total_leaves), 1.0)
-	var cursor := branch_y + 14.0
+	var slot_height := band_height / maxf(float(total_leaves), 1.0)
+	var cursor := content_top + (band_height - slot_height * float(total_leaves)) * 0.5
 	for index in range(children.size()):
 		var subtree_height := slot_height * float(leaf_counts[index])
-		_layout_upgrade_graph_node(children[index], 0, cursor + subtree_height * 0.5, root_pos + Vector2(UPGRADE_TREE_ROOT_SIZE.x, UPGRADE_TREE_ROOT_SIZE.y * 0.5), slot_height)
+		var anchor := root_pos + Vector2(UPGRADE_TREE_ROOT_SIZE.x, UPGRADE_TREE_ROOT_SIZE.y * 0.5)
+		_layout_upgrade_graph_node(children[index], 0, cursor + subtree_height * 0.5, anchor, slot_height, band_x, branch_title)
 		cursor += subtree_height
 
 func _graph_leaf_count(definition: Dictionary) -> int:
@@ -537,11 +618,15 @@ func _graph_leaf_count(definition: Dictionary) -> int:
 		count += _graph_leaf_count(child)
 	return maxi(count, 1)
 
-func _layout_upgrade_graph_node(definition: Dictionary, depth: int, center_y: float, parent_anchor: Vector2, slot_height: float) -> void:
-	var node_pos := Vector2(156.0 + depth * UPGRADE_TREE_DEPTH_STEP, center_y - UPGRADE_TREE_NODE_SIZE.y * 0.5)
+func _layout_upgrade_graph_node(definition: Dictionary, depth: int, center_y: float, parent_anchor: Vector2, slot_height: float, band_x: float, parent_id: String) -> void:
+	var node_pos := Vector2(band_x + UPGRADE_TREE_BAND_INSET + depth * UPGRADE_TREE_DEPTH_STEP, center_y - UPGRADE_TREE_NODE_SIZE.y * 0.5)
 	var id := str(definition.get("id", ""))
 	var action: Callable = definition.get("action", Callable())
-	_create_tree_connector(parent_anchor, Vector2(node_pos.x, center_y))
+	var dashes := _create_tree_connector(parent_anchor, Vector2(node_pos.x, center_y))
+	upgrade_tree_connectors[id] = dashes
+	if not upgrade_tree_children.has(parent_id):
+		upgrade_tree_children[parent_id] = []
+	upgrade_tree_children[parent_id].append(id)
 	_create_upgrade_tree_node(id, str(definition.get("title", id)), str(definition.get("description", "")), int(definition.get("cost", 0)), str(definition.get("currency", "gold")), str(definition.get("icon", "")), node_pos, action)
 	var button := upgrade_tree_buttons.get(id) as Button
 	if button and bool(definition.get("future", false)):
@@ -560,7 +645,7 @@ func _layout_upgrade_graph_node(definition: Dictionary, depth: int, center_y: fl
 	var next_anchor := Vector2(node_pos.x + UPGRADE_TREE_NODE_SIZE.x, center_y)
 	for index in range(children.size()):
 		var subtree_height := slot_height * float(leaf_counts[index])
-		_layout_upgrade_graph_node(children[index], depth + 1, cursor + subtree_height * 0.5, next_anchor, slot_height)
+		_layout_upgrade_graph_node(children[index], depth + 1, cursor + subtree_height * 0.5, next_anchor, slot_height, band_x, id)
 		cursor += subtree_height
 
 func _load_upgrade_icon_texture(icon_path: String) -> Texture2D:
@@ -578,7 +663,6 @@ func _load_upgrade_icon_texture(icon_path: String) -> Texture2D:
 	return texture
 
 func _create_parallel_tree_root(branch_title: String, root_title: String, pos: Vector2, icon_path: String) -> void:
-	_create_tree_branch_label(branch_title, Vector2(pos.x - 8.0, pos.y - 24.0), 124)
 	var root := Panel.new()
 	root.name = "%sRoot" % branch_title.replace(" ", "")
 	root.position = pos
@@ -590,7 +674,7 @@ func _create_parallel_tree_root(branch_title: String, root_title: String, pos: V
 	root.add_child(content)
 	var icon := TextureRect.new()
 	icon.position = Vector2(5, 5)
-	icon.size = Vector2(54, 54)
+	icon.size = UPGRADE_TREE_ROOT_SIZE - Vector2(10, 10)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -637,13 +721,15 @@ func _create_tree_branch_label(text_value: String, pos: Vector2, width: float) -
 	var label_node := Label.new()
 	label_node.text = text_value
 	label_node.position = pos
-	label_node.size = Vector2(width, 24)
+	label_node.size = Vector2(width, UPGRADE_TREE_BAND_LABEL_HEIGHT)
 	label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label_node.add_theme_font_size_override("font_size", 12)
 	label_node.add_theme_color_override("font_color", Color(0.72, 0.66, 0.52, 1.0))
 	upgrade_tree_canvas.add_child(label_node)
 
-func _create_tree_connector(from_point: Vector2, to_point: Vector2) -> void:
+## Returns the dashes it created so a purchase can light the path outward.
+func _create_tree_connector(from_point: Vector2, to_point: Vector2) -> Array:
+	var dashes: Array = []
 	# Dome Keeper style: dashed gold polyline with a soft horizontal bend
 	var bend_y := (from_point.y + to_point.y) * 0.5
 	var path := PackedVector2Array([
@@ -678,7 +764,9 @@ func _create_tree_connector(from_point: Vector2, to_point: Vector2) -> void:
 			dash.antialiased = true
 			dash.points = PackedVector2Array([start, end])
 			upgrade_tree_canvas.add_child(dash)
+			dashes.append(dash)
 			current += dash_len + gap_len
+	return dashes
 
 func _create_upgrade_tree_node(id: String, title_text: String, description: String, cost: int, currency: String, icon_path: String, pos: Vector2, action: Callable, target_parent: Control = null) -> void:
 	var button := Button.new()
@@ -717,8 +805,8 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 
 	var icon := TextureRect.new()
 	icon.name = "Icon"
-	icon.position = Vector2(10, 10)
-	icon.size = Vector2(36, 36)
+	icon.position = Vector2(8, 6)
+	icon.size = Vector2(34, 34)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -728,8 +816,8 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 	var title_label := Label.new()
 	title_label.name = "Title"
 	title_label.text = title_text
-	title_label.position = Vector2(46, 4)
-	title_label.size = Vector2(68, 28)
+	title_label.position = Vector2(46, 3)
+	title_label.size = Vector2(66, 22)
 	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 12)
@@ -739,7 +827,7 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 
 	var currency_icon := TextureRect.new()
 	currency_icon.name = "CurrencyIcon"
-	currency_icon.position = Vector2(90, 30)
+	currency_icon.position = Vector2(84, 26)
 	currency_icon.size = Vector2(14, 14)
 	currency_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	currency_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -749,8 +837,8 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 
 	var cost_label := Label.new()
 	cost_label.name = "Cost"
-	cost_label.position = Vector2(106, 26)
-	cost_label.size = Vector2(22, 20)
+	cost_label.position = Vector2(100, 24)
+	cost_label.size = Vector2(26, 20)
 	cost_label.add_theme_font_size_override("font_size", 13)
 	cost_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.75, 1.0))
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -758,8 +846,8 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 
 	var state_label := Label.new()
 	state_label.name = "State"
-	state_label.position = Vector2(102, 2)
-	state_label.size = Vector2(22, 18)
+	state_label.position = Vector2(100, 1)
+	state_label.size = Vector2(24, 18)
 	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	state_label.add_theme_font_size_override("font_size", 12)
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -787,8 +875,90 @@ func _on_upgrade_tree_node_pressed(id: String, action: Callable) -> void:
 				menu_sound_fx.play_upgrade()
 		elif action.is_valid():
 			menu_sound_fx.play_error()
+	# Spending has to feel like spending: currency flies out of the counter into
+	# the card, and the paths the purchase opened light up outward.
+	if purchase_succeeded:
+		_spawn_purchase_currency_burst(tree_button, str(upgrade_tree_currency.get(id, "gold")), maxi(gems_before - int(hud.total_gems), gold_before - int(hud.total_gold)))
+		_light_child_connectors(id)
+	elif action.is_valid():
+		_refuse_upgrade_button(tree_button)
 	_refresh_upgrade_tree_cards()
 	_show_upgrade_tree_detail(id)
+
+## Currency sprites arc from the resource counter into the purchased card.
+func _spawn_purchase_currency_burst(target_button: Control, currency: String, spent: int) -> void:
+	if target_button == null or not is_instance_valid(target_button) or upgrade_tree_resources == null:
+		return
+	var texture: Texture2D = GEM_ICON_TEXTURE if currency == "gems" else GOLD_ICON_TEXTURE
+	var from_point := _panel_local(upgrade_tree_resources.get_global_rect().get_center())
+	var to_point := _panel_local(target_button.get_global_rect().get_center())
+	var count := clampi(spent, 3, 7)
+	for index in range(count):
+		var coin := TextureRect.new()
+		coin.texture = texture
+		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		coin.size = Vector2(20, 20)
+		coin.pivot_offset = Vector2(10, 10)
+		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		coin.position = from_point - Vector2(10, 10) + Vector2(randf_range(-14.0, 14.0), randf_range(-10.0, 10.0))
+		panel.add_child(coin)
+		var lift := Vector2(randf_range(-30.0, 30.0), randf_range(-70.0, -30.0))
+		var midpoint: Vector2 = coin.position.lerp(to_point - Vector2(10, 10), 0.5) + lift
+		var coin_tween := create_tween()
+		coin_tween.set_parallel(false)
+		coin_tween.tween_interval(float(index) * 0.045)
+		coin_tween.set_trans(Tween.TRANS_SINE)
+		coin_tween.tween_property(coin, "position", midpoint, 0.16)
+		coin_tween.set_trans(Tween.TRANS_CUBIC)
+		coin_tween.set_ease(Tween.EASE_IN)
+		coin_tween.tween_property(coin, "position", to_point - Vector2(10, 10), 0.20)
+		coin_tween.parallel().tween_property(coin, "scale", Vector2(0.4, 0.4), 0.20)
+		coin_tween.parallel().tween_property(coin, "modulate", Color(1.0, 1.0, 1.0, 0.0), 0.20)
+		coin_tween.tween_callback(coin.queue_free)
+
+## The dashes leading to each newly reachable child sweep from gold to white.
+func _light_child_connectors(id: String) -> void:
+	for child_id in upgrade_tree_children.get(id, []):
+		var dashes: Array = upgrade_tree_connectors.get(child_id, [])
+		for index in range(dashes.size()):
+			var dash := dashes[index] as Line2D
+			if dash == null or not is_instance_valid(dash):
+				continue
+			var base_color: Color = dash.default_color
+			var dash_tween := create_tween()
+			dash_tween.tween_interval(float(index) * 0.02)
+			dash_tween.tween_property(dash, "default_color", Color(1.0, 0.97, 0.86, 1.0), 0.08)
+			dash_tween.parallel().tween_property(dash, "width", 4.0, 0.08)
+			dash_tween.tween_property(dash, "default_color", base_color, 0.30)
+			dash_tween.parallel().tween_property(dash, "width", 2.4, 0.30)
+
+## A refused purchase shakes the card and flashes its price red, so mashing an
+## unaffordable node still answers.
+func _refuse_upgrade_button(target_button: Control) -> void:
+	if target_button == null or not is_instance_valid(target_button):
+		return
+	# Quick-stat cards live in an HBoxContainer, which owns their position, so
+	# those shake through the card background instead.
+	var shake_target: Control = target_button
+	if target_button.get_parent() is Container:
+		shake_target = target_button.get_node_or_null("CardBackground") as Control
+	if shake_target:
+		if not shake_target.has_meta("base_position"):
+			shake_target.set_meta("base_position", shake_target.position)
+		var origin: Vector2 = shake_target.get_meta("base_position")
+		var shake := create_tween()
+		shake.set_trans(Tween.TRANS_SINE)
+		for offset in [7.0, -6.0, 4.0, -3.0, 0.0]:
+			shake.tween_property(shake_target, "position", origin + Vector2(offset, 0.0), 0.045)
+	var cost_label := target_button.get_node_or_null("Cost") as Label
+	if cost_label:
+		var flash := create_tween()
+		flash.tween_property(cost_label, "modulate", Color(1.0, 0.36, 0.30, 1.0), 0.06)
+		flash.tween_property(cost_label, "modulate", Color.WHITE, 0.30)
+
+func _panel_local(global_point: Vector2) -> Vector2:
+	return panel.get_global_transform().affine_inverse() * global_point
 
 func _show_upgrade_tree_detail(id: String) -> void:
 	if upgrade_tree_detail == null:
@@ -1321,10 +1491,11 @@ func show_menu():
 		panel.visible = true
 		_focus_first_upgrade_tree_node()
 		call_deferred("_shift_camera_for_upgrade_tree")
-		# Single-player upgrade choices are a planning moment. Pausing prevents
-		# enemies from damaging the base while a new player reads the tree.
-		set_meta("paused_single_player_gameplay", not get_tree().paused)
-		get_tree().paused = true
+		# The board no longer covers the mine, so the world keeps running while it
+		# is open and an approaching enemy is visible above the panel. The hero
+		# cannot move while spending, so the panel closes itself the moment
+		# something gets close enough to matter.
+		set_meta("paused_single_player_gameplay", false)
 
 func hide_menu():
 	panel.visible = false

@@ -234,6 +234,12 @@ func _dig_target(delta: float) -> void:
 		damage_layer.erase_cell(target_cell)
 		front_damage_layer.erase_cell(below_cell)
 		var cell_had_gem = world.has_gem(target_cell)
+		if cell_had_gem and world.has_method("notify_minewars_gem_dug"):
+			world.notify_minewars_gem_dug(target_cell)
+		if world.has_method("notify_tutorial_cell_dug"):
+			world.notify_tutorial_cell_dug(target_cell, cell_had_gem)
+		if world.has_method("try_spawn_cave_reward"):
+			world.try_spawn_cave_reward(target_cell)
 		world.on_cell_dug(target_cell)
 		if cell_had_gem:
 			_spawn_gem(target_cell)
@@ -338,9 +344,12 @@ func _is_diggable_cell(cell: Vector2i) -> bool:
 	var astar = world.astar
 	if not astar.is_in_bounds(cell.x, cell.y):
 		return false
+	if world.has_method("is_dig_cell_protected") and world.is_dig_cell_protected(cell):
+		return false
 	if (cell.y <= 1 and cell.x != 0) or cell.y < 0:
 		return false
-	return block_layer.get_cell_source_id(cell) != -1
+	var block_id = block_layer.get_cell_source_id(cell)
+	return block_id != -1 and block_id != 16
 
 func _update_animation(delta: float) -> void:
 	if velocity.length() > 0.1:

@@ -43,6 +43,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="Mining"
 
+[editor]
+
+movie_writer/movie_file="/home/sebastian-berger/MineWarsTrailer/trailer.avi"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")

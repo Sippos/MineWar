@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://cg2q8a32q8743"]
+
+[ext_resource type="Script" path="res://trailer_generator.gd" id="1_a2b3c"]
+
+[node name="TrailerGenerator" type="Node2D"]
+script = ExtResource("1_a2b3c")
+
+[node name="TrailerCamera" type="Camera2D" parent="."]
+position = Vector2(0, 0)
+zoom = Vector2(0.8, 0.8)
+process_callback = 0
+position_smoothing_enabled = true
+position_smoothing_speed = 3.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 128
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer"]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 64
+text = "Gameplay Mode"
+horizontal_alignment = 1
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)

@@ -787,7 +787,8 @@ func handle_digging(delta: float) -> void:
 			var point = active_ray.get_collision_point()
 			point += active_ray.target_position.normalized() * 5.0
 			var cell = tile_map.local_to_map(tile_map.to_local(point))
-			if tile_map.get_cell_source_id(cell) != -1:
+			var block_id := tile_map.get_cell_source_id(cell)
+			if block_id != -1 and block_id != 16:
 				var world := get_parent()
 				var protected := false
 				if world and world.has_method("is_dig_cell_protected"):

@@ -1292,7 +1292,7 @@ func get_farthest_open_cell() -> Vector2i:
 					visited[n] = dist + 1
 					queue.append(n)
 					
-	return farthest_cell
+	print("Farthest cell is ", farthest_cell, " max_dist ", max_dist); return farthest_cell
 
 func get_random_enemy_type(wave: int) -> int:
 	# Introduce threats in readable tiers. The old fully random table could put

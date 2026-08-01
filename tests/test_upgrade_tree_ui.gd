@@ -13,8 +13,8 @@ func _source() -> String:
 
 func test_tree_is_large_scrollable_and_leaves_the_world_visible() -> void:
 	var source := _source()
-	assert_true(source.contains("SINGLE_MENU_MAX_SCREEN_WIDTH_RATIO := 0.70"), "Single-player graph should use a large readable portion of the viewport")
-	assert_true(source.contains("UPGRADE_TREE_WORLD_STRIP := 260.0"), "Desktop layout should reserve a live-world strip")
+	assert_true(source.contains("UPGRADE_TREE_STRIP_RATIO := 0.56"), "Single-player graph should be a bottom command strip that leaves the mine visible")
+	assert_true(source.contains("UPGRADE_MENU_ALERT_DISTANCE := 460.0"), "An approaching enemy should be able to close the board")
 	assert_true(source.contains("upgrade_tree_shell = PanelContainer.new()"), "Upgrade graph should use a dedicated shell")
 	assert_true(source.contains("upgrade_tree_scroll = ScrollContainer.new()"), "Large graphs should remain scrollable")
 	assert_true(source.contains("upgrade_tree_canvas.custom_minimum_size = Vector2(860.0"), "Canvas height should expand from graph content")
@@ -40,7 +40,9 @@ func test_tree_is_icon_first_and_uses_compact_cost_badges() -> void:
 
 func test_tree_preserves_costs_owned_states_and_dependencies() -> void:
 	var source := _source()
-	assert_true(source.contains("upgrade_tree_resources.text = \"Gems %d   Gold %d\""), "Tree header should show live currencies")
+	# The header stopped being one text line when it became icon-first in
+	# POLISH-020; this assertion tracked the old string and had been failing since.
+	assert_true(source.contains("upgrade_tree_resources.get_node_or_null(\"GemLabel\")") and source.contains("upgrade_tree_resources.get_node_or_null(\"GoldLabel\")"), "Tree header should show live currencies beside their sprites")
 	assert_true(source.contains("dependency_locked = not minimap_unlocked"), "Enemy Sight should require Minimap")
 	assert_true(source.contains("dependency_locked = not healthbar_unlocked"), "Hero health actions should require Hero HP")
 	assert_true(source.contains("dependency_locked = not base_health_unlocked"), "Base health actions should require Base HP")
@@ -51,14 +53,17 @@ func test_tree_preserves_costs_owned_states_and_dependencies() -> void:
 func test_open_tree_frames_world_and_creates_a_safe_solo_planning_pause() -> void:
 	var source := _source()
 	assert_true(source.contains("call_deferred(\"_shift_camera_for_upgrade_tree\")"), "Opening should frame gameplay in the visible world strip")
-	assert_true(source.contains("var desired_player_x: float = shell_right + visible_strip_width * 0.48"), "Player framing should target the world strip")
+	assert_true(source.contains("var desired_player_y: float = visible_band_height * 0.62"), "Player framing should target the clear band above the strip")
 	assert_true(source.contains("upgrade_camera_original_offset"), "Camera movement should retain its original offset")
 	assert_true(source.contains("_restore_camera_after_upgrade_tree()"), "Closing should restore the gameplay camera")
 	assert_true(source.contains("if player: player.can_move = false"), "Opening should stop direct player movement")
 	assert_true(source.contains("if player: player.can_move = true"), "Closing should restore player movement")
 	assert_true(source.contains("process_mode = Node.PROCESS_MODE_ALWAYS"), "The planning UI must remain interactive while solo gameplay is paused")
 	assert_true(source.contains("set_meta(\"paused_single_player_gameplay\""), "The menu should remember whether it owns the solo pause")
-	assert_true(source.contains("get_tree().paused = true"), "Solo players need time to read upgrade choices without taking hidden damage")
-	assert_true(source.contains("get_tree().paused = false"), "Closing the planning menu should resume gameplay")
+	assert_true(source.contains("func _check_upgrade_menu_enemy_alert"), "The world keeps running, so the board must give the hero back when an enemy closes in")
+	assert_true(source.contains("get_tree().paused = false"), "Closing the planning menu should never leave the world paused")
 	assert_true(source.contains("_pulse_upgrade_button(tree_button)"), "Purchased nodes should still pulse visibly")
+	assert_true(source.contains("func _spawn_purchase_currency_burst"), "Spending should throw currency from the counter into the card")
+	assert_true(source.contains("func _light_child_connectors"), "A purchase should light the paths it just opened")
+	assert_true(source.contains("func _refuse_upgrade_button"), "An unaffordable card should answer a click instead of going dead")
 	assert_true(source.contains("_spawn_stat_upgrade_particles(color)"), "Upgrade feedback should remain authored in world space")

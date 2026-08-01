@@ -81,7 +81,9 @@ var save_path_override := ""
 func get_save_path() -> String:
 	if not save_path_override.is_empty():
 		return save_path_override
-	if OS.has_feature("headless"):
+	# OS.has_feature("headless") is false under --headless; the display server
+	# name is what actually reports it.
+	if DisplayServer.get_name() == "headless":
 		return HEADLESS_SAVE_PATH
 	return DEFAULT_SAVE_PATH
 

@@ -10,12 +10,12 @@ const HERO_TEXTURES := {
 	"Mech": preload("res://character_sprites/hero_idle/mech_idle_front.png"),
 }
 const HERO_POSITIONS := {
-	"Dwarf": Vector2(-265, -120),
-	"Shaman": Vector2(0, -175),
-	"Nerubian": Vector2(265, -120),
-	"Druid": Vector2(-225, 145),
-	"Undead King": Vector2(225, 145),
-	"Mech": Vector2(350, 65),
+	"Dwarf": Vector2(-260, -140),
+	"Shaman": Vector2(-360, 0),
+	"Nerubian": Vector2(260, -140),
+	"Druid": Vector2(-260, 140),
+	"Undead King": Vector2(260, 140),
+	"Mech": Vector2(360, 0),
 }
 const HERO_CARD_SIDE := {
 	"Dwarf": 1.0,
@@ -190,36 +190,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	_select_hero(nearby_hero)
 
-func _compact_hero_choices() -> Array[String]:
-	var choices: Array[String] = []
-	# A fresh stronghold needs no shrine for the hero already equipped. The first
-	# real unlock introduces a compact current-vs-alternative choice.
-	if Global.unlocked_heroes.size() <= 1:
-		return choices
-	_add_compact_choice(choices, str(Global.selected_hero_id))
-	# A hero unlocked by the run that just ended is always the alternative on
-	# offer, so the reward is the first thing the stronghold shows.
-	var newly_unlocked: Array = world.get_meta("newly_unlocked_heroes", []) if world != null else []
-	for index in range(newly_unlocked.size() - 1, -1, -1):
-		_add_compact_choice(choices, str(newly_unlocked[index]))
-	# Otherwise the second pedestal walks the roster forward from the active hero
-	# and wraps. This used to scan the roster backwards, which always landed on
-	# the newest unlock and left every earlier hero unreachable — with a full
-	# roster the starting Dwarf could never be selected again.
-	var roster: Array = Global.unlocked_heroes
-	var active_index: int = roster.find(str(Global.selected_hero_id))
-	for step in range(1, roster.size() + 1):
-		if choices.size() >= 2:
-			break
-		_add_compact_choice(choices, str(roster[posmod(active_index + step, roster.size())]))
-	return choices
 
-func _add_compact_choice(choices: Array[String], hero_name: String) -> void:
-	if choices.size() >= 2 or hero_name.is_empty() or choices.has(hero_name):
-		return
-	if not _hero_unlocked(hero_name):
-		return
-	choices.append(hero_name)
 
 func _build_hero_shrines() -> void:
 	# A fresh save already has its starting Dwarf. Keep the first room focused on
@@ -242,8 +213,12 @@ func _build_hero_shrines() -> void:
 			Vector2(250, -62), Vector2(350, -62), Vector2(450, -62)
 		]
 	else:
-		visible_choices = _compact_hero_choices()
-		compact_positions = [Vector2(-205, -62), Vector2(205, -62)]
+		visible_choices = []
+		compact_positions = []
+		for hero in HERO_ORDER:
+			if _hero_unlocked(hero):
+				visible_choices.append(hero)
+				compact_positions.append(HERO_POSITIONS[hero])
 		
 	for choice_index in range(visible_choices.size()):
 		var hero_name: String = visible_choices[choice_index]
