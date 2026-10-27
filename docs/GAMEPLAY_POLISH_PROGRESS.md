@@ -692,7 +692,7 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ## Last queue update
 
-`POLISH-001` through `POLISH-026` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. POLISH-026 establishes a professional 5-bus audio architecture, categorized voice pooling, procedural stone-vault cache cracking/crumbling SFX, authentic resonant brass War Horn calls, and stinger-to-music dynamic ducking.
+`POLISH-001` through `POLISH-027` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. POLISH-026 establishes a professional 5-bus audio architecture, categorized voice pooling, procedural stone-vault cache cracking/crumbling SFX, authentic resonant brass War Horn calls, and stinger-to-music dynamic ducking. POLISH-027 implements centralized camera trauma screen shake, multi-hit safe hit-stop freeze frames, and directional gem and ore bounce physics with squash-and-stretch landing feedback.
 
 ---
 
@@ -713,6 +713,27 @@ Click feedback: currency sprites arc from the resource counter into the purchase
   - `tests/expedition_horn_cache_runner.tscn`: All 12 audio assertions passed clean (`EXPEDITION_HORN_CACHE_PASS`).
   - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions and boss unlocks (`MINEWARS_COMPLETE_RUN_PASS`).
 * **Files:** `default_bus_layout.tres` (new), `project.godot`, `sound_fx.gd`, `music_manager.gd`, `scripts/gameplay/collectibles/rewards/sealed_cache.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `tests/expedition_horn_cache_runner.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+### Task ID: `POLISH-027`
+* **Title:** Hit-Stop, Screen Trauma & Debris Juice
+* **Status:** `COMPLETE`
+* **Quantic Foundry Drivers:** Action: Destruction (Kinetic Weight), Mastery: Challenge
+* **Relevant Skills:** `game-feel`, `camera-systems`, `godot-shaders`, `smoke-check`
+* **Changes Made:**
+  - Authored `scripts/utils/juice_manager.gd` and registered as Autoload singleton `JuiceManager` in `project.godot`.
+  - Implemented quadratic trauma-based screen shake (`shake = trauma^2`) with sinusoidal pseudo-random offset, tracking active `Camera2D` and cleanly restoring base offset when trauma decays (eliminating offset drift).
+  - Implemented multi-hit safe hit-stop freeze frames (`hit_stop(duration, slow)`) using real-time unscaled timer with ownership ID tracking to ensure `Engine.time_scale` is never stuck slowed or restored prematurely.
+  - Connected `JuiceManager` hooks to mining block break / gem reveals in `player.gd` (`_emit_dig_impact`), motherlode seam collapses and War Horn calls in `scripts/systems/world_generation/siege_mode_controller.gd`, and combat impacts in `combat_feedback.gd`.
+  - Added directional gem pop physics in `scripts/gameplay/collectibles/gems/gem.gd` (`pop_from_mine`): excavated gems arc upwards and towards the hero upon breaking rock, followed by a squash-and-stretch landing bounce (`TRANS_BACK`, `EASE_OUT`).
+  - Created dedicated test suite `tests/test_juice_system_runner.tscn` verifying all hitstop timing, overlapping freeze ownership, trauma decay curve, and gem pop scale restoration.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 juice and pop assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 17 audio, horn, cache, and juice assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions, Mech boss phases, and victory flow (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `scripts/utils/juice_manager.gd` (new), `tests/test_juice_system_runner.gd`/`.tscn` (new), `project.godot`, `player.gd`, `scripts/gameplay/collectibles/gems/gem.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `spider_minion.gd`, `combat_feedback.gd`, `tests/expedition_horn_cache_runner.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
 
 ---
 
