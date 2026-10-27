@@ -765,13 +765,41 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ### Task ID: `POLISH-029`
 * **Title:** Dynamic Terrain Defense & Enemy Chokepoint Pathfinding
+* **Status:** COMPLETE
 * **Quantic Foundry Drivers:** Mastery: Strategy (Tactical Excavation), Action: Destruction
 * **Relevant Skills:** `game-designer`, `godot-physics`, `godot-tilemap`, `smoke-check`
-* **Scope / Target:** `scripts/systems/world_generation/world.gd`, enemy navigation controllers (`AStar2D`)
+* **Scope / Target:** `scripts/systems/world_generation/world.gd`, `enemy.gd`, `scripts/systems/gameplay/run_summary_data.gd`, `match_flow.gd`, `scripts/ui/run_summary_dialog.gd`, `tests/test_terrain_defense_runner.tscn`
+* **What Changed:**
+  - Guarded 8-directional BFS in `world.gd::_update_flow_field()` to strictly verify that both orthogonal neighbors are open before allowing diagonal directions, eliminating corner-cutting through solid rock walls.
+  - Implemented `is_chokepoint_cell(cell)` identifying 1-wide corridors and funnels flanked by opposing solid rock walls.
+  - Added `place_reinforcement_barrier(cell)` enabling placement of solid rock barriers that update navigation and force enemies to dynamically reroute back to open detours.
+  - Added volatile explosive trap blocks (`arm_explosive_trap`, `detonate_explosive_cell`) causing 3x3 block excavation, heavy AoE damage to nearby mobs, and camera trauma.
+  - Integrated chokepoint funneling in `enemy.gd`: dampened separation and suppressed lateral drift so mobs queue single-file in narrow corridors rather than catching on walls.
+  - Added tactical combat impact: enemies hit inside chokepoints suffer +35% tactical damage and drop +50% coins and XP on defeat.
+  - Tracked `chokepoint_kills` across `world.gd`, `siege_mode_controller.gd`, `match_flow.gd`, `run_summary_data.gd`, and `run_summary_dialog.gd`, rewarding +75 Quantic Foundry Strategy points per chokepoint kill.
+  - Created dedicated headless test suite `tests/test_terrain_defense_runner.tscn` covering direct obstruction rerouting, shortcut adaptation, barrier placement, diagonal corner safety, chokepoint damage bonuses, explosive traps, and scoring.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_terrain_defense_runner.tscn`: Passed all 20 assertions (`TERRAIN_DEFENSE_PASS`).
+  - `tests/test_run_summary_runner.tscn`: Passed all 25 assertions (`RUN_SUMMARY_PASS`).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 48 assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed full 4-stage campaign run with Mech boss (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `scripts/systems/world_generation/world.gd`, `enemy.gd`, `scripts/systems/gameplay/run_summary_data.gd`, `match_flow.gd`, `scripts/ui/run_summary_dialog.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `tests/test_terrain_defense_runner.gd`/`.tscn` (new), `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-030`
+* **Title:** Biome Anomalies & Hidden Relic Chambers
+* **Quantic Foundry Drivers:** Creativity: Discovery (Exploration, Tinkering), Achievement: Power
+* **Relevant Skills:** `procedural-gen`, `level-design`, `godot-resources`, `game-feel`
+* **Scope / Target:** `scripts/systems/world_generation/world.gd`, ancient relic chambers & modifiers
 * **Change Definition:**
-  1. Dynamically update enemy navigation mesh as blocks are dug so mobs pathfind through player tunnels rather than gliding across solid rock.
-  2. Reward player for carving chokepoints and kill-funnels into the bedrock.
-  3. Introduce explosive trap blocks or reinforcement barriers in tunnel networks.
+  1. Procedurally generate hidden sub-surface anomaly chambers (e.g. Ancient Steam Pump, Magma Seam, Geode Shrine) sealed behind dense stone.
+  2. Unearthing an anomaly chamber grants an expedition modifier or passive buff for the remainder of the run.
+  3. Visual & audio discovery cues when mining adjacent to an anomaly chamber.
 * **Acceptance Criteria:**
-  - Headless test verifies enemies reroute through excavated cells when direct path is obstructed by unbroken rock.
+  - Headless test verifies anomaly chambers generate with discovery borders and grant expedition modifiers when uncovered.
 

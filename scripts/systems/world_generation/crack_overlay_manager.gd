@@ -9,6 +9,7 @@ var crack_shader := preload("res://assets/shaders/damage_crack_overlay.gdshader"
 var border_atlas: Texture2D
 var inside_corners_atlas: Texture2D
 var front_face: Texture2D
+var full_tile_crack: Texture2D
 
 var _active_overlays: Dictionary = {}
 
@@ -18,6 +19,7 @@ func _ready() -> void:
 	z_index = 20 # Ensure it draws above terrain
 	border_atlas = load("res://assets/sprites/world/terrain/dome/Cracks_Border_Atlas.png")
 	inside_corners_atlas = load("res://assets/sprites/world/terrain/dome/Cracks_Inside_Corners.png")
+	full_tile_crack = load("res://assets/sprites/world/terrain/damage/First_Hitting.png")
 	# Scale the crack front art the SAME way the front-face tile is scaled (64px art
 	# squished into the shallow strip) so the crack pattern aligns with the face.
 	front_face = _scale_front_crack(load("res://assets/sprites/world/terrain/dome/Cracks_Front_Face.png"))
@@ -30,10 +32,11 @@ func _scale_front_crack(tex: Texture2D) -> Texture2D:
 	return ImageTexture.create_from_image(img)
 
 func set_damage(cell: Vector2i, progress: float, is_front: bool = false) -> void:
-	if progress <= 0.0 or progress >= 1.0:
+	if progress <= 0.0:
 		clear_damage(cell, is_front)
 		return
 
+	progress = clampf(progress, 0.0, 1.0)
 	var key = str(cell) + ("_front" if is_front else "_top")
 	if not _active_overlays.has(key):
 		_create_overlay(cell, is_front, key)
@@ -86,8 +89,17 @@ func _create_overlay(cell: Vector2i, is_front: bool, key: String) -> void:
 	else:
 		if edge_layer != null and edge_layer.get_cell_source_id(cell) != -1:
 			var atlas_coords = edge_layer.get_cell_atlas_coords(cell)
-			var rect = Rect2(atlas_coords.x * TILE_SIZE, atlas_coords.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-			var sprite = _make_sprite(border_atlas, rect)
+			var sprite: Sprite2D
+			if atlas_coords == Vector2i(0, 0) or atlas_coords == Vector2i(-1, -1):
+				sprite = _make_sprite(full_tile_crack, Rect2(0, 0, TILE_SIZE, TILE_SIZE))
+			else:
+				var rect = Rect2(atlas_coords.x * TILE_SIZE, atlas_coords.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+				sprite = _make_sprite(border_atlas, rect)
+			sprite.position = cell_pos
+			add_child(sprite)
+			sprites.append(sprite)
+		else:
+			var sprite = _make_sprite(full_tile_crack, Rect2(0, 0, TILE_SIZE, TILE_SIZE))
 			sprite.position = cell_pos
 			add_child(sprite)
 			sprites.append(sprite)

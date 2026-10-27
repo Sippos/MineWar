@@ -39,6 +39,7 @@ var crack_overlay_manager: Node2D
 var light_occluder_manager: Node2D
 var juice_manager: Node
 var _border_rim_material: ShaderMaterial
+var tile_damage: Dictionary = {}
 
 var astar: AStarGrid2D
 const ENEMY_SCENE = preload("res://enemy.tscn")
@@ -105,6 +106,8 @@ var flow_field: Dictionary = {}
 var flow_field_target := Vector2i(0, -1)
 var world_generation_in_progress := false
 var dug_at_msec: Dictionary = {}
+var chokepoint_kills: int = 0
+var explosive_trap_cells: Dictionary = {}
 var current_breach_cell := Vector2i.ZERO
 var current_breach_valid := false
 var current_breach_is_surface := true
@@ -180,7 +183,8 @@ func _ready() -> void:
 	# TileMapLayers, and a single such frame cost well over a second. Both mines now
 	# build straight through in one frame (~0.3 s each), so the whole load is one
 	# short hitch instead of a multi-second stall.
-	$Player.player_id = player_id
+	if has_node("Player") and "player_id" in $Player:
+		$Player.player_id = player_id
 	_connect_base_signals()
 	_repair_atlas_tiles()
 	print("[PROF p%d] repair_atlas %.1f ms" % [player_id, (Time.get_ticks_usec() - _tp) / 1000.0]); _tp = Time.get_ticks_usec()
@@ -256,20 +260,23 @@ func _connect_once(source: Node, signal_name: String, target: Callable) -> void:
 func _configure_mine_lighting() -> void:
 	# Keep the generated fog data available for future secrets or minimap use,
 	# but do not cover the world with an almost-black tile overlay during play.
-	fog_layer.visible = show_fog_overlay
-	canvas_modulate.color = ambient_tint
-	player_light.color = player_light_color
-	player_light.energy = player_light_energy
-	player_light.texture_scale = player_light_scale
-	if player_light.texture is GradientTexture2D:
-		var radial_texture := player_light.texture as GradientTexture2D
-		radial_texture.fill = GradientTexture2D.FILL_RADIAL
-		radial_texture.fill_from = Vector2(0.5, 0.5)
-		radial_texture.fill_to = Vector2(1.0, 0.5)
-	# Runtime overlapping occluders (MineLightOccluderManager) seal tunnel walls.
-	player_light.shadow_enabled = true
-	player_light.shadow_filter = Light2D.SHADOW_FILTER_PCF5
-	player_light.shadow_color = Color(0, 0, 0, 0.72)
+	if fog_layer:
+		fog_layer.visible = show_fog_overlay
+	if canvas_modulate:
+		canvas_modulate.color = ambient_tint
+	if player_light:
+		player_light.color = player_light_color
+		player_light.energy = player_light_energy
+		player_light.texture_scale = player_light_scale
+		if player_light.texture is GradientTexture2D:
+			var radial_texture := player_light.texture as GradientTexture2D
+			radial_texture.fill = GradientTexture2D.FILL_RADIAL
+			radial_texture.fill_from = Vector2(0.5, 0.5)
+			radial_texture.fill_to = Vector2(1.0, 0.5)
+		# Runtime overlapping occluders (MineLightOccluderManager) seal tunnel walls.
+		player_light.shadow_enabled = true
+		player_light.shadow_filter = Light2D.SHADOW_FILTER_PCF5
+		player_light.shadow_color = Color(0, 0, 0, 0.72)
 	_setup_border_rim_shader()
 
 func _setup_border_rim_shader() -> void:
@@ -343,6 +350,9 @@ func on_cell_dug(cell: Vector2i) -> void:
 		if btype == 3 and randf() < 0.05:
 			call_deferred("_spawn_buried_threat", cell)
 
+	if explosive_trap_cells.has(cell):
+		call_deferred("detonate_explosive_cell", cell)
+
 	if not world_generation_in_progress:
 		topology_revision += 1
 		dug_at_msec[cell] = Time.get_ticks_msec()
@@ -362,6 +372,7 @@ func on_cell_dug(cell: Vector2i) -> void:
 	if crack_overlay_manager:
 		crack_overlay_manager.clear_damage(cell, false)
 		crack_overlay_manager.clear_damage(Vector2i(cell.x, cell.y + 1), true)
+	tile_damage.erase(cell)
 	if light_occluder_manager:
 		light_occluder_manager.on_cell_dug(cell)
 	
@@ -404,8 +415,11 @@ func update_fog_mask(cell: Vector2i) -> void:
 	var atlas_y = index / 4
 	
 	# Source 9 is the new fog_mask_atlas
-	fog_layer.set_cell(cell, 9, Vector2i(atlas_x, atlas_y))
-	
+	if fog_layer:
+		fog_layer.set_cell(cell, 9, Vector2i(atlas_x, atlas_y))
+	if block_layer == null:
+		return
+
 	# Every solid cell renders its own mass tile so the cave-floor backdrop never
 	# shows through unmined rock. Exposed cells use their neighbour-mask frame
 	# (border + rounded cutouts); a fully-interior cell resolves to frame (0,0),
@@ -1458,6 +1472,17 @@ func update_front_wall(cell: Vector2i) -> void:
 		# gem indicator refresh is handled by the block logic, but we can call it if it exists.
 		pass
 
+func get_tile_damage(cell: Vector2i) -> float:
+	return tile_damage.get(cell, 0.0)
+
+func add_tile_damage(cell: Vector2i, amount: float) -> float:
+	var new_dmg: float = tile_damage.get(cell, 0.0) + amount
+	tile_damage[cell] = new_dmg
+	return new_dmg
+
+func clear_tile_damage(cell: Vector2i) -> void:
+	tile_damage.erase(cell)
+
 func get_tile_max_health(cell: Vector2i, block_id: int = -1) -> float:
 	if block_id == -1 and block_layer != null:
 		block_id = block_layer.get_cell_source_id(cell)
@@ -1524,12 +1549,12 @@ func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal 
 	var flash := Node2D.new()
 	flash.name = "TileHitFlash"
 	flash.add_to_group("polish_feedback")
-	flash.z_index = 12
+	flash.z_index = 10
 	flash.global_position = world_position
 	
-	var flash_color := Color(2.0, 2.0, 2.0, 0.85) if not strong else Color(2.4, 2.2, 1.8, 0.95)
+	var flash_color := Color(1.0, 1.0, 1.0, 0.22) if not strong else Color(1.2, 1.1, 0.9, 0.45)
 	if gem_reveal:
-		flash_color = Color(0.8, 2.4, 2.5, 0.95)
+		flash_color = Color(0.6, 1.2, 1.3, 0.5)
 		
 	var flash_rect := ColorRect.new()
 	var rect_size := Vector2(36, 36) if not strong else Vector2(52, 52)
@@ -1850,14 +1875,108 @@ func _update_flow_field() -> void:
 			continue
 		var best_dir := Vector2.ZERO
 		var min_dist: int = visited[cell]
-		# Check all 8 directions to give smooth diagonals if possible
+		# Check all 8 directions to give smooth diagonals if possible,
+		# while strictly preventing diagonal corner-cutting through solid walls.
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]:
+			if d.x != 0 and d.y != 0:
+				var adj_x := Vector2i(cell.x + d.x, cell.y)
+				var adj_y := Vector2i(cell.x, cell.y + d.y)
+				if not astar.is_in_bounds(adj_x.x, adj_x.y) or astar.is_point_solid(adj_x):
+					continue
+				if not astar.is_in_bounds(adj_y.x, adj_y.y) or astar.is_point_solid(adj_y):
+					continue
 			var neighbor = cell + d
 			if visited.has(neighbor) and visited[neighbor] < min_dist:
 				min_dist = visited[neighbor]
 				best_dir = Vector2(d.x, d.y)
 		if best_dir != Vector2.ZERO:
 			flow_field[cell] = best_dir.normalized()
+
+func record_chokepoint_kill() -> void:
+	chokepoint_kills += 1
+
+func is_chokepoint_cell(cell: Vector2i) -> bool:
+	if astar == null or not astar.is_in_bounds(cell.x, cell.y) or astar.is_point_solid(cell):
+		return false
+	var left_solid := not astar.is_in_bounds(cell.x - 1, cell.y) or astar.is_point_solid(Vector2i(cell.x - 1, cell.y))
+	var right_solid := not astar.is_in_bounds(cell.x + 1, cell.y) or astar.is_point_solid(Vector2i(cell.x + 1, cell.y))
+	var top_solid := not astar.is_in_bounds(cell.x, cell.y - 1) or astar.is_point_solid(Vector2i(cell.x, cell.y - 1))
+	var bottom_solid := not astar.is_in_bounds(cell.x, cell.y + 1) or astar.is_point_solid(Vector2i(cell.x, cell.y + 1))
+
+	# Horizontal corridor (walls above and below)
+	if top_solid and bottom_solid and not left_solid and not right_solid:
+		return true
+	# Vertical corridor (walls to left and right)
+	if left_solid and right_solid and not top_solid and not bottom_solid:
+		return true
+	# Pinch point or dead-end (at least 2 opposing or 3 total solid walls)
+	var solid_count := (1 if left_solid else 0) + (1 if right_solid else 0) + (1 if top_solid else 0) + (1 if bottom_solid else 0)
+	if solid_count >= 2 and ((left_solid and right_solid) or (top_solid and bottom_solid) or solid_count >= 3):
+		return true
+	return false
+
+func place_reinforcement_barrier(cell: Vector2i) -> bool:
+	if astar == null or not astar.is_in_bounds(cell.x, cell.y):
+		return false
+	if cell.y < 0 and cell.distance_to(BASE_TARGET_CELL) < 2.0:
+		return false
+	if block_layer:
+		block_layer.set_cell(cell, 3, Vector2i.ZERO)
+	if _generation_block_cache != null:
+		_generation_block_cache[cell] = 3
+	astar.set_point_solid(cell, true)
+	update_fog_mask(cell)
+	update_front_wall(cell)
+	update_inside_corners(cell)
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			var n := Vector2i(cell.x + dx, cell.y + dy)
+			update_fog_mask(n)
+			update_front_wall(n)
+			update_inside_corners(n)
+	topology_revision += 1
+	_update_flow_field()
+	_refresh_navigation_weights_around(cell, 2)
+	return true
+
+func arm_explosive_trap(cell: Vector2i, damage: int = 120, blast_radius: int = 1) -> void:
+	explosive_trap_cells[cell] = {"damage": damage, "radius": blast_radius}
+
+func detonate_explosive_cell(center_cell: Vector2i) -> void:
+	var trap_info: Dictionary = explosive_trap_cells.get(center_cell, {"damage": 120, "radius": 1})
+	explosive_trap_cells.erase(center_cell)
+	var blast_damage: int = int(trap_info.get("damage", 120))
+	var radius: int = int(trap_info.get("radius", 1))
+
+	var world_center: Vector2 = Vector2.ZERO
+	if block_layer:
+		world_center = block_layer.to_global(block_layer.map_to_local(center_cell))
+
+	# Blast away neighboring soft/medium blocks in radius
+	for dx in range(-radius, radius + 1):
+		for dy in range(-radius, radius + 1):
+			var target_cell := Vector2i(center_cell.x + dx, center_cell.y + dy)
+			if target_cell.y < 0 and target_cell.distance_to(BASE_TARGET_CELL) < 2.0:
+				continue
+			var btype = _get_block_source_id(target_cell)
+			if btype in [1, 2, 3]:
+				on_cell_dug(target_cell)
+
+	# Damage all enemies within blast radius
+	var world_radius := (float(radius) + 0.8) * 64.0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and enemy is Node2D:
+			var d := (enemy as Node2D).global_position.distance_to(world_center)
+			if d <= world_radius and enemy.has_method("take_damage"):
+				var falloff := clampf(1.0 - (d / (world_radius * 1.25)), 0.5, 1.0)
+				enemy.take_damage(int(blast_damage * falloff))
+
+	var juice = get_node_or_null("/root/JuiceManager")
+	if juice and juice.has_method("trigger_motherlode_shatter"):
+		juice.trigger_motherlode_shatter()
+	var sound = get_node_or_null("/root/SoundFx")
+	if sound and sound.has_method("play_cache_collapse"):
+		sound.play_cache_collapse()
 
 var _last_cave_in_msec: int = 0
 const CAVE_IN_COOLDOWN_MSEC := 5000

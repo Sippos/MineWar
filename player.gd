@@ -438,10 +438,45 @@ func get_feeler_rays() -> Dictionary:
 		"up_right": feeler_up_right
 	}
 
+func _is_ray_pointing_to_mineable_block(ray: RayCast2D) -> bool:
+	if ray == null or tile_map == null:
+		return false
+	ray.force_raycast_update()
+	if not ray.is_colliding() or ray.get_collider() != tile_map:
+		return false
+	var point = ray.get_collision_point() + ray.target_position.normalized() * 5.0
+	var cell = tile_map.local_to_map(tile_map.to_local(point))
+	var block_id := tile_map.get_cell_source_id(cell)
+	if block_id == -1 or block_id == 16:
+		return false
+	var world := get_parent()
+	var protected := false
+	if world and world.has_method("is_dig_cell_protected"):
+		protected = bool(world.call("is_dig_cell_protected", cell))
+	else:
+		protected = (cell.y <= 1 and cell.x != 0) or cell.y < 0
+	return not protected
+
+func _get_ray_cell(ray: RayCast2D) -> Vector2i:
+	if ray == null or tile_map == null:
+		return Vector2i(-999999, -999999)
+	ray.force_raycast_update()
+	if not ray.is_colliding() or ray.get_collider() != tile_map:
+		return Vector2i(-999999, -999999)
+	var point = ray.get_collision_point() + ray.target_position.normalized() * 5.0
+	return tile_map.local_to_map(tile_map.to_local(point))
+
 func get_corner_assist_nudge(dir: Vector2, current_speed: float) -> Vector2:
 	if currently_digging_cell != null or not can_move or is_dead or dir.is_zero_approx():
 		return Vector2.ZERO
 	if feeler_right_top == null:
+		return Vector2.ZERO
+
+	# If the player is pushing into a mineable block, corner assist must not nudge them away
+	if (dir.x > 0.15 and _is_ray_pointing_to_mineable_block(ray_right)) or \
+	   (dir.x < -0.15 and _is_ray_pointing_to_mineable_block(ray_left)) or \
+	   (dir.y > 0.15 and _is_ray_pointing_to_mineable_block(ray_down)) or \
+	   (dir.y < -0.15 and _is_ray_pointing_to_mineable_block(ray_up)):
 		return Vector2.ZERO
 
 	var nudge_speed: float = current_speed * 0.75
@@ -703,6 +738,8 @@ func _physics_process(delta: float) -> void:
 		var target_center: Vector2 = enemy_hit.global_position + Vector2(0, 8)
 		if player_center.distance_to(target_center) < 42.0:
 			velocity = Vector2.ZERO
+	elif currently_digging_cell != null:
+		velocity = Vector2.ZERO
 	else:
 		_apply_corner_assist(direction, current_speed, delta)
 
@@ -899,29 +936,71 @@ func _show_mining_tier_feedback(block_id: int) -> void:
 		warned_ancient_stone = true
 		hud_node.show_notice("ANCIENT WALL — your current pick barely bites. Upgrade Pick Power before committing here.", 4.6)
 
+func _calculate_dig_times(cell: Vector2i) -> Dictionary:
+	var calculated_dig_time: float = base_dig_time
+	var rpg_mining: Node = _rpg_controller()
+	if rpg_mining != null and rpg_mining.has_method("get_dig_time_multiplier"):
+		calculated_dig_time *= float(rpg_mining.call("get_dig_time_multiplier"))
+	else:
+		calculated_dig_time *= pow(0.975, agility - 1)
+	calculated_dig_time *= _get_shaman_dig_time_multiplier()
+	calculated_dig_time *= cave_reward_dig_mult
+	if current_hero_name == "Druid" and druid_mole_active:
+		calculated_dig_time *= 0.55
+	var block_id := tile_map.get_cell_source_id(cell)
+	var hardness_multiplier := get_block_hardness_multiplier(block_id, cell)
+	if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
+		hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
+	var current_target_dig_time: float = calculated_dig_time * hardness_multiplier
+	return {
+		"swing_time": calculated_dig_time,
+		"target_time": current_target_dig_time
+	}
+
 func handle_digging(delta: float) -> void:
 	if current_hero_name == "Nerubian":
 		# Nerubian claw mining is owned by HeroBalanceController, but it still
 		# uses this player's action sheet for the shared contact cue.
 		return
-	
-	var input_dir = Vector2.ZERO
-	if Input.is_action_pressed("p%d_right" % player_id): input_dir.x += 1
-	elif Input.is_action_pressed("p%d_left" % player_id): input_dir.x -= 1
-	elif Input.is_action_pressed("p%d_down" % player_id): input_dir.y += 1
-	elif Input.is_action_pressed("p%d_up" % player_id): input_dir.y -= 1
-	
+
 	var active_ray: RayCast2D = null
-	if velocity.length() < 20.0:
-		if input_dir.x > 0:
+	var right_pressed := Input.is_action_pressed("p%d_right" % player_id)
+	var left_pressed := Input.is_action_pressed("p%d_left" % player_id)
+	var down_pressed := Input.is_action_pressed("p%d_down" % player_id)
+	var up_pressed := Input.is_action_pressed("p%d_up" % player_id)
+
+	# If currently digging, stick to the ray pointing at that cell as long as its input is held
+	if currently_digging_cell != null:
+		if right_pressed and _get_ray_cell(ray_right) == currently_digging_cell:
 			active_ray = ray_right
-		elif input_dir.x < 0:
+		elif left_pressed and _get_ray_cell(ray_left) == currently_digging_cell:
 			active_ray = ray_left
-		elif input_dir.y > 0:
+		elif down_pressed and _get_ray_cell(ray_down) == currently_digging_cell:
 			active_ray = ray_down
-		elif input_dir.y < 0:
+		elif up_pressed and _get_ray_cell(ray_up) == currently_digging_cell:
 			active_ray = ray_up
-	
+
+	# Otherwise, choose candidate ray based on input direction
+	if active_ray == null:
+		var candidate_rays: Array[RayCast2D] = []
+		var dir_x := (1.0 if right_pressed else 0.0) - (1.0 if left_pressed else 0.0)
+		var dir_y := (1.0 if down_pressed else 0.0) - (1.0 if up_pressed else 0.0)
+		if abs(dir_x) >= abs(dir_y):
+			if dir_x > 0: candidate_rays.append(ray_right)
+			elif dir_x < 0: candidate_rays.append(ray_left)
+			if dir_y > 0: candidate_rays.append(ray_down)
+			elif dir_y < 0: candidate_rays.append(ray_up)
+		else:
+			if dir_y > 0: candidate_rays.append(ray_down)
+			elif dir_y < 0: candidate_rays.append(ray_up)
+			if dir_x > 0: candidate_rays.append(ray_right)
+			elif dir_x < 0: candidate_rays.append(ray_left)
+
+		for r in candidate_rays:
+			if _is_ray_pointing_to_mineable_block(r):
+				active_ray = r
+				break
+
 	if active_ray and active_ray.is_colliding():
 		var collider = active_ray.get_collider()
 		if collider == tile_map:
@@ -940,46 +1019,31 @@ func handle_digging(delta: float) -> void:
 					_show_protected_dig_feedback(cell)
 					_stop_digging()
 					return
+
+				var times := _calculate_dig_times(cell)
+				current_dig_swing_time = times.swing_time
+				current_dig_target_time = times.target_time
+
 				if currently_digging_cell == cell:
 					dig_timer += delta
-					var calculated_dig_time: float = base_dig_time
-					var rpg_mining: Node = _rpg_controller()
-					if rpg_mining != null and rpg_mining.has_method("get_dig_time_multiplier"):
-						calculated_dig_time *= float(rpg_mining.call("get_dig_time_multiplier"))
-					else:
-						calculated_dig_time *= pow(0.975, agility - 1)
-					calculated_dig_time *= _get_shaman_dig_time_multiplier()
-					calculated_dig_time *= cave_reward_dig_mult
-					if current_hero_name == "Druid" and druid_mole_active:
-						calculated_dig_time *= 0.55
-					# Keep the authored swing cadence independent from block hardness.
-					# Harder blocks consume more contacts, rather than stretching this
-					# animation cycle.
-					current_dig_swing_time = calculated_dig_time
-					block_id = tile_map.get_cell_source_id(cell)
-					var hardness_multiplier := get_block_hardness_multiplier(block_id, cell)
-					if rpg_mining != null and rpg_mining.has_method("get_mining_force_multiplier"):
-						hardness_multiplier *= float(rpg_mining.call("get_mining_force_multiplier", block_id))
-					var current_target_dig_time: float = calculated_dig_time * hardness_multiplier
-					current_dig_target_time = current_target_dig_time
-					var damage_progress = clampf(dig_timer / current_target_dig_time, 0.0, 1.0)
+					if world and world.has_method("add_tile_damage"):
+						world.tile_damage[cell] = dig_timer
+					var damage_progress = clampf(dig_timer / maxf(current_dig_target_time, 0.001), 0.0, 1.0)
 					var below_cell = Vector2i(cell.x, cell.y + 1)
 					if world and world.get("crack_overlay_manager") != null:
 						world.crack_overlay_manager.set_damage(cell, damage_progress, false)
 						world.crack_overlay_manager.set_damage(below_cell, damage_progress, true)
-					if dig_timer >= current_target_dig_time:
+					if dig_timer >= current_dig_target_time:
 						# Do not break from the progress timer. The next visible contact
 						# frame owns the terrain change, dust, and audio as one event.
 						dig_break_queued = true
-						dig_timer = current_target_dig_time
+						dig_timer = current_dig_target_time
 				else:
 					_stop_digging()
 					currently_digging_cell = cell
 					_show_mining_tier_feedback(tile_map.get_cell_source_id(cell))
-					dig_timer = 0.0
-					current_dig_target_time = 0.0
-					current_dig_swing_time = 0.0
-					dig_break_queued = false
+					dig_timer = world.get_tile_damage(cell) if (world and world.has_method("get_tile_damage")) else 0.0
+					dig_break_queued = (dig_timer >= current_dig_target_time and current_dig_target_time > 0.0)
 					action_anim_timer = 0.0
 					action_anim_active = true
 					dig_animation_last_frame = -1
@@ -987,6 +1051,8 @@ func handle_digging(delta: float) -> void:
 					magic_orb_last_animation_cycle = -1
 			else:
 				_stop_digging()
+		else:
+			_stop_digging()
 	else:
 		_stop_digging()
 
@@ -1018,11 +1084,6 @@ func _show_protected_dig_feedback(cell: Vector2i) -> void:
 
 func _stop_digging() -> void:
 	if currently_digging_cell != null:
-		var below_cell = Vector2i(currently_digging_cell.x, currently_digging_cell.y + 1)
-		var world := get_parent()
-		if world and world.get("crack_overlay_manager") != null:
-			world.crack_overlay_manager.clear_damage(currently_digging_cell, false)
-			world.crack_overlay_manager.clear_damage(below_cell, true)
 		currently_digging_cell = null
 		dig_timer = 0.0
 		current_dig_target_time = 0.0
@@ -1050,6 +1111,8 @@ func _sync_dig_animation_impact(frame_index: int, cycle_frames: float, impact_fr
 			_finish_queued_dig_at_contact()
 		else:
 			_emit_dig_impact(false, currently_digging_cell, tile_map.get_cell_source_id(currently_digging_cell))
+	elif dig_break_queued and frame_index >= impact_frame:
+		_finish_queued_dig_at_contact()
 	dig_animation_last_frame = frame_index
 	dig_animation_last_cycle = cycle
 
@@ -1072,6 +1135,8 @@ func _finish_queued_dig_at_contact() -> void:
 	if world.get("crack_overlay_manager") != null:
 		world.crack_overlay_manager.clear_damage(cell, false)
 		world.crack_overlay_manager.clear_damage(below_cell, true)
+	if world.has_method("clear_tile_damage"):
+		world.clear_tile_damage(cell)
 	if cell_had_gem and world.has_method("notify_minewars_gem_dug"):
 		world.notify_minewars_gem_dug(cell)
 	if world.has_method("notify_tutorial_cell_dug"):

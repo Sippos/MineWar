@@ -207,6 +207,7 @@ func _populate_run_summary_card(compact: bool) -> void:
 	var total_gold: int = int(summary_data.get("total_gold"))
 	var blocks_mined: int = int(summary_data.get("blocks_mined"))
 	var caches_unlocked: int = int(summary_data.get("caches_unlocked"))
+	var chokepoint_kills: int = int(summary_data.get("chokepoint_kills"))
 	var horn_greed_multiplier: float = float(summary_data.get("horn_greed_multiplier"))
 	var horn_soundings: int = int(summary_data.get("horn_soundings"))
 	var hero_name: String = str(summary_data.get("hero_name"))
@@ -258,6 +259,8 @@ func _populate_run_summary_card(compact: bool) -> void:
 	_add_result_row(stats, GOLD_TEXTURE, "", "Gold banked", str(total_gold))
 	_add_result_row(stats, null, "MINE", "Blocks mined", str(blocks_mined))
 	_add_result_row(stats, null, "SEAM", "Caches unlocked", "%d claimed" % caches_unlocked, Color(0.4, 0.88, 1.0))
+	if chokepoint_kills > 0:
+		_add_result_row(stats, null, "CHOKE", "Chokepoint kills", "%d routed" % chokepoint_kills, Color(0.95, 0.72, 0.28))
 	var greed_text := "%.2fx" % horn_greed_multiplier
 	if horn_soundings > 0:
 		greed_text += " (%d horn)" % horn_soundings

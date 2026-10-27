@@ -160,14 +160,35 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 		combat_behavior.configure()
 
 func recalculate_path():
-	var start_cell = tile_map.local_to_map(tile_map.to_local(global_position))
 	path.clear()
-	if world.astar.is_in_bounds(start_cell.x, start_cell.y) and world.astar.is_in_bounds(target_base_cell.x, target_base_cell.y):
-		var id_path = world.astar.get_id_path(start_cell, target_base_cell)
-		for id in id_path:
-			path.append(tile_map.to_global(tile_map.map_to_local(id)))
-		current_path_index = 0
-	last_topology_revision = int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
+	if tile_map == null or not is_instance_valid(tile_map):
+		return
+	if base != null and is_instance_valid(base):
+		target_base_cell = tile_map.local_to_map(tile_map.to_local(base.global_position))
+	var start_cell = tile_map.local_to_map(tile_map.to_local(global_position))
+	if world != null and world.get("astar") != null:
+		var astar: AStarGrid2D = world.astar
+		if astar.is_in_bounds(target_base_cell.x, target_base_cell.y):
+			# If starting inside or on edge of solid point, snap to nearest open cell
+			if astar.is_in_bounds(start_cell.x, start_cell.y) and astar.is_point_solid(start_cell):
+				var best_cell: Vector2i = start_cell
+				var min_dist_sq: float = INF
+				for dx in [-1, 0, 1]:
+					for dy in [-1, 0, 1]:
+						var test_cell := Vector2i(start_cell.x + dx, start_cell.y + dy)
+						if astar.is_in_bounds(test_cell.x, test_cell.y) and not astar.is_point_solid(test_cell):
+							var d: float = (tile_map.map_to_local(test_cell) - tile_map.to_local(global_position)).length_squared()
+							if d < min_dist_sq:
+								min_dist_sq = d
+								best_cell = test_cell
+				if best_cell != start_cell:
+					start_cell = best_cell
+			if astar.is_in_bounds(start_cell.x, start_cell.y) and not astar.is_point_solid(start_cell):
+				var id_path: Array[Vector2i] = astar.get_id_path(start_cell, target_base_cell)
+				for id in id_path:
+					path.append(tile_map.to_global(tile_map.map_to_local(id)))
+				current_path_index = 0
+	last_topology_revision = int(world.get("topology_revision")) if world != null and world.get("topology_revision") != null else last_topology_revision
 
 func _physics_process(delta: float):
 	_update_health_bar(delta)
@@ -206,10 +227,10 @@ func _physics_process(delta: float):
 		sleep_particles.emitting = false
 
 	path_timer += delta
-	var world_revision := int(world.get("topology_revision")) if world.get("topology_revision") != null else last_topology_revision
+	var world_revision := int(world.get("topology_revision")) if world != null and world.get("topology_revision") != null else last_topology_revision
 	if world_revision != last_topology_revision:
 		last_topology_revision = world_revision
-		path_timer = maxf(path_timer, PATH_REFRESH_INTERVAL - randf_range(0.0, 0.5))
+		path_timer = PATH_REFRESH_INTERVAL
 	
 	if path_timer > PATH_REFRESH_INTERVAL:
 		recalculate_path()
@@ -253,7 +274,7 @@ func _physics_process(delta: float):
 		var dir := Vector2.ZERO
 		var target_pos := Vector2.ZERO
 		
-		# Prefer Flow Field if available
+		# Prefer Flow Field if available, otherwise follow AStar path
 		var has_flow = world.get("flow_field") != null and world.flow_field.has(current_cell)
 		if has_flow:
 			dir = world.flow_field[current_cell]
@@ -268,11 +289,20 @@ func _physics_process(delta: float):
 				return
 			else:
 				dir = target_delta / maxf(dist, 0.001)
+		elif path.size() == 0 and not has_flow:
+			recalculate_path()
 		
 		if dir != Vector2.ZERO:
+			var in_chokepoint := bool(world.has_method("is_chokepoint_cell") and world.is_chokepoint_cell(current_cell))
 			var open_factor: float = float(world.get_enemy_open_space_factor(global_position)) if world.has_method("get_enemy_open_space_factor") else 0.0
-			var lateral: Vector2 = dir.orthogonal() * lane_bias * speed * OPEN_SPACE_LANE_STRENGTH * open_factor
-			var separation: Vector2 = _calculate_separation_velocity()
+			var lateral: Vector2 = Vector2.ZERO
+			var separation: Vector2 = Vector2.ZERO
+			if in_chokepoint:
+				# Funnel single-file through narrow tunnels without shoving into walls
+				separation = _calculate_separation_velocity() * 0.15
+			else:
+				lateral = dir.orthogonal() * lane_bias * speed * OPEN_SPACE_LANE_STRENGTH * open_factor
+				separation = _calculate_separation_velocity()
 			velocity = dir * speed + lateral + separation
 			var max_velocity: float = speed * 1.16
 			if velocity.length() > max_velocity:
@@ -366,17 +396,27 @@ func _damage_colliding_players() -> void:
 	# than from invisible body contact while an enemy is merely walking.
 	return
 
+func is_in_chokepoint() -> bool:
+	if tile_map == null or not is_instance_valid(tile_map) or world == null or not is_instance_valid(world):
+		return false
+	var cell: Vector2i = tile_map.local_to_map(tile_map.to_local(global_position))
+	return bool(world.has_method("is_chokepoint_cell") and world.is_chokepoint_cell(cell))
+
 func take_damage(amount: int) -> void:
 	if amount <= 0 or health <= 0:
 		return
-	health = max(0, health - amount)
+	var final_amount := amount
+	var in_choke := is_in_chokepoint()
+	if in_choke:
+		final_amount = int(round(float(amount) * 1.35))
+	health = max(0, health - final_amount)
 	health_bar_hold_timer = HEALTH_BAR_HOLD_TIME
 	_set_health_bar_values(false)
 	health_bar_container.visible = true
 	health_bar_container.modulate.a = 1.0
 	_play_hit_reaction()
 	var feedback: Node = COMBAT_FEEDBACK.ensure(world)
-	feedback.play_enemy_hit(global_position + Vector2(0, 4), _feedback_hit_direction(), amount, health <= 0)
+	feedback.play_enemy_hit(global_position + Vector2(0, 4), _feedback_hit_direction(), final_amount, health <= 0)
 	if health <= 0:
 		die()
 
@@ -482,15 +522,19 @@ func die() -> void:
 			queue_free()
 			return
 
+	var in_choke := is_in_chokepoint()
+	if in_choke and world and world.has_method("record_chokepoint_kill"):
+		world.record_chokepoint_kill()
+
 	var coin_scene = preload("res://scenes/entities/collectibles/drops/coin_drop.tscn")
 	var coin = coin_scene.instantiate()
-	coin.gold_value = gold_drop
+	coin.gold_value = int(round(float(gold_drop) * 1.5)) if in_choke else gold_drop
 	coin.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
 	world.call_deferred("add_child", coin)
 	
 	var xp_scene = preload("res://scenes/entities/collectibles/drops/xp_drop.tscn")
 	var xp = xp_scene.instantiate()
-	xp.xp_value = xp_drop
+	xp.xp_value = int(round(float(xp_drop) * 1.5)) if in_choke else xp_drop
 	xp.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
 	world.call_deferred("add_child", xp)
 		

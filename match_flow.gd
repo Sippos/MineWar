@@ -196,6 +196,10 @@ func _build_run_summary_data(victory: bool, hud: Node) -> RefCounted:
 
 	if controller and controller.has_method("get_caches_unlocked"):
 		data.set("caches_unlocked", int(controller.call("get_caches_unlocked")))
+	if active_world and active_world.get("chokepoint_kills") != null:
+		data.set("chokepoint_kills", int(active_world.get("chokepoint_kills")))
+	elif controller and controller.has_method("get_chokepoint_kills"):
+		data.set("chokepoint_kills", int(controller.call("get_chokepoint_kills")))
 	if controller and controller.has_method("get_horn_soundings"):
 		data.set("horn_soundings", int(controller.call("get_horn_soundings")))
 	if controller and controller.has_method("get_horn_greed_multiplier"):

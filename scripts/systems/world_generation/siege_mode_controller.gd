@@ -1396,6 +1396,9 @@ func _cell_world_position(cell: Vector2i) -> Vector2:
 func get_caches_unlocked() -> int:
 	return caches_unlocked
 
+func get_chokepoint_kills() -> int:
+	return int(world.get("chokepoint_kills")) if world and world.get("chokepoint_kills") != null else 0
+
 func get_horn_soundings() -> int:
 	return horn_soundings
 

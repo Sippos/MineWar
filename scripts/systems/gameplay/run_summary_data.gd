@@ -20,6 +20,7 @@ var total_gems: int = 0
 var total_gold: int = 0
 var blocks_mined: int = 0
 var caches_unlocked: int = 0
+var chokepoint_kills: int = 0
 
 var horn_soundings: int = 0
 var horn_greed_multiplier: float = 1.0
@@ -33,7 +34,7 @@ var total_legacy_ore: int = 0
 var milestone_title: String = ""
 
 func calculate_score() -> int:
-	var base_points := (blocks_mined * 10) + (total_gems * 25) + (caches_unlocked * 200) + (waves_survived * 500) + (base_integrity * 15)
+	var base_points := (blocks_mined * 10) + (total_gems * 25) + (caches_unlocked * 200) + (chokepoint_kills * 75) + (waves_survived * 500) + (base_integrity * 15)
 	if victory:
 		base_points += 2500
 	score = int(round(float(base_points) * maxf(horn_greed_multiplier, 1.0)))
@@ -55,6 +56,7 @@ func to_dict() -> Dictionary:
 		"total_gold": total_gold,
 		"blocks_mined": blocks_mined,
 		"caches_unlocked": caches_unlocked,
+		"chokepoint_kills": chokepoint_kills,
 		"horn_soundings": horn_soundings,
 		"horn_greed_multiplier": horn_greed_multiplier,
 		"score": score,
@@ -83,6 +85,7 @@ static func from_dict(data: Dictionary) -> RefCounted:
 	summary.set("total_gold", int(data.get("total_gold", 0)))
 	summary.set("blocks_mined", int(data.get("blocks_mined", 0)))
 	summary.set("caches_unlocked", int(data.get("caches_unlocked", 0)))
+	summary.set("chokepoint_kills", int(data.get("chokepoint_kills", 0)))
 	summary.set("horn_soundings", int(data.get("horn_soundings", 0)))
 	summary.set("horn_greed_multiplier", float(data.get("horn_greed_multiplier", 1.0)))
 	summary.set("score", int(data.get("score", 0)))

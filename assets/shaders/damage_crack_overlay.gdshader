@@ -27,10 +27,8 @@ void fragment() {
 	// If no damage, don't show anything
 	if (current_damage <= 0.01) {
 		COLOR = vec4(0.0);
-	} else if (current_damage >= 0.99) {
-		// Show full cracks but tinted by the base color if needed
+	} else if (current_damage >= 0.95) {
 		COLOR = crack_color;
-		COLOR.rgb *= COLOR.rgb;
 	} else {
 		// Calculate local UV for the tile (handles cases where the tile is in an atlas)
 		// Assuming the texture size is a multiple of tile_size.
@@ -41,16 +39,11 @@ void fragment() {
 		// Distance from the center of the tile
 		vec2 center_uv = local_uv * 2.0 - 1.0; // range -1 to 1
 		
-		// max(abs(x), abs(y)) gives a square distance, fitting tile borders nicely.
-		// Use length(center_uv) if you prefer a circular reveal.
 		float dist = max(abs(center_uv.x), abs(center_uv.y));
 		
-		// When damage is 0.0, threshold is > 1.0 (nothing shown).
-		// When damage is 1.0, threshold is <= 0.0 (everything shown).
-		float reveal_threshold = 1.0 - current_damage;
-		
-		// Smooth reveal starting from the edges
-		float mask = smoothstep(reveal_threshold - edge_sharpness, reveal_threshold + edge_sharpness, dist);
+		float edge_mask = smoothstep(1.0 - current_damage - edge_sharpness, 1.0 - current_damage + edge_sharpness, dist);
+		float center_mask = 1.0 - smoothstep(current_damage - edge_sharpness, current_damage + edge_sharpness, dist);
+		float mask = clamp(max(edge_mask, center_mask) + current_damage * 0.4, 0.0, 1.0);
 		
 		COLOR = crack_color;
 		COLOR.a *= mask;
