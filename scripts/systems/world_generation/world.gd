@@ -90,6 +90,12 @@ const BREACH_MARKER_Z_INDEX := 19
 enum OnboardingStage { DIG_DOWN, FIND_GEM, PICK_UP_GEM, BANK_GEM, OPEN_UPGRADES, COMPLETE }
 
 var minewars_motherlodes: Dictionary = {}
+const RELIC_SHRINE_SCRIPT := preload("res://scripts/gameplay/collectibles/rewards/relic_shrine.gd")
+var anomaly_chambers: Dictionary = {}
+var anomaly_border_cells: Dictionary = {}
+var anomaly_interior_cells: Dictionary = {}
+var anomalies_unearthed: int = 0
+var active_anomaly_modifiers: Array = []
 var cave_reward_spawned := false
 var onboarding_active := false
 var onboarding_stage: int = OnboardingStage.DIG_DOWN
@@ -344,6 +350,9 @@ func _lighting_focus_node() -> Node2D:
 	return get_node_or_null("Player") as Node2D
 
 func on_cell_dug(cell: Vector2i) -> void:
+	_check_anomaly_discovery(cell)
+	_check_anomaly_unearth(cell)
+
 	if _generation_block_cache != null and _generation_block_cache.has(cell):
 		var btype = _generation_block_cache[cell]
 		# 5% chance on hard rock
@@ -575,6 +584,240 @@ func ensure_minewars_motherlodes() -> void:
 	if minewars_motherlodes.is_empty():
 		_seed_expedition_motherlodes()
 
+func _seed_biome_anomalies() -> void:
+	if is_vs_mode:
+		return
+	var rng := RandomNumberGenerator.new()
+	if DEBUG_FIXED_WORLD_SEED >= 0:
+		rng.seed = DEBUG_FIXED_WORLD_SEED + 9991
+	else:
+		rng.randomize()
+	
+	anomaly_chambers.clear()
+	anomaly_border_cells.clear()
+	anomaly_interior_cells.clear()
+	
+	var definitions := [
+		{
+			"id": "ancient_steam_pump",
+			"title": "ANCIENT STEAM PUMP",
+			"description": "+35 Speed, +20% Dig Cadence",
+			"colour": Color(0.92, 0.62, 0.22, 1.0),
+			"min_depth": 9,
+			"max_depth": 11,
+			"preferred_side": -1,
+		},
+		{
+			"id": "magma_seam",
+			"title": "PRIMORDIAL MAGMA SEAM",
+			"description": "+1 Pick Power, +15 Fire Damage",
+			"colour": Color(1.0, 0.32, 0.12, 1.0),
+			"min_depth": 15,
+			"max_depth": 17,
+			"preferred_side": 1,
+		},
+		{
+			"id": "geode_shrine",
+			"title": "RESONANT GEODE SHRINE",
+			"description": "+1 Gem per Seam, +2 Free Carry",
+			"colour": Color(0.35, 0.75, 1.0, 1.0),
+			"min_depth": 21,
+			"max_depth": 23,
+			"preferred_side": -1,
+		},
+	]
+	
+	for def in definitions:
+		var chamber_id: String = def["id"]
+		var side: int = def["preferred_side"]
+		var center := Vector2i(side * rng.randi_range(7, 12), rng.randi_range(def["min_depth"], def["max_depth"]))
+		for attempt in range(5):
+			var too_close := false
+			for ml_center in minewars_motherlodes.values():
+				if absi((ml_center as Vector2i).x - center.x) < 4 and absi((ml_center as Vector2i).y - center.y) < 3:
+					too_close = true
+					break
+			if too_close:
+				side = -side
+				center = Vector2i(side * rng.randi_range(7, 12), rng.randi_range(def["min_depth"], def["max_depth"]))
+			else:
+				break
+				
+		var interior_cells: Array[Vector2i] = []
+		for dx in range(-1, 2):
+			for dy in range(-1, 1):
+				interior_cells.append(center + Vector2i(dx, dy))
+				
+		var border_cells: Array[Vector2i] = []
+		for dx in range(-2, 3):
+			for dy in range(-2, 2):
+				var cell := center + Vector2i(dx, dy)
+				if not interior_cells.has(cell):
+					border_cells.append(cell)
+					
+		for cell in border_cells:
+			block_layer.set_cell(cell, 3, Vector2i.ZERO)
+			if _generation_block_cache != null:
+				_generation_block_cache[cell] = 3
+			if astar.is_in_bounds(cell.x, cell.y):
+				astar.set_point_solid(cell, true)
+			anomaly_border_cells[cell] = chamber_id
+			
+		for cell in interior_cells:
+			block_layer.erase_cell(cell)
+			if _generation_block_cache != null:
+				_generation_block_cache.erase(cell)
+			if astar.is_in_bounds(cell.x, cell.y):
+				astar.set_point_solid(cell, false)
+			anomaly_interior_cells[cell] = chamber_id
+			
+		var shrine: Area2D = RELIC_SHRINE_SCRIPT.new()
+		shrine.name = "RelicShrine_%s" % chamber_id
+		shrine.configure(chamber_id, def["title"], def["description"], def["colour"], def)
+		var shrine_world_pos := block_layer.to_global(block_layer.map_to_local(center))
+		shrine.position = to_local(shrine_world_pos)
+		shrine.activated.connect(Callable(self, "_on_anomaly_shrine_activated"))
+		add_child(shrine)
+		
+		anomaly_chambers[chamber_id] = {
+			"id": chamber_id,
+			"title": def["title"],
+			"description": def["description"],
+			"colour": def["colour"],
+			"center": center,
+			"interior_cells": interior_cells,
+			"border_cells": border_cells,
+			"shrine": shrine,
+			"discovered": false,
+			"unearthed": false,
+		}
+
+func ensure_biome_anomalies() -> void:
+	if anomaly_chambers.is_empty():
+		_seed_biome_anomalies()
+		for chamber in anomaly_chambers.values():
+			var cells_to_refresh: Array[Vector2i] = []
+			cells_to_refresh.append_array(chamber["interior_cells"])
+			cells_to_refresh.append_array(chamber["border_cells"])
+			for cell in cells_to_refresh:
+				for refresh_cell in [cell, cell + Vector2i.LEFT, cell + Vector2i.RIGHT, cell + Vector2i.UP, cell + Vector2i.DOWN]:
+					update_fog_mask(refresh_cell)
+					update_front_wall(refresh_cell)
+					update_inside_corners(refresh_cell)
+
+func _check_anomaly_discovery(cell: Vector2i) -> void:
+	for chamber_id in anomaly_chambers.keys():
+		var chamber: Dictionary = anomaly_chambers[chamber_id]
+		if chamber.get("discovered", false):
+			continue
+		var is_near := false
+		for b_cell in chamber.get("border_cells", []):
+			if absi(b_cell.x - cell.x) <= 1 and absi(b_cell.y - cell.y) <= 1:
+				is_near = true
+				break
+		if is_near:
+			_discover_anomaly_chamber(chamber_id)
+
+func _discover_anomaly_chamber(chamber_id: String) -> void:
+	if not anomaly_chambers.has(chamber_id):
+		return
+	var chamber: Dictionary = anomaly_chambers[chamber_id]
+	if chamber.get("discovered", false):
+		return
+	chamber["discovered"] = true
+	var title: String = str(chamber.get("title", "ANOMALY"))
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_anomaly_reveal"):
+		sound_fx.play_anomaly_reveal()
+	var juice := get_node_or_null("/root/JuiceManager")
+	if juice and juice.has_method("apply_camera_trauma"):
+		juice.apply_camera_trauma(0.28)
+	var hud := get_node_or_null("HUD")
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("ANOMALY DETECTED: %s! Resonant hum vibrates the rock." % title, 3.2)
+	_spawn_anomaly_border_discovery_fx(chamber)
+
+func _spawn_anomaly_border_discovery_fx(chamber: Dictionary) -> void:
+	var colour: Color = chamber.get("colour", Color.CYAN)
+	for cell in chamber.get("border_cells", []):
+		var p_pos := block_layer.to_global(block_layer.map_to_local(cell))
+		var dot := Polygon2D.new()
+		dot.polygon = PackedVector2Array([Vector2(-3, -3), Vector2(3, -3), Vector2(3, 3), Vector2(-3, 3)])
+		dot.color = Color(colour.r, colour.g, colour.b, 0.7)
+		dot.position = to_local(p_pos)
+		dot.z_index = 8
+		add_child(dot)
+		var t := create_tween()
+		t.tween_property(dot, "scale", Vector2(1.8, 1.8), 0.8).set_trans(Tween.TRANS_SINE)
+		t.parallel().tween_property(dot, "modulate:a", 0.0, 0.8)
+		t.tween_callback(dot.queue_free)
+
+func _check_anomaly_unearth(cell: Vector2i) -> void:
+	var chamber_id: String = ""
+	if anomaly_border_cells.has(cell):
+		chamber_id = str(anomaly_border_cells[cell])
+	elif anomaly_interior_cells.has(cell):
+		chamber_id = str(anomaly_interior_cells[cell])
+	if not chamber_id.is_empty():
+		_unearth_anomaly_chamber(chamber_id)
+
+func _unearth_anomaly_chamber(chamber_id: String) -> void:
+	if not anomaly_chambers.has(chamber_id):
+		return
+	var chamber: Dictionary = anomaly_chambers[chamber_id]
+	if chamber.get("unearthed", false):
+		return
+	chamber["unearthed"] = true
+	chamber["discovered"] = true
+	anomalies_unearthed += 1
+	var title: String = str(chamber.get("title", "ANOMALY"))
+	var desc: String = str(chamber.get("description", ""))
+	
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_relic_activated"):
+		sound_fx.play_relic_activated()
+	var juice := get_node_or_null("/root/JuiceManager")
+	if juice:
+		if juice.has_method("apply_camera_trauma"):
+			juice.apply_camera_trauma(0.44)
+		if juice.has_method("hit_stop"):
+			juice.hit_stop(0.065, 0.08)
+			
+	var shrine: Node = chamber.get("shrine")
+	if shrine and shrine.has_method("activate"):
+		shrine.activate()
+	else:
+		_apply_anomaly_modifier_effects(chamber_id, chamber)
+		
+	var hud := get_node_or_null("HUD")
+	if hud and hud.has_method("show_notice"):
+		hud.show_notice("ANOMALY UNEARTHED: %s! %s" % [title, desc], 4.2)
+
+func _on_anomaly_shrine_activated(anomaly_id: String, modifier_data: Dictionary) -> void:
+	_apply_anomaly_modifier_effects(anomaly_id, modifier_data)
+
+func _apply_anomaly_modifier_effects(anomaly_id: String, modifier_data: Dictionary) -> void:
+	if not active_anomaly_modifiers.has(anomaly_id):
+		active_anomaly_modifiers.append(anomaly_id)
+	var player_node := get_node_or_null("Player")
+	if player_node and player_node.has_method("apply_anomaly_buff"):
+		player_node.apply_anomaly_buff(anomaly_id, modifier_data)
+
+func get_anomaly_chambers() -> Dictionary:
+	return anomaly_chambers
+
+func get_anomalies_unearthed() -> int:
+	return anomalies_unearthed
+
+func get_active_anomaly_modifiers() -> Array:
+	return active_anomaly_modifiers
+
+func unearth_anomaly(chamber_id: String) -> bool:
+	if not anomaly_chambers.has(chamber_id):
+		return false
+	_unearth_anomaly_chamber(chamber_id)
+	return true
+
 func get_minewars_prospect_hint(stage: int) -> String:
 	if not minewars_motherlodes.has(stage):
 		var fallback_depths := {1: 12, 2: 18, 3: 24, 4: 28}
@@ -637,6 +880,7 @@ func generate_initial_world() -> void:
 
 	print("  [PROF p%d]   fill loop %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 	_seed_expedition_motherlodes()
+	_seed_biome_anomalies()
 	_ensure_tutorial_gem()
 	print("  [PROF p%d]   motherlodes %.1f ms" % [player_id, (Time.get_ticks_usec() - _tg) / 1000.0]); _tg = Time.get_ticks_usec()
 	# Now that all blocks are placed, calculate masks and front walls

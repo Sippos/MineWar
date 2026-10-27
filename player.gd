@@ -194,6 +194,11 @@ var cave_reward_ids: Array[String] = []
 var cave_reward_carry_bonus := 0
 var cave_reward_speed_bonus := 0.0
 var cave_reward_dig_mult := 1.0
+var active_anomaly_buffs: Array[String] = []
+var anomaly_speed_bonus := 0.0
+var anomaly_dig_mult := 1.0
+var anomaly_fire_damage := 0
+var anomaly_bonus_gems := 0
 
 # Carrying stays permissive: Strength and cave rewards grant a small free
 # allowance before the existing overload slowdown starts. Every two Strength
@@ -349,6 +354,43 @@ func apply_cave_reward(reward_id: String) -> bool:
 			hud.add_cave_reward(reward_id)
 		if hud and hud.has_method("show_notice") and not notice_text.is_empty():
 			hud.show_notice(notice_text, 2.4)
+	return true
+
+func apply_anomaly_buff(anomaly_id: String, _params: Dictionary = {}) -> bool:
+	if active_anomaly_buffs.has(anomaly_id):
+		return false
+	active_anomaly_buffs.append(anomaly_id)
+	var notice_text := ""
+	match anomaly_id:
+		"ancient_steam_pump":
+			anomaly_speed_bonus += 35.0
+			anomaly_dig_mult *= 0.80
+			notice_text = "Steam Pump Active: +35 Speed, +20% Dig Cadence"
+		"magma_seam":
+			if has_method("upgrade_mining_power"):
+				upgrade_mining_power()
+			anomaly_fire_damage += 15
+			notice_text = "Magma Seam Active: +1 Pick Power, +15 Fire Damage"
+		"geode_shrine":
+			anomaly_bonus_gems += 1
+			cave_reward_carry_bonus += 2
+			notice_text = "Geode Shrine Active: +1 Gem per Seam, +2 Free Carry"
+			if is_inside_tree():
+				var parent_node := get_parent()
+				var hud = parent_node.get_node_or_null("HUD") if parent_node else null
+				if hud and hud.has_method("add_gems"):
+					hud.add_gems(3)
+		"clockwork_core":
+			max_health += 30
+			health += 30
+			notice_text = "Clockwork Core Active: +30 Max HP, Bastion Fortified"
+		_:
+			notice_text = "Ancient Relic Power Awakened!"
+	if is_inside_tree():
+		var parent_node := get_parent()
+		var hud = parent_node.get_node_or_null("HUD") if parent_node else null
+		if hud and hud.has_method("show_notice") and not notice_text.is_empty():
+			hud.show_notice(notice_text, 3.2)
 	return true
 
 func get_carry_load() -> int:
@@ -688,9 +730,9 @@ func _physics_process(delta: float) -> void:
 
 	var penalty: float = get_weight_penalty()
 	var rpg_movement: Node = _rpg_controller()
-	var current_speed: float = base_speed + float(agility - 1) * 3.0 + cave_reward_speed_bonus
+	var current_speed: float = base_speed + float(agility - 1) * 3.0 + cave_reward_speed_bonus + anomaly_speed_bonus
 	if rpg_movement != null and rpg_movement.has_method("get_move_speed"):
-		current_speed = float(rpg_movement.call("get_move_speed")) + cave_reward_speed_bonus
+		current_speed = float(rpg_movement.call("get_move_speed")) + cave_reward_speed_bonus + anomaly_speed_bonus
 	current_speed *= 1.0 - penalty
 	var direction = Vector2.ZERO
 	if can_move:
@@ -762,6 +804,7 @@ func _physics_process(delta: float) -> void:
 			var damage: int = 10 * strength
 			if rpg_combat != null and rpg_combat.has_method("get_basic_attack_damage"):
 				damage = int(rpg_combat.call("get_basic_attack_damage"))
+			damage += anomaly_fire_damage
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
 			attack_timer = 0.0
@@ -944,7 +987,7 @@ func _calculate_dig_times(cell: Vector2i) -> Dictionary:
 	else:
 		calculated_dig_time *= pow(0.975, agility - 1)
 	calculated_dig_time *= _get_shaman_dig_time_multiplier()
-	calculated_dig_time *= cave_reward_dig_mult
+	calculated_dig_time *= (cave_reward_dig_mult * anomaly_dig_mult)
 	if current_hero_name == "Druid" and druid_mole_active:
 		calculated_dig_time *= 0.55
 	var block_id := tile_map.get_cell_source_id(cell)
@@ -1149,6 +1192,8 @@ func _finish_queued_dig_at_contact() -> void:
 		gems_to_spawn += 1
 	if cell_had_gem and _roll_intelligence_gem_bonus():
 		gems_to_spawn += 1
+	if cell_had_gem and anomaly_bonus_gems > 0:
+		gems_to_spawn += anomaly_bonus_gems
 	_spawn_dug_gems(cell, gems_to_spawn)
 	add_xp(GEM_BLOCK_XP if cell_had_gem else DIG_BLOCK_XP)
 	currently_digging_cell = null

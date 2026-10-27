@@ -64,6 +64,12 @@ func _test_score_calculation() -> void:
 	# base = 3450 + 2500 (victory bonus) = 5950
 	_expect(calculated == 5950, "Victory score with triumph bonus should equal 5950 (got %d)" % calculated)
 
+	data.set("victory", false)
+	data.set("anomalies_unearthed", 2)
+	calculated = data.call("calculate_score")
+	# base = 3450 + 2*300 (600) = 4050
+	_expect(calculated == 4050, "Score with 2 anomalies unearthed should equal 4050 (got %d)" % calculated)
+
 func _test_serialization_roundtrip() -> void:
 	var data: RefCounted = SUMMARY_DATA_SCRIPT.new()
 	data.set("victory", true)
@@ -72,6 +78,7 @@ func _test_serialization_roundtrip() -> void:
 	data.set("caches_unlocked", 3)
 	data.set("horn_soundings", 2)
 	data.set("horn_greed_multiplier", 1.5)
+	data.set("anomalies_unearthed", 2)
 	data.set("score", 8500)
 	data.set("legacy_ore_earned", 6)
 	data.set("total_legacy_ore", 24)
@@ -79,12 +86,14 @@ func _test_serialization_roundtrip() -> void:
 	var dict: Dictionary = data.call("to_dict")
 	_expect(dict.get("hero_name") == "Shaman", "to_dict should capture hero name")
 	_expect(int(dict.get("caches_unlocked")) == 3, "to_dict should capture caches unlocked")
+	_expect(int(dict.get("anomalies_unearthed")) == 2, "to_dict should capture anomalies unearthed")
 	_expect(int(dict.get("horn_soundings")) == 2, "to_dict should capture horn soundings")
 	_expect(int(dict.get("score")) == 8500, "to_dict should capture score")
 
 	var restored: RefCounted = SUMMARY_DATA_SCRIPT.call("from_dict", dict)
 	_expect(restored.get("hero_name") == "Shaman", "from_dict should restore hero name")
 	_expect(int(restored.get("blocks_mined")) == 42, "from_dict should restore blocks mined")
+	_expect(int(restored.get("anomalies_unearthed")) == 2, "from_dict should restore anomalies unearthed")
 	_expect(int(restored.get("score")) == 8500, "from_dict should restore score")
 	_expect(bool(restored.get("victory")) == true, "from_dict should restore victory flag")
 

@@ -78,6 +78,8 @@ func _build_streams() -> void:
 	_streams["objective_tick"] = _make_chime_stream([620.0, 820.0], 0.16, 0.055)
 	_streams["cache_open"] = _make_cache_open_stream(0.55)
 	_streams["cache_collapse"] = _make_cache_collapse_stream(0.42)
+	_streams["anomaly_reveal"] = _make_anomaly_reveal_stream(0.68)
+	_streams["relic_activated"] = _make_relic_activated_stream(0.85)
 
 # --- Public API ---
 
@@ -138,6 +140,14 @@ func play_cache_open() -> void:
 
 func play_cache_collapse() -> void:
 	_play_sfx("cache_collapse", -6.5, 0.03)
+
+func play_anomaly_reveal() -> void:
+	_play_stinger("anomaly_reveal", -2.0, 0.015)
+	_duck_music(1.2, -6.0)
+
+func play_relic_activated() -> void:
+	_play_stinger("relic_activated", 1.0, 0.01)
+	_duck_music(2.0, -10.0)
 
 # --- Routing & Pooling ---
 
@@ -307,6 +317,48 @@ func _make_upgrade_stream(duration: float) -> AudioStreamWAV:
 		var envelope := sin(PI * clampf(progress, 0.0, 1.0))
 		var finish := sin(TAU * 1480.0 * t) * pow(clampf((progress - 0.68) / 0.32, 0.0, 1.0), 2.0) * (1.0 - progress)
 		samples[index] = clampf((rise + shimmer) * envelope * 0.32 + finish * 0.42, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_anomaly_reveal_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var frequencies := [329.63, 440.0, 659.25, 880.0, 1318.51]
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var drone := sin(TAU * 110.0 * t) * 0.25 * pow(maxf(0.0, 1.0 - progress), 1.2)
+		var shimmer := 0.0
+		for i in range(frequencies.size()):
+			var start := float(i) * 0.04
+			var local_t := t - start
+			if local_t < 0.0:
+				continue
+			var freq: float = frequencies[i] * (1.0 + 0.006 * sin(TAU * 6.5 * local_t))
+			var env := pow(maxf(0.0, 1.0 - local_t / (duration - start)), 2.2)
+			shimmer += (sin(TAU * freq * local_t) + 0.3 * sin(TAU * freq * 2.0 * local_t)) * env
+		var mix := (drone + shimmer * 0.28) * 0.75
+		samples[index] = clampf(mix, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_relic_activated_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var chords := [130.81, 196.0, 261.63, 392.0]
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.15, 0.0, 1.0)
+		var release := pow(clampf((1.0 - progress) / 0.75, 0.0, 1.0), 1.8)
+		var env := attack * release
+		var brass := 0.0
+		for root_freq in chords:
+			brass += sin(TAU * root_freq * t) + 0.4 * sin(TAU * root_freq * 2.0 * t) + 0.2 * sin(TAU * root_freq * 3.0 * t)
+		var sparkle_freq := lerpf(880.0, 1760.0, pow(progress, 0.7))
+		var sparkle := sin(TAU * sparkle_freq * t) * (1.0 + sin(TAU * 18.0 * t) * 0.5) * env * 0.35
+		var mix := (brass * 0.25 + sparkle) * env * 0.85
+		samples[index] = clampf(mix, -1.0, 1.0)
 	return _make_wav(samples)
 
 func _make_error_stream(duration: float) -> AudioStreamWAV:

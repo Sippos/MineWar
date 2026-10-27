@@ -200,6 +200,10 @@ func _build_run_summary_data(victory: bool, hud: Node) -> RefCounted:
 		data.set("chokepoint_kills", int(active_world.get("chokepoint_kills")))
 	elif controller and controller.has_method("get_chokepoint_kills"):
 		data.set("chokepoint_kills", int(controller.call("get_chokepoint_kills")))
+	if active_world and active_world.has_method("get_anomalies_unearthed"):
+		data.set("anomalies_unearthed", int(active_world.call("get_anomalies_unearthed")))
+	elif active_world and active_world.get("anomalies_unearthed") != null:
+		data.set("anomalies_unearthed", int(active_world.get("anomalies_unearthed")))
 	if controller and controller.has_method("get_horn_soundings"):
 		data.set("horn_soundings", int(controller.call("get_horn_soundings")))
 	if controller and controller.has_method("get_horn_greed_multiplier"):

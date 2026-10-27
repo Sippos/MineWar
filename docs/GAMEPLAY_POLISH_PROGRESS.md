@@ -793,13 +793,47 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ### Task ID: `POLISH-030`
 * **Title:** Biome Anomalies & Hidden Relic Chambers
+* **Status:** `COMPLETE`
 * **Quantic Foundry Drivers:** Creativity: Discovery (Exploration, Tinkering), Achievement: Power
 * **Relevant Skills:** `procedural-gen`, `level-design`, `godot-resources`, `game-feel`
-* **Scope / Target:** `scripts/systems/world_generation/world.gd`, ancient relic chambers & modifiers
+* **Scope / Target:** `scripts/systems/world_generation/world.gd`, `scripts/gameplay/collectibles/rewards/relic_shrine.gd`, `player.gd`, `sound_fx.gd`, `scripts/systems/gameplay/run_summary_data.gd`, `scripts/ui/run_summary_dialog.gd`
+* **Changes Made:**
+  - Authored `scripts/gameplay/collectibles/rewards/relic_shrine.gd` creating ancient interactive relic chambers with floating runic cores, pulsing halos, and status banners.
+  - Procedurally generated 3 depth-tiered anomaly chambers in `world.gd` (`ancient_steam_pump` at depth 9-11, `magma_seam` at depth 15-17, and `geode_shrine` at depth 21-23) sealed behind dense stone perimeters (`source_id = 3`).
+  - Added discovery cues in `world.gd`: mining adjacent to hidden anomaly borders triggers `SoundFX.play_anomaly_reveal()`, camera trauma, pulsing border flare particles, and HUD detection banners.
+  - Added perimeter breach mechanics: digging dense perimeter rock unearths the chamber, fires `SoundFX.play_relic_activated()`, triggers hit-stop and camera trauma, awakens the `RelicShrine`, and awards permanent expedition modifiers.
+  - Wired expedition modifiers into `player.gd` (`apply_anomaly_buff`):
+    - *Ancient Steam Pump*: +35 move speed, +20% digging cadence.
+    - *Primordial Magma Seam*: +1 pick power, +15 fire combat damage.
+    - *Resonant Geode Shrine*: +1 bonus gem per seam, +2 free carry allowance, +3 starting gems.
+  - Synthesized procedural PCM audio in `sound_fx.gd`: pentatonic drone shimmer for `anomaly_reveal` and brass-sparkle chord swell for `relic_activated`.
+  - Integrated `anomalies_unearthed` into `run_summary_data.gd` (+300 Quantic Foundry Discovery score per anomaly) and `run_summary_dialog.gd` retrospective UI display.
+  - Created automated test suite `tests/test_biome_anomalies_runner.tscn` verifying procedural generation, dense sealing, proximity discovery cues, unearthing, buff application, and retrospective scoring.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_biome_anomalies_runner.tscn`: Passed all 37 assertions (`BIOME_ANOMALIES_PASS`).
+  - `tests/test_run_summary_runner.tscn`: Passed all 30 assertions (`RUN_SUMMARY_PASS`).
+  - `tests/test_corner_assist_runner.tscn`: Passed all 25 assertions (`CORNER_ASSIST_PASS`).
+  - `tests/test_terrain_defense_runner.tscn`: Passed all 20 assertions (`TERRAIN_DEFENSE_PASS`).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 48 assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions and Mech boss victory (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `scripts/gameplay/collectibles/rewards/relic_shrine.gd` (new), `tests/test_biome_anomalies_runner.gd`/`.tscn` (new), `scripts/systems/world_generation/world.gd`, `player.gd`, `sound_fx.gd`, `match_flow.gd`, `scripts/systems/gameplay/run_summary_data.gd`, `scripts/ui/run_summary_dialog.gd`, `tests/test_run_summary_runner.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-031`
+* **Title:** Dynamic Enemy Health Bars & Tactical Combat Indicators
+* **Quantic Foundry Drivers:** Action: Destruction (Kinetic Feedback), Mastery: Strategy (Combat Readability)
+* **Relevant Skills:** `game-ui-ux`, `game-feel`, `godot-ui-control`, `smoke-check`
+* **Scope / Target:** `enemy.gd`, `combat_feedback.gd`, floating health bars, hit flashes, and status badges
 * **Change Definition:**
-  1. Procedurally generate hidden sub-surface anomaly chambers (e.g. Ancient Steam Pump, Magma Seam, Geode Shrine) sealed behind dense stone.
-  2. Unearthing an anomaly chamber grants an expedition modifier or passive buff for the remainder of the run.
-  3. Visual & audio discovery cues when mining adjacent to an anomaly chamber.
+  1. Implement transient enemy health bars that appear only when an enemy takes damage, is targeted, or approaches melee proximity, smoothly fading out after combat inactivity.
+  2. Add animated damage-catchup white bar (easing delay) to clearly communicate chunk damage.
+  3. Add visual combat status badges (e.g. Fire Dot from Magma Seam, Chokepoint Vulnerability).
 * **Acceptance Criteria:**
-  - Headless test verifies anomaly chambers generate with discovery borders and grant expedition modifiers when uncovered.
+  - Headless test verifies health bar lifecycle (hidden -> shown on damage -> fade out), damage catch-up animation, and status badge display.
+
 
