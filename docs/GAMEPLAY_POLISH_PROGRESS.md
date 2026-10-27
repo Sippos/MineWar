@@ -692,7 +692,7 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ## Last queue update
 
-`POLISH-001` through `POLISH-026` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. POLISH-026 establishes a professional 5-bus audio architecture, categorized voice pooling, procedural stone-vault cache cracking/crumbling SFX, authentic resonant brass War Horn calls, and stinger-to-music dynamic ducking.
+`POLISH-001` through `POLISH-027` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. POLISH-026 establishes a professional 5-bus audio architecture, categorized voice pooling, procedural stone-vault cache cracking/crumbling SFX, authentic resonant brass War Horn calls, and stinger-to-music dynamic ducking. POLISH-027 implements centralized camera trauma screen shake, multi-hit safe hit-stop freeze frames, and directional gem and ore bounce physics with squash-and-stretch landing feedback.
 
 ---
 
@@ -716,30 +716,62 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ---
 
-## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
-
 ### Task ID: `POLISH-027`
 * **Title:** Hit-Stop, Screen Trauma & Debris Juice
+* **Status:** `COMPLETE`
 * **Quantic Foundry Drivers:** Action: Destruction (Kinetic Weight), Mastery: Challenge
 * **Relevant Skills:** `game-feel`, `camera-systems`, `godot-shaders`, `smoke-check`
-* **Scope / Target:** `scripts/utils/juice_manager.gd`, `scripts/camera/`, melee strike handlers
-* **Change Definition:**
-  1. Add global micro-hitstop (3-4 frame timescale freeze) on heavy pickaxe strikes and enemy melee impacts.
-  2. Add camera trauma impulse to `Camera2D` when motherlodes shatter or the War Horn is blown.
-  3. Directional bounce on excavated gem shards and ore chunks toward the hero.
-* **Acceptance Criteria:**
-  - Automated runner asserts `Engine.time_scale` restores to 1.0 after freeze timeout.
-  - No camera desync or jitter in 60 FPS headless check.
+* **Changes Made:**
+  - Authored `scripts/utils/juice_manager.gd` and registered as Autoload singleton `JuiceManager` in `project.godot`.
+  - Implemented quadratic trauma-based screen shake (`shake = trauma^2`) with sinusoidal pseudo-random offset, tracking active `Camera2D` and cleanly restoring base offset when trauma decays (eliminating offset drift).
+  - Implemented multi-hit safe hit-stop freeze frames (`hit_stop(duration, slow)`) using real-time unscaled timer with ownership ID tracking to ensure `Engine.time_scale` is never stuck slowed or restored prematurely.
+  - Connected `JuiceManager` hooks to mining block break / gem reveals in `player.gd` (`_emit_dig_impact`), motherlode seam collapses and War Horn calls in `scripts/systems/world_generation/siege_mode_controller.gd`, and combat impacts in `combat_feedback.gd`.
+  - Added directional gem pop physics in `scripts/gameplay/collectibles/gems/gem.gd` (`pop_from_mine`): excavated gems arc upwards and towards the hero upon breaking rock, followed by a squash-and-stretch landing bounce (`TRANS_BACK`, `EASE_OUT`).
+  - Created dedicated test suite `tests/test_juice_system_runner.tscn` verifying all hitstop timing, overlapping freeze ownership, trauma decay curve, and gem pop scale restoration.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 juice and pop assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 17 audio, horn, cache, and juice assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions, Mech boss phases, and victory flow (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `scripts/utils/juice_manager.gd` (new), `tests/test_juice_system_runner.gd`/`.tscn` (new), `project.godot`, `player.gd`, `scripts/gameplay/collectibles/gems/gem.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `spider_minion.gd`, `combat_feedback.gd`, `tests/expedition_horn_cache_runner.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
 
 ### Task ID: `POLISH-028`
 * **Title:** End-of-Run Retrospective & Score Breakdown
+* **Status:** `COMPLETE`
 * **Quantic Foundry Drivers:** Achievement: Power & Completion, Mastery: Strategy
 * **Relevant Skills:** `quantic-foundry-motivation`, `economy-designer`, `godot-ui-control`, `save-systems`
-* **Scope / Target:** `scenes/ui/run_summary_dialog.tscn`, `scripts/ui/run_summary_dialog.gd`, `scripts/systems/gameplay/`
+* **Changes Made:**
+  - Authored `scripts/systems/gameplay/run_summary_data.gd` DTO capturing expedition performance metrics: blocks/ore mined, gems banked, caches unlocked, horn greed multiplier, waves survived, base integrity, score calculation formula, and itemized Legacy Ore breakdown.
+  - Built `scenes/ui/run_summary_dialog.tscn` and `scripts/ui/run_summary_dialog.gd` providing a dedicated, responsive retrospective screen with hero card, stat grid, greed multipliers, and persistent Legacy Ore crediting ledger.
+  - Refactored `match_flow.gd` to assemble full `RunSummaryData` from world, player, HUD, and siege controller, instantiating `run_summary_dialog.tscn` as `MatchResultOverlay` while preserving backwards-compatible node paths and action button bindings.
+  - Updated `scripts/systems/world_generation/siege_mode_controller.gd` to track `caches_unlocked`, `horn_soundings`, `total_horn_ore_bonus`, and `get_horn_greed_multiplier()`.
+  - Updated `player.gd` to track `total_blocks_mined` and `total_ore_mined` on cell digs.
+  - Enhanced `global.gd` with `record_run_summary` and persistent `last_run_summary` storage across save/load cycles.
+  - Implemented zero-downtime flow with immediate focus navigation on `RetryButton`, keyboard shortcuts, and instant Stronghold return.
+  - Created dedicated headless test suite `tests/test_run_summary_runner.tscn` verifying all scoring math, serialization roundtrip, scene hierarchy, callback dispatch, and persistence.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_run_summary_runner.tscn`: Passed all 25 retrospective, score, UI, and persistence assertions (`RUN_SUMMARY_PASS`).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 juice assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 17 horn, cache, and audio assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions, Mech boss phases, and victory flow (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `scripts/systems/gameplay/run_summary_data.gd` (new), `scenes/ui/run_summary_dialog.tscn` (new), `scripts/ui/run_summary_dialog.gd` (new), `tests/test_run_summary_runner.gd`/`.tscn` (new), `match_flow.gd`, `player.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `global.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-029`
+* **Title:** Dynamic Terrain Defense & Enemy Chokepoint Pathfinding
+* **Quantic Foundry Drivers:** Mastery: Strategy (Tactical Excavation), Action: Destruction
+* **Relevant Skills:** `game-designer`, `godot-physics`, `godot-tilemap`, `smoke-check`
+* **Scope / Target:** `scripts/systems/world_generation/world.gd`, enemy navigation controllers (`AStar2D`)
 * **Change Definition:**
-  1. Build post-run summary screen displaying Total Ore Mined, Caches Unlocked, Waves Survived, and Horn Greed Multiplier.
-  2. Calculate and credit Legacy Ore conversion into stronghold persistence data.
-  3. Instant restart / Return to Bastion flow with zero unskippable downtime.
+  1. Dynamically update enemy navigation mesh as blocks are dug so mobs pathfind through player tunnels rather than gliding across solid rock.
+  2. Reward player for carving chokepoints and kill-funnels into the bedrock.
+  3. Introduce explosive trap blocks or reinforcement barriers in tunnel networks.
 * **Acceptance Criteria:**
-  - Full expedition test verifies data pass-through to summary dialog on death/victory.
+  - Headless test verifies enemies reroute through excavated cells when direct path is obstructed by unbroken rock.
 

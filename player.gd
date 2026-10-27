@@ -188,17 +188,19 @@ var undead_cast_timer = 0.0
 
 var carried_gems = []
 var nearby_gems = []
+var total_blocks_mined := 0
+var total_ore_mined := 0
 var cave_reward_ids: Array[String] = []
 var cave_reward_carry_bonus := 0
 var cave_reward_speed_bonus := 0.0
 var cave_reward_dig_mult := 1.0
 
 # Carrying stays permissive: Strength and cave rewards grant a small free
-# allowance before the existing overload slowdown starts. Every three Strength
+# allowance before the existing overload slowdown starts. Every two Strength
 # points above the starting value adds another slot without changing pickup or
 # deposit rules.
 const BASE_FREE_CARRY_ALLOWANCE := 1
-const STRENGTH_CARRY_STEP := 3
+const STRENGTH_CARRY_STEP := 2
 const BOOTS_SPEED_BONUS := 28.0
 const PICKAXE_DIG_MULT := 0.82
 const PICKAXE_ATTACK_MULT := 0.88
@@ -212,12 +214,23 @@ var ray_left: RayCast2D
 var ray_down: RayCast2D
 var ray_up: RayCast2D
 
+# Dome Keeper Corner Assist / Anti-Snag Feeler Rays
+var feeler_right_top: RayCast2D
+var feeler_right_bottom: RayCast2D
+var feeler_left_top: RayCast2D
+var feeler_left_bottom: RayCast2D
+var feeler_down_left: RayCast2D
+var feeler_down_right: RayCast2D
+var feeler_up_left: RayCast2D
+var feeler_up_right: RayCast2D
+
 func _ready() -> void:
 	collision_mask |= 4 # Collide with enemies (Layer 3)
 	ray_right = RayCast2D.new(); ray_right.position = Vector2(0, -24); ray_right.target_position = Vector2(34, 0); ray_right.collision_mask = 5; add_child(ray_right)
 	ray_left = RayCast2D.new(); ray_left.position = Vector2(0, -24); ray_left.target_position = Vector2(-34, 0); ray_left.collision_mask = 5; add_child(ray_left)
 	ray_down = RayCast2D.new(); ray_down.position = Vector2(0, -24); ray_down.target_position = Vector2(0, 34); ray_down.collision_mask = 5; add_child(ray_down)
 	ray_up = RayCast2D.new(); ray_up.position = Vector2(0, -24); ray_up.target_position = Vector2(0, -34); ray_up.collision_mask = 5; add_child(ray_up)
+	_setup_corner_assist_feelers()
 	update_hero_sprites()
 
 func _input(event: InputEvent) -> void:
@@ -379,6 +392,119 @@ func deposit_gems() -> int:
 	carried_gems = remaining_items
 	return deposited
 
+# ==============================================================================
+# Dome Keeper Corner Assist / Anti-Snag Feeler Rays
+# ==============================================================================
+
+func _create_feeler_ray(ray_name: String, pos: Vector2, target: Vector2) -> RayCast2D:
+	var ray := RayCast2D.new()
+	ray.name = ray_name
+	ray.position = pos
+	ray.target_position = target
+	ray.collision_mask = 1 # Solid terrain blocks (Layer 1)
+	ray.exclude_parent = true
+	ray.hit_from_inside = true
+	ray.enabled = true
+	add_child(ray)
+	return ray
+
+func _setup_corner_assist_feelers() -> void:
+	const PERP_OFFSET: float = 17.0
+	const REACH: float = 18.0
+	const START_INSET: float = 6.0
+	const CENTER_Y: float = -24.0
+
+	feeler_right_top = _create_feeler_ray("FeelerRightTop", Vector2(20.0 - START_INSET, CENTER_Y - PERP_OFFSET), Vector2(REACH, 0))
+	feeler_right_bottom = _create_feeler_ray("FeelerRightBottom", Vector2(20.0 - START_INSET, CENTER_Y + PERP_OFFSET), Vector2(REACH, 0))
+
+	feeler_left_top = _create_feeler_ray("FeelerLeftTop", Vector2(-20.0 + START_INSET, CENTER_Y - PERP_OFFSET), Vector2(-REACH, 0))
+	feeler_left_bottom = _create_feeler_ray("FeelerLeftBottom", Vector2(-20.0 + START_INSET, CENTER_Y + PERP_OFFSET), Vector2(-REACH, 0))
+
+	feeler_down_left = _create_feeler_ray("FeelerDownLeft", Vector2(-PERP_OFFSET, CENTER_Y + 20.0 - START_INSET), Vector2(0, REACH))
+	feeler_down_right = _create_feeler_ray("FeelerDownRight", Vector2(PERP_OFFSET, CENTER_Y + 20.0 - START_INSET), Vector2(0, REACH))
+
+	feeler_up_left = _create_feeler_ray("FeelerUpLeft", Vector2(-PERP_OFFSET, CENTER_Y - 20.0 + START_INSET), Vector2(0, -REACH))
+	feeler_up_right = _create_feeler_ray("FeelerUpRight", Vector2(PERP_OFFSET, CENTER_Y - 20.0 + START_INSET), Vector2(0, -REACH))
+
+func get_feeler_rays() -> Dictionary:
+	return {
+		"right_top": feeler_right_top,
+		"right_bottom": feeler_right_bottom,
+		"left_top": feeler_left_top,
+		"left_bottom": feeler_left_bottom,
+		"down_left": feeler_down_left,
+		"down_right": feeler_down_right,
+		"up_left": feeler_up_left,
+		"up_right": feeler_up_right
+	}
+
+func get_corner_assist_nudge(dir: Vector2, current_speed: float) -> Vector2:
+	if currently_digging_cell != null or not can_move or is_dead or dir.is_zero_approx():
+		return Vector2.ZERO
+	if feeler_right_top == null:
+		return Vector2.ZERO
+
+	var nudge_speed: float = current_speed * 0.75
+	var nudge := Vector2.ZERO
+
+	# Horizontal feelers (moving right/left, check if top or bottom catches a corner)
+	if dir.x > 0.15:
+		feeler_right_top.force_raycast_update()
+		feeler_right_bottom.force_raycast_update()
+		var top_hit := feeler_right_top.is_colliding()
+		var bot_hit := feeler_right_bottom.is_colliding()
+		if top_hit and not bot_hit:
+			nudge.y += nudge_speed # Top caught rock, nudge down into open lane
+		elif bot_hit and not top_hit:
+			nudge.y -= nudge_speed # Bottom caught rock, nudge up into open lane
+	elif dir.x < -0.15:
+		feeler_left_top.force_raycast_update()
+		feeler_left_bottom.force_raycast_update()
+		var top_hit := feeler_left_top.is_colliding()
+		var bot_hit := feeler_left_bottom.is_colliding()
+		if top_hit and not bot_hit:
+			nudge.y += nudge_speed # Top caught rock, nudge down into open lane
+		elif bot_hit and not top_hit:
+			nudge.y -= nudge_speed # Bottom caught rock, nudge up into open lane
+
+	# Vertical feelers (moving down/up, check if left or right catches a corner)
+	if dir.y > 0.15:
+		feeler_down_left.force_raycast_update()
+		feeler_down_right.force_raycast_update()
+		var left_hit := feeler_down_left.is_colliding()
+		var right_hit := feeler_down_right.is_colliding()
+		if left_hit and not right_hit:
+			nudge.x += nudge_speed # Left caught rock, nudge right into open lane
+		elif right_hit and not left_hit:
+			nudge.x -= nudge_speed # Right caught rock, nudge left into open lane
+	elif dir.y < -0.15:
+		feeler_up_left.force_raycast_update()
+		feeler_up_right.force_raycast_update()
+		var left_hit := feeler_up_left.is_colliding()
+		var right_hit := feeler_up_right.is_colliding()
+		if left_hit and not right_hit:
+			nudge.x += nudge_speed # Left caught rock, nudge right into open lane
+		elif right_hit and not left_hit:
+			nudge.x -= nudge_speed # Right caught rock, nudge left into open lane
+
+	return nudge
+
+func _apply_corner_assist(dir: Vector2, current_speed: float, _delta: float) -> void:
+	var nudge := get_corner_assist_nudge(dir, current_speed)
+	if nudge.is_zero_approx():
+		return
+
+	# Apply perpendicular nudges if not strongly countered by intentional player input
+	if nudge.x > 0.0 and dir.x >= -0.2:
+		velocity.x = max(velocity.x, nudge.x)
+	elif nudge.x < 0.0 and dir.x <= 0.2:
+		velocity.x = min(velocity.x, nudge.x)
+
+	if nudge.y > 0.0 and dir.y >= -0.2:
+		velocity.y = max(velocity.y, nudge.y)
+	elif nudge.y < 0.0 and dir.y <= 0.2:
+		velocity.y = min(velocity.y, nudge.y)
+
 func _rpg_controller() -> Node:
 	return get_node_or_null("HeroRPGController")
 
@@ -536,17 +662,23 @@ func _physics_process(delta: float) -> void:
 		direction.x = Input.get_axis("p%d_left" % player_id, "p%d_right" % player_id)
 		direction.y = Input.get_axis("p%d_up" % player_id, "p%d_down" % player_id)
 	
+	var is_mobile_touch: bool = bool(get_tree().root.get_meta("web_low_memory_mode", false)) or OS.has_feature("mobile") or OS.has_feature("web_ios")
 	if direction.length() > 0:
 		direction = direction.normalized()
-		# Dome Keeper carry drag: acceleration scales inversely with carried weight
-		var overload := float(get_carry_overload())
-		var accel_rate: float = 1400.0 / (1.0 + overload * 0.28)
-		velocity = velocity.move_toward(direction * current_speed, accel_rate * delta)
+		if is_mobile_touch:
+			velocity = direction * current_speed
+		else:
+			var overload := float(get_carry_overload())
+			var accel_rate: float = 2400.0 / (1.0 + overload * 0.2)
+			velocity = velocity.move_toward(direction * current_speed, accel_rate * delta)
 		_update_direction_row(direction)
 	else:
-		var overload := float(get_carry_overload())
-		var decel_rate: float = 1600.0 / (1.0 + overload * 0.2)
-		velocity = velocity.move_toward(Vector2.ZERO, decel_rate * delta)
+		if is_mobile_touch:
+			velocity = Vector2.ZERO
+		else:
+			var overload := float(get_carry_overload())
+			var decel_rate: float = 2400.0 / (1.0 + overload * 0.15)
+			velocity = velocity.move_toward(Vector2.ZERO, decel_rate * delta)
 
 	var enemy_hit: Node = null
 	var closest_enemy_distance: float = INF
@@ -571,6 +703,8 @@ func _physics_process(delta: float) -> void:
 		var target_center: Vector2 = enemy_hit.global_position + Vector2(0, 8)
 		if player_center.distance_to(target_center) < 42.0:
 			velocity = Vector2.ZERO
+	else:
+		_apply_corner_assist(direction, current_speed, delta)
 
 	move_and_slide()
 	
@@ -744,13 +878,7 @@ func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO
 		base_mult = [14.0, 7.0, 3.4, 1.6][tier]
 		
 	var depth = max(0.0, float(cell.y))
-	# Dome Keeper exponential depth hardness: pow(depth, 1.5)
-	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
-	var depth_mult = 1.0 + clampf(depth_factor, 0.0, 3.5)
-	
-	if (world and world.has_method("has_gem") and world.has_gem(cell)) or block_id == 21:
-		base_mult *= 2.0
-	
+	var depth_mult = 1.0 + clampf(depth / 30.0, 0.0, 1.5)
 	return base_mult * depth_mult
 
 func get_mining_power_level() -> int:
@@ -936,6 +1064,9 @@ func _finish_queued_dig_at_contact() -> void:
 	var below_cell: Vector2i = Vector2i(cell.x, cell.y + 1)
 	var world := get_parent()
 	var cell_had_gem := bool(world.has_gem(cell))
+	total_blocks_mined += 1
+	if cell_had_gem:
+		total_ore_mined += 1
 	_emit_dig_impact(true, cell, block_id, cell_had_gem)
 	tile_map.erase_cell(cell)
 	if world.get("crack_overlay_manager") != null:
@@ -1300,3 +1431,9 @@ func perform_stomp() -> void:
 		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) <= radius:
 			if enemy.has_method("take_damage"):
 				enemy.take_damage(stomp_damage)
+
+func get_total_blocks_mined() -> int:
+	return total_blocks_mined
+
+func get_total_ore_mined() -> int:
+	return total_ore_mined

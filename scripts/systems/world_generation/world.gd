@@ -196,9 +196,11 @@ func _ready() -> void:
 	crack_overlay_manager.name = "CrackOverlayManager"
 	add_child(crack_overlay_manager)
 
-	juice_manager = preload("res://scripts/utils/juice_manager.gd").new()
-	juice_manager.name = "JuiceManager"
-	add_child(juice_manager)
+	juice_manager = get_node_or_null("/root/JuiceManager")
+	if juice_manager == null:
+		juice_manager = preload("res://scripts/utils/juice_manager.gd").new()
+		juice_manager.name = "JuiceManager"
+		add_child(juice_manager)
 
 	light_occluder_manager = preload("res://scripts/systems/world_generation/mine_light_occluder_manager.gd").new()
 	light_occluder_manager.name = "MineLightOccluderManager"
@@ -1460,9 +1462,7 @@ func get_tile_max_health(cell: Vector2i, block_id: int = -1) -> float:
 	if block_id == -1 and block_layer != null:
 		block_id = block_layer.get_cell_source_id(cell)
 	var depth := maxf(0.0, float(cell.y))
-	# Dome Keeper exponential formula: 2 + round(pow(coord.y, 1.5))
-	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
-	var depth_mult: float = 1.0 + clampf(depth_factor, 0.0, 3.5)
+	var depth_mult: float = 1.0 + clampf(depth / 30.0, 0.0, 1.5)
 	var base_health := 2.0
 	if block_id == 2:
 		base_health = 4.0
@@ -1470,8 +1470,6 @@ func get_tile_max_health(cell: Vector2i, block_id: int = -1) -> float:
 		base_health = 8.0
 	elif block_id == 16:
 		return 9999.0
-	if has_gem(cell) or block_id == BLOCK_GEM:
-		base_health *= 2.0
 	return base_health * depth_mult
 
 func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO, tier: int = 0) -> float:
@@ -1482,15 +1480,14 @@ func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO
 	elif block_id == 3:
 		base_mult = [14.0, 7.0, 3.4, 1.6][tier]
 	var depth := maxf(0.0, float(cell.y))
-	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
-	var depth_mult: float = 1.0 + clampf(depth_factor, 0.0, 3.5)
-	if has_gem(cell) or block_id == BLOCK_GEM:
-		base_mult *= 2.0
+	var depth_mult: float = 1.0 + clampf(depth / 30.0, 0.0, 1.5)
 	return base_mult * depth_mult
 
 func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal := false, impact_direction := Vector2.ZERO) -> void:
 	if juice_manager != null and is_instance_valid(juice_manager):
 		juice_manager.trigger_block_hit(strong, gem_reveal)
+
+	var is_low_mem := bool(get_tree().root.get_meta("web_low_memory_mode", false)) or OS.has_feature("web") or OS.has_feature("mobile")
 
 	# Directional chip & debris burst flying away from the strike normal (Dome Keeper style)
 	var burst := CPUParticles2D.new()
@@ -1498,8 +1495,8 @@ func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal 
 	burst.add_to_group("polish_feedback")
 	burst.one_shot = true
 	burst.emitting = false
-	burst.amount = 30 if strong else 12
-	burst.lifetime = 0.55 if strong else 0.26
+	burst.amount = (12 if strong else 4) if is_low_mem else (30 if strong else 12)
+	burst.lifetime = 0.4 if strong else 0.22
 	burst.explosiveness = 0.95
 	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	burst.emission_sphere_radius = 8.0 if strong else 4.0
@@ -1550,39 +1547,41 @@ func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal 
 	else:
 		flash.queue_free()
 	
-	# Light spark flash
-	var spark := PointLight2D.new()
-	spark.name = "HitSparkFlash"
-	spark.add_to_group("polish_feedback")
-	spark.energy = 2.4 if strong else 1.3
-	spark.texture_scale = 0.45 if not strong else 0.75
-	spark.color = Color(1.0, 0.92, 0.78)
-	if player_light and player_light.texture:
-		spark.texture = player_light.texture
-	spark.global_position = world_position
-	add_child(spark)
-	if is_inside_tree():
-		var spark_tween := create_tween()
-		spark_tween.tween_property(spark, "energy", 0.0, 0.14 if not strong else 0.22)
-		spark_tween.tween_callback(spark.queue_free)
-	else:
-		spark.queue_free()
+	# Light spark flash (avoid creating transient PointLight2D nodes on mobile web)
+	if not is_low_mem:
+		var spark := PointLight2D.new()
+		spark.name = "HitSparkFlash"
+		spark.add_to_group("polish_feedback")
+		spark.energy = 2.4 if strong else 1.3
+		spark.texture_scale = 0.45 if not strong else 0.75
+		spark.color = Color(1.0, 0.92, 0.78)
+		if player_light and player_light.texture:
+			spark.texture = player_light.texture
+		spark.global_position = world_position
+		add_child(spark)
+		if is_inside_tree():
+			var spark_tween := create_tween()
+			spark_tween.tween_property(spark, "energy", 0.0, 0.14 if not strong else 0.22)
+			spark_tween.tween_callback(spark.queue_free)
+		else:
+			spark.queue_free()
 
 	if gem_reveal:
 		_spawn_feedback_label(world_position + Vector2(0, -24), "GEM REVEALED", Color(0.3, 1.0, 0.95), 1.05)
-		var gem_flash := PointLight2D.new()
-		gem_flash.name = "GemRevealFlash"
-		gem_flash.add_to_group("polish_feedback")
-		gem_flash.energy = 2.2
-		gem_flash.texture_scale = 0.45
-		gem_flash.color = Color(0.25, 1.0, 0.9)
-		if player_light and player_light.texture:
-			gem_flash.texture = player_light.texture
-		gem_flash.global_position = world_position
-		add_child(gem_flash)
-		var g_flash_tween := create_tween()
-		g_flash_tween.tween_property(gem_flash, "energy", 0.0, 0.32)
-		g_flash_tween.tween_callback(gem_flash.queue_free)
+		if not is_low_mem:
+			var gem_flash := PointLight2D.new()
+			gem_flash.name = "GemRevealFlash"
+			gem_flash.add_to_group("polish_feedback")
+			gem_flash.energy = 2.2
+			gem_flash.texture_scale = 0.45
+			gem_flash.color = Color(0.25, 1.0, 0.9)
+			if player_light and player_light.texture:
+				gem_flash.texture = player_light.texture
+			gem_flash.global_position = world_position
+			add_child(gem_flash)
+			var g_flash_tween := create_tween()
+			g_flash_tween.tween_property(gem_flash, "energy", 0.0, 0.32)
+			g_flash_tween.tween_callback(gem_flash.queue_free)
 
 func spawn_gem_pickup_feedback(world_position: Vector2) -> void:
 	_spawn_resource_burst(world_position, Color(0.25, 0.95, 1.0, 0.95), "GemPickupFeedback")

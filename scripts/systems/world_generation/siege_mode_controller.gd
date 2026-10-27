@@ -255,6 +255,10 @@ var muster_arrival_announced := false
 var horn_marker: Node2D
 var horn_label: Label
 var horn_sounded := false
+var caches_unlocked := 0
+var horn_soundings := 0
+var total_horn_ore_bonus := 0
+var total_horn_gem_bonus := 0
 var reward_caches: Array = []
 var reward_caches_open := false
 # Per-run variance: one objective drawn per stage plus a single run-wide modifier.
@@ -600,8 +604,11 @@ func _input(event: InputEvent) -> void:
 
 func _sound_the_horn() -> void:
 	horn_sounded = true
+	horn_soundings += 1
 	var gems := _horn_gem_bounty()
 	var ore := _horn_ore_bounty()
+	total_horn_gem_bonus += gems
+	total_horn_ore_bonus += ore
 	if gems > 0 and hud and hud.has_method("add_gems"):
 		hud.add_gems(gems)
 	if ore > 0:
@@ -927,6 +934,7 @@ func _open_reward_caches() -> void:
 		hud.show_notice("THE SEAM OPENS — three caches, one choice. Taking one buries the others.", 4.0)
 
 func _on_reward_cache_claimed(reward_id: String) -> void:
+	caches_unlocked += 1
 	_collapse_reward_caches()
 	_award_objective_reward(reward_id)
 
@@ -1384,3 +1392,18 @@ func _count_world_enemies() -> int:
 
 func _cell_world_position(cell: Vector2i) -> Vector2:
 	return block_layer.to_global(block_layer.map_to_local(cell))
+
+func get_caches_unlocked() -> int:
+	return caches_unlocked
+
+func get_horn_soundings() -> int:
+	return horn_soundings
+
+func get_horn_greed_multiplier() -> float:
+	return 1.0 + (float(horn_soundings) * 0.25)
+
+func get_total_horn_ore_bonus() -> int:
+	return total_horn_ore_bonus
+
+func get_total_horn_gem_bonus() -> int:
+	return total_horn_gem_bonus
