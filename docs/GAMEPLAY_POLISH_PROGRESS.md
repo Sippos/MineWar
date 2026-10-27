@@ -826,14 +826,48 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ### Task ID: `POLISH-031`
 * **Title:** Dynamic Enemy Health Bars & Tactical Combat Indicators
+* **Status:** `COMPLETE`
 * **Quantic Foundry Drivers:** Action: Destruction (Kinetic Feedback), Mastery: Strategy (Combat Readability)
 * **Relevant Skills:** `game-ui-ux`, `game-feel`, `godot-ui-control`, `smoke-check`
-* **Scope / Target:** `enemy.gd`, `combat_feedback.gd`, floating health bars, hit flashes, and status badges
+* **Scope / Target:** `enemy.gd`, `enemy.tscn`, `player.gd`, `combat_feedback.gd`, `tests/test_dynamic_health_bars_runner.tscn`
+* **Changes Made:**
+  - Upgraded `enemy.tscn` with a dedicated, non-overlapping ProgressBar layout: `DamageLag` ProgressBar with bright white fill (`Color(0.98, 0.98, 0.98, 0.95)`) and dark 1px border background, underneath a transparent-background `Health` ProgressBar with dynamic color modulation.
+  - Implemented transient combat lifecycle in `enemy.gd`: health bar begins completely hidden (`modulate.a = 0.0`), snaps visible on damage or player targeting/melee proximity (<= 115px), and smoothly fades out with exponential easing after combat inactivity.
+  - Added animated damage-catchup white bar with easing delay (`DAMAGE_LAG_DELAY = 0.40s`): taking chunk damage freezes the white bar to clearly expose the lost chunk, followed by smooth exponential catch-up lerping.
+  - Implemented dynamic health bar color grading based on health percentage: healthy green (> 50%), warning amber (25-50%), and critical red (<= 25%).
+  - Added centered `StatusBadgeRow` containing visual combat status badges:
+    - *Chokepoint Vulnerability* (`⚔ VULN`): amber-gold badge displayed whenever an enemy is funneled in a 1-wide chokepoint.
+    - *Fire DoT* (`🔥 BURN`): crimson badge with periodic tick damage and flame particles, applied by player strikes when the Magma Seam relic is active.
+    - *Sleep / Stun* (`💤 SLEEP`): blue badge displayed when enemy is immobilized.
+    - *Boss Mark* (`☠ BOSS`): purple badge displayed for boss encounters.
+  - Extended `combat_feedback.gd::play_enemy_hit()` to support custom tactical tinting: golden tactical spark bursts in chokepoints and fiery sparks on burning mobs.
+  - Added test suite `tests/test_dynamic_health_bars_runner.tscn` verifying initial hidden state, damage snap, inactivity fadeout, melee proximity & targeting detection, damage lag delay & catch-up easing, color transitions, status badges, and feedback tints.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_dynamic_health_bars_runner.tscn`: Passed all 49 assertions (`DYNAMIC_HEALTH_BARS_PASS`).
+  - `tests/test_terrain_defense_runner.tscn`: Passed all 20 assertions (`TERRAIN_DEFENSE_PASS`).
+  - `tests/test_biome_anomalies_runner.tscn`: Passed all 37 assertions (`BIOME_ANOMALIES_PASS`).
+  - `tests/test_run_summary_runner.tscn`: Passed all 30 assertions (`RUN_SUMMARY_PASS`).
+  - `tests/test_corner_assist_runner.tscn`: Passed all 25 assertions (`CORNER_ASSIST_PASS`).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 48 assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions and Mech boss victory (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `enemy.gd`, `enemy.tscn`, `combat_feedback.gd`, `player.gd`, `tests/test_dynamic_health_bars_runner.gd`/`.tscn` (new), `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-032`
+* **Title:** Hero Ability Kinetic VFX & Audio Climax Feedback
+* **Quantic Foundry Drivers:** Action: Excitement, Mastery: Challenge & Flow
+* **Relevant Skills:** `game-feel`, `audio-design`, `godot-shaders`, `smoke-check`
+* **Scope / Target:** `hero_abilities.gd`, `dwarf_abilities.gd`, `sound_fx.gd`, `combat_feedback.gd`
 * **Change Definition:**
-  1. Implement transient enemy health bars that appear only when an enemy takes damage, is targeted, or approaches melee proximity, smoothly fading out after combat inactivity.
-  2. Add animated damage-catchup white bar (easing delay) to clearly communicate chunk damage.
-  3. Add visual combat status badges (e.g. Fire Dot from Magma Seam, Chokepoint Vulnerability).
+  1. Add visceral ground-pound shockwave ring and camera trauma on Dwarf War Stomp.
+  2. Implement distinct procedural audio stingers for high-impact hero abilities (Avatar activation, Shaman lightning/totem drop, Druid burrow pulse).
+  3. Wire tactical ability impact frames and camera punch into `JuiceManager`.
 * **Acceptance Criteria:**
-  - Headless test verifies health bar lifecycle (hidden -> shown on damage -> fade out), damage catch-up animation, and status badge display.
+  - Headless test verifies ability execution, shockwave / VFX instantiation, and audio hook triggering without errors.
 
 

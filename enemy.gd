@@ -13,11 +13,12 @@ const ENEMY_TEXTURES = {
 	EnemyType.ORC: preload("res://character_sprites/orc_walk_pixelart_spritesheet.png")
 }
 const BOSS_TEXTURE = preload("res://character_sprites/mech_walk_pixelart_spritesheet.png")
-const HEALTH_BAR_NEAR_DISTANCE := 170.0
-const HEALTH_BAR_HOLD_TIME := 2.8
-const HEALTH_BAR_FADE_SPEED := 7.5
-const HEALTH_BAR_VALUE_SPEED := 18.0
+const HEALTH_BAR_NEAR_DISTANCE := 115.0
+const HEALTH_BAR_HOLD_TIME := 2.5
+const HEALTH_BAR_FADE_SPEED := 6.5
+const HEALTH_BAR_VALUE_SPEED := 24.0
 const HEALTH_BAR_LAG_SPEED := 4.5
+const DAMAGE_LAG_DELAY := 0.40
 const PATH_REFRESH_INTERVAL := 1.25
 const SEPARATION_RADIUS := 54.0
 const SEPARATION_STRENGTH := 0.58
@@ -34,6 +35,12 @@ var gold_drop = 10
 var xp_drop = 10
 var is_boss_enemy = false
 var health_bar_hold_timer := 0.0
+var damage_lag_delay_timer := 0.0
+var burn_duration := 0.0
+var burn_tick_timer := 0.0
+var burn_tick_damage := 0
+var burn_particles: CPUParticles2D
+var _custom_status_badges: Dictionary = {}
 var sprite_rest_scale := Vector2.ONE
 var sprite_rest_position := Vector2.ZERO
 var hit_reaction_tween: Tween
@@ -50,12 +57,17 @@ var last_stuck_check_position := Vector2.ZERO
 var combat_behavior: Node
 
 @onready var world = get_parent()
-@onready var tile_map = world.get_node("BlockLayer")
-@onready var base = world.get_node("Base")
+@onready var tile_map = world.get_node("BlockLayer") if world and world.has_node("BlockLayer") else null
+@onready var base = world.get_node("Base") if world and world.has_node("Base") else null
 @onready var sprite: Sprite2D = $Sprite2D
-@onready var health_bar_container: Control = $HealthBarContainer
-@onready var health_bar: ProgressBar = $HealthBarContainer/Health
-@onready var damage_lag_bar: ProgressBar = $HealthBarContainer/DamageLag
+@onready var health_bar_container: Control = get_node_or_null("HealthBarContainer") as Control
+@onready var health_bar: ProgressBar = get_node_or_null("HealthBarContainer/Health") as ProgressBar
+@onready var damage_lag_bar: ProgressBar = get_node_or_null("HealthBarContainer/DamageLag") as ProgressBar
+@onready var status_badge_row: HBoxContainer = get_node_or_null("HealthBarContainer/StatusBadgeRow") as HBoxContainer
+@onready var chokepoint_badge: Label = get_node_or_null("HealthBarContainer/StatusBadgeRow/ChokepointBadge") as Label
+@onready var burn_badge: Label = get_node_or_null("HealthBarContainer/StatusBadgeRow/BurnBadge") as Label
+@onready var sleep_badge: Label = get_node_or_null("HealthBarContainer/StatusBadgeRow/SleepBadge") as Label
+@onready var boss_badge: Label = get_node_or_null("HealthBarContainer/StatusBadgeRow/BossBadge") as Label
 
 var path: Array[Vector2] = []
 var current_path_index = 0
@@ -74,8 +86,11 @@ func _ready():
 		lane_bias = 0.25 if lane_bias >= 0.0 else -0.25
 	lane_phase = randf_range(0.0, TAU)
 	last_stuck_check_position = global_position
+	_ensure_health_bar_nodes()
 	_set_health_bar_values(true)
-	health_bar_container.visible = false
+	if health_bar_container:
+		health_bar_container.visible = is_boss_enemy
+		health_bar_container.modulate.a = 1.0 if is_boss_enemy else 0.0
 	combat_behavior = ENEMY_COMBAT_BEHAVIOR.new()
 	combat_behavior.name = "CombatBehavior"
 	add_child(combat_behavior)
@@ -161,7 +176,7 @@ func initialize(wave_number: int, is_boss: bool, e_type: int = EnemyType.RAT) ->
 
 func recalculate_path():
 	path.clear()
-	if tile_map == null or not is_instance_valid(tile_map):
+	if tile_map == null or not is_instance_valid(tile_map) or tile_map.tile_set == null:
 		return
 	if base != null and is_instance_valid(base):
 		target_base_cell = tile_map.local_to_map(tile_map.to_local(base.global_position))
@@ -192,6 +207,20 @@ func recalculate_path():
 
 func _physics_process(delta: float):
 	_update_health_bar(delta)
+	
+	# Process Fire DoT ticks
+	if burn_duration > 0.0:
+		burn_duration = maxf(0.0, burn_duration - delta)
+		burn_tick_timer -= delta
+		if burn_tick_timer <= 0.0:
+			burn_tick_timer = 0.5
+			_apply_burn_tick(burn_tick_damage)
+		if burn_particles:
+			burn_particles.emitting = burn_duration > 0.0
+		if burn_duration <= 0.0:
+			if burn_particles:
+				burn_particles.emitting = false
+			_update_status_badges(0.0)
 	if emergence_timer > 0.0:
 		emergence_timer = maxf(emergence_timer - delta, 0.0)
 		velocity = Vector2.ZERO
@@ -269,7 +298,7 @@ func _physics_process(delta: float):
 			if "spikes_level" in base and base.spikes_level > 0:
 				take_damage(15 * base.spikes_level)
 			attack_cooldown_timer = 1.0
-	elif base != null:
+	elif base != null and tile_map != null and is_instance_valid(tile_map) and tile_map.tile_set != null:
 		var current_cell = tile_map.local_to_map(tile_map.to_local(global_position))
 		var dir := Vector2.ZERO
 		var target_pos := Vector2.ZERO
@@ -397,7 +426,7 @@ func _damage_colliding_players() -> void:
 	return
 
 func is_in_chokepoint() -> bool:
-	if tile_map == null or not is_instance_valid(tile_map) or world == null or not is_instance_valid(world):
+	if tile_map == null or not is_instance_valid(tile_map) or tile_map.tile_set == null or world == null or not is_instance_valid(world):
 		return false
 	var cell: Vector2i = tile_map.local_to_map(tile_map.to_local(global_position))
 	return bool(world.has_method("is_chokepoint_cell") and world.is_chokepoint_cell(cell))
@@ -405,18 +434,31 @@ func is_in_chokepoint() -> bool:
 func take_damage(amount: int) -> void:
 	if amount <= 0 or health <= 0:
 		return
-	var final_amount := amount
+	_ensure_health_bar_nodes()
 	var in_choke := is_in_chokepoint()
+	var final_amount := amount
 	if in_choke:
 		final_amount = int(round(float(amount) * 1.35))
 	health = max(0, health - final_amount)
 	health_bar_hold_timer = HEALTH_BAR_HOLD_TIME
+	damage_lag_delay_timer = DAMAGE_LAG_DELAY
 	_set_health_bar_values(false)
-	health_bar_container.visible = true
-	health_bar_container.modulate.a = 1.0
-	_play_hit_reaction()
+	if health_bar_container:
+		health_bar_container.visible = true
+		health_bar_container.modulate.a = 1.0
+
+	var tactical_tint := Color.WHITE
+	var feedback_tint := Color.TRANSPARENT
+	if in_choke:
+		tactical_tint = Color(1.0, 0.88, 0.35, 1.0)
+		feedback_tint = Color(1.0, 0.84, 0.22, 1.0)
+	elif burn_duration > 0.0:
+		tactical_tint = Color(1.0, 0.45, 0.15, 1.0)
+		feedback_tint = Color(1.0, 0.32, 0.10, 1.0)
+
+	_play_hit_reaction(tactical_tint)
 	var feedback: Node = COMBAT_FEEDBACK.ensure(world)
-	feedback.play_enemy_hit(global_position + Vector2(0, 4), _feedback_hit_direction(), final_amount, health <= 0)
+	feedback.play_enemy_hit(global_position + Vector2(0, 4), _feedback_hit_direction(), final_amount, health <= 0, feedback_tint)
 	if health <= 0:
 		die()
 
@@ -426,6 +468,7 @@ func _set_health_bar_values(snap: bool) -> void:
 	health_bar.max_value = max_health
 	damage_lag_bar.max_value = max_health
 	if snap:
+		damage_lag_delay_timer = 0.0
 		health_bar.value = health
 		damage_lag_bar.value = health
 
@@ -436,10 +479,13 @@ func _update_health_bar(delta: float) -> void:
 	if is_boss_enemy:
 		health_bar_hold_timer = HEALTH_BAR_HOLD_TIME
 	elif nearby_or_targeted:
-		health_bar_hold_timer = max(health_bar_hold_timer, 0.35)
+		health_bar_hold_timer = maxf(health_bar_hold_timer, 0.45)
+	elif burn_duration > 0.0:
+		health_bar_hold_timer = maxf(health_bar_hold_timer, 0.60)
 	else:
-		health_bar_hold_timer = max(0.0, health_bar_hold_timer - delta)
-	var should_show := is_boss_enemy or nearby_or_targeted or health_bar_hold_timer > 0.0
+		health_bar_hold_timer = maxf(0.0, health_bar_hold_timer - delta)
+
+	var should_show := is_boss_enemy or nearby_or_targeted or burn_duration > 0.0 or health_bar_hold_timer > 0.0
 	var target_alpha := 1.0 if should_show else 0.0
 	health_bar_container.modulate.a = move_toward(
 		health_bar_container.modulate.a,
@@ -447,10 +493,33 @@ func _update_health_bar(delta: float) -> void:
 		delta * HEALTH_BAR_FADE_SPEED
 	)
 	health_bar_container.visible = should_show or health_bar_container.modulate.a > 0.02
-	var health_weight := 1.0 - exp(-HEALTH_BAR_VALUE_SPEED * delta)
-	var lag_weight := 1.0 - exp(-HEALTH_BAR_LAG_SPEED * delta)
-	health_bar.value = lerpf(float(health_bar.value), float(health), health_weight)
-	damage_lag_bar.value = lerpf(float(damage_lag_bar.value), float(health), lag_weight)
+
+	# Color fill modulation based on current health %
+	if health_bar:
+		var hp_percent := float(health) / maxf(float(max_health), 1.0)
+		var fill_color := Color(0.2, 0.85, 0.35, 1.0) # Green (healthy)
+		if hp_percent <= 0.25:
+			fill_color = Color(0.95, 0.22, 0.18, 1.0) # Red (critical)
+		elif hp_percent <= 0.50:
+			fill_color = Color(0.96, 0.76, 0.16, 1.0) # Amber (warning)
+		health_bar.modulate = fill_color
+
+		var health_weight := 1.0 - exp(-HEALTH_BAR_VALUE_SPEED * delta)
+		health_bar.value = lerpf(float(health_bar.value), float(health), health_weight)
+		if absf(float(health_bar.value) - float(health)) < 0.2:
+			health_bar.value = float(health)
+
+	# Damage catch-up white bar with easing delay
+	if damage_lag_bar and health_bar:
+		if damage_lag_delay_timer > 0.0:
+			damage_lag_delay_timer = maxf(0.0, damage_lag_delay_timer - delta)
+		else:
+			var lag_weight := 1.0 - exp(-HEALTH_BAR_LAG_SPEED * delta)
+			damage_lag_bar.value = lerpf(float(damage_lag_bar.value), float(health_bar.value), lag_weight)
+			if absf(float(damage_lag_bar.value) - float(health_bar.value)) < 0.4:
+				damage_lag_bar.value = health_bar.value
+
+	_update_status_badges(delta)
 
 func _is_player_near_or_targeted() -> bool:
 	if not is_instance_valid(world):
@@ -462,22 +531,309 @@ func _is_player_near_or_targeted() -> bool:
 			continue
 		if global_position.distance_to(candidate.global_position) <= HEALTH_BAR_NEAR_DISTANCE:
 			return true
-		if candidate.get("currently_attacking_enemy") == self:
+		if candidate.get("currently_attacking_enemy") == self or (candidate.has_meta("currently_attacking_enemy") and candidate.get_meta("currently_attacking_enemy") == self):
 			return true
 	return false
 
-func _play_hit_reaction() -> void:
+func _play_hit_reaction(tactical_tint: Color = Color.WHITE) -> void:
 	if not sprite:
 		return
 	if hit_reaction_tween and hit_reaction_tween.is_running():
 		hit_reaction_tween.kill()
 	sprite.scale = sprite_rest_scale * Vector2(1.12, 0.90)
 	sprite.position = sprite_rest_position + Vector2(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0))
-	sprite.modulate = Color(2.4, 2.4, 2.4, 1.0)
+	var flash_mult := 2.4
+	sprite.modulate = Color(
+		tactical_tint.r * flash_mult,
+		tactical_tint.g * flash_mult,
+		tactical_tint.b * flash_mult,
+		1.0
+	)
 	hit_reaction_tween = create_tween()
 	hit_reaction_tween.set_parallel(true)
 	hit_reaction_tween.tween_property(sprite, "scale", sprite_rest_scale, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	hit_reaction_tween.tween_property(sprite, "position", sprite_rest_position, 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	hit_reaction_tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
+
+func _ensure_health_bar_nodes() -> void:
+	if health_bar_container == null:
+		health_bar_container = get_node_or_null("HealthBarContainer") as Control
+	if health_bar_container == null:
+		health_bar_container = Control.new()
+		health_bar_container.name = "HealthBarContainer"
+		health_bar_container.z_index = 30
+		health_bar_container.offset_left = -32.0
+		health_bar_container.offset_top = -45.0
+		health_bar_container.offset_right = 32.0
+		health_bar_container.offset_bottom = -37.0
+		health_bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		health_bar_container.visible = false
+		health_bar_container.modulate.a = 0.0
+		add_child(health_bar_container)
+
+	if damage_lag_bar == null and health_bar_container:
+		damage_lag_bar = health_bar_container.get_node_or_null("DamageLag") as ProgressBar
+	if damage_lag_bar == null and health_bar_container:
+		damage_lag_bar = ProgressBar.new()
+		damage_lag_bar.name = "DamageLag"
+		damage_lag_bar.layout_mode = 1
+		damage_lag_bar.anchors_preset = Control.PRESET_FULL_RECT
+		damage_lag_bar.anchor_right = 1.0
+		damage_lag_bar.anchor_bottom = 1.0
+		damage_lag_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		damage_lag_bar.show_percentage = false
+		var lag_fill := StyleBoxFlat.new()
+		lag_fill.bg_color = Color(0.98, 0.98, 0.98, 0.95)
+		lag_fill.corner_radius_top_left = 1
+		lag_fill.corner_radius_top_right = 1
+		lag_fill.corner_radius_bottom_right = 1
+		lag_fill.corner_radius_bottom_left = 1
+		damage_lag_bar.add_theme_stylebox_override("fill", lag_fill)
+		var lag_bg := StyleBoxFlat.new()
+		lag_bg.bg_color = Color(0.035, 0.04, 0.05, 0.92)
+		lag_bg.border_width_left = 1
+		lag_bg.border_width_top = 1
+		lag_bg.border_width_right = 1
+		lag_bg.border_width_bottom = 1
+		lag_bg.border_color = Color(0.06, 0.06, 0.07, 1)
+		damage_lag_bar.add_theme_stylebox_override("background", lag_bg)
+		health_bar_container.add_child(damage_lag_bar)
+
+	if health_bar == null and health_bar_container:
+		health_bar = health_bar_container.get_node_or_null("Health") as ProgressBar
+	if health_bar == null and health_bar_container:
+		health_bar = ProgressBar.new()
+		health_bar.name = "Health"
+		health_bar.layout_mode = 1
+		health_bar.anchors_preset = Control.PRESET_FULL_RECT
+		health_bar.anchor_right = 1.0
+		health_bar.anchor_bottom = 1.0
+		health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		health_bar.show_percentage = false
+		var h_fill := StyleBoxFlat.new()
+		h_fill.bg_color = Color(1, 1, 1, 1)
+		h_fill.corner_radius_top_left = 1
+		h_fill.corner_radius_top_right = 1
+		h_fill.corner_radius_bottom_right = 1
+		h_fill.corner_radius_bottom_left = 1
+		health_bar.add_theme_stylebox_override("fill", h_fill)
+		health_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+		health_bar_container.add_child(health_bar)
+
+	if status_badge_row == null and health_bar_container:
+		status_badge_row = health_bar_container.get_node_or_null("StatusBadgeRow") as HBoxContainer
+	if status_badge_row == null and health_bar_container:
+		status_badge_row = HBoxContainer.new()
+		status_badge_row.name = "StatusBadgeRow"
+		status_badge_row.layout_mode = 1
+		status_badge_row.anchors_preset = Control.PRESET_TOP_WIDE
+		status_badge_row.anchor_right = 1.0
+		status_badge_row.offset_top = -14.0
+		status_badge_row.offset_bottom = -2.0
+		status_badge_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		status_badge_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		status_badge_row.add_theme_constant_override("separation", 3)
+		health_bar_container.add_child(status_badge_row)
+		health_bar_container.move_child(status_badge_row, 0)
+
+	_ensure_badge_labels()
+
+func _ensure_badge_labels() -> void:
+	if not status_badge_row:
+		return
+	if chokepoint_badge == null:
+		chokepoint_badge = status_badge_row.get_node_or_null("ChokepointBadge") as Label
+	if chokepoint_badge == null:
+		chokepoint_badge = _create_badge_label("ChokepointBadge", "⚔ VULN", Color(0.88, 0.45, 0.08, 0.92), Color(1, 0.65, 0.2, 0.8))
+		status_badge_row.add_child(chokepoint_badge)
+
+	if burn_badge == null:
+		burn_badge = status_badge_row.get_node_or_null("BurnBadge") as Label
+	if burn_badge == null:
+		burn_badge = _create_badge_label("BurnBadge", "🔥 BURN", Color(0.92, 0.2, 0.1, 0.92), Color(1, 0.4, 0.2, 0.8))
+		status_badge_row.add_child(burn_badge)
+
+	if sleep_badge == null:
+		sleep_badge = status_badge_row.get_node_or_null("SleepBadge") as Label
+	if sleep_badge == null:
+		sleep_badge = _create_badge_label("SleepBadge", "💤 SLEEP", Color(0.2, 0.4, 0.85, 0.92), Color(0.4, 0.65, 1, 0.8))
+		status_badge_row.add_child(sleep_badge)
+
+	if boss_badge == null:
+		boss_badge = status_badge_row.get_node_or_null("BossBadge") as Label
+	if boss_badge == null:
+		boss_badge = _create_badge_label("BossBadge", "☠ BOSS", Color(0.65, 0.12, 0.85, 0.92), Color(0.85, 0.4, 1, 0.8))
+		status_badge_row.add_child(boss_badge)
+
+func _create_badge_label(badge_name: String, text: String, bg_color: Color, border_color: Color) -> Label:
+	var label := Label.new()
+	label.name = badge_name
+	label.visible = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 8)
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 2
+	style.corner_radius_top_right = 2
+	style.corner_radius_bottom_right = 2
+	style.corner_radius_bottom_left = 2
+	style.content_margin_left = 3.0
+	style.content_margin_top = 1.0
+	style.content_margin_right = 3.0
+	style.content_margin_bottom = 1.0
+	label.add_theme_stylebox_override("normal", style)
+	return label
+
+func _update_status_badges(delta: float = 0.0) -> void:
+	if not status_badge_row:
+		return
+
+	# Update custom timed status badges
+	for badge_id in _custom_status_badges.keys():
+		var data: Dictionary = _custom_status_badges[badge_id]
+		if data.has("duration") and float(data["duration"]) > 0.0:
+			data["duration"] = maxf(0.0, float(data["duration"]) - delta)
+			if float(data["duration"]) <= 0.0:
+				remove_status_badge(badge_id)
+
+	# Chokepoint vulnerability badge
+	var in_choke := is_in_chokepoint()
+	if chokepoint_badge:
+		chokepoint_badge.visible = in_choke or _custom_status_badges.has("chokepoint")
+
+	# Burn DoT badge
+	if burn_badge:
+		burn_badge.visible = burn_duration > 0.0 or _custom_status_badges.has("burn")
+
+	# Sleep / Stun badge
+	if sleep_badge:
+		sleep_badge.visible = sleep_timer > 0.0 or _custom_status_badges.has("sleep")
+
+	# Boss badge
+	if boss_badge:
+		boss_badge.visible = is_boss_enemy or _custom_status_badges.has("boss")
+
+func apply_burn(duration: float, tick_damage: int = 4) -> void:
+	burn_duration = maxf(burn_duration, duration)
+	burn_tick_damage = maxi(burn_tick_damage, tick_damage)
+	if burn_tick_timer <= 0.0:
+		burn_tick_timer = 0.5
+	health_bar_hold_timer = maxf(health_bar_hold_timer, duration)
+	_ensure_health_bar_nodes()
+	_ensure_burn_particles()
+	_update_status_badges(0.0)
+
+func _apply_burn_tick(tick_dmg: int) -> void:
+	if health <= 0 or tick_dmg <= 0:
+		return
+	health = max(0, health - tick_dmg)
+	health_bar_hold_timer = maxf(health_bar_hold_timer, 1.2)
+	damage_lag_delay_timer = DAMAGE_LAG_DELAY * 0.5
+	_set_health_bar_values(false)
+	if health_bar_container:
+		health_bar_container.visible = true
+	if sprite:
+		var flash_tween := create_tween()
+		sprite.modulate = Color(2.2, 1.3, 0.4, 1.0)
+		flash_tween.tween_property(sprite, "modulate", Color.WHITE, 0.22)
+	if health <= 0:
+		die()
+
+func _ensure_burn_particles() -> void:
+	if burn_particles == null:
+		burn_particles = CPUParticles2D.new()
+		burn_particles.name = "BurnParticles"
+		burn_particles.direction = Vector2(0, -1)
+		burn_particles.gravity = Vector2(0, -70)
+		burn_particles.spread = 45.0
+		burn_particles.initial_velocity_min = 15.0
+		burn_particles.initial_velocity_max = 35.0
+		burn_particles.scale_amount_min = 2.0
+		burn_particles.scale_amount_max = 3.5
+		burn_particles.color = Color(1.0, 0.42, 0.12, 0.95)
+		burn_particles.lifetime = 0.55
+		burn_particles.amount = 6
+		burn_particles.z_index = 22
+		add_child(burn_particles)
+	burn_particles.emitting = true
+
+func apply_status_badge(badge_id: String, duration: float = 0.0, label_text: String = "", bg_color: Color = Color.TRANSPARENT) -> void:
+	_ensure_health_bar_nodes()
+	_custom_status_badges[badge_id] = {
+		"duration": duration,
+		"label": label_text,
+		"color": bg_color
+	}
+	if status_badge_row and not status_badge_row.has_node(badge_id.capitalize() + "Badge"):
+		if label_text != "":
+			var custom_label := _create_badge_label(badge_id.capitalize() + "Badge", label_text, bg_color, Color(1, 1, 1, 0.8))
+			status_badge_row.add_child(custom_label)
+	_update_status_badges(0.0)
+
+func remove_status_badge(badge_id: String) -> void:
+	_custom_status_badges.erase(badge_id)
+	if badge_id == "burn":
+		burn_duration = 0.0
+		if burn_particles:
+			burn_particles.emitting = false
+	elif badge_id == "sleep":
+		sleep_timer = 0.0
+	if status_badge_row:
+		var custom_node := status_badge_row.get_node_or_null(badge_id.capitalize() + "Badge")
+		if custom_node and custom_node != chokepoint_badge and custom_node != burn_badge and custom_node != sleep_badge and custom_node != boss_badge:
+			custom_node.queue_free()
+	_update_status_badges(0.0)
+
+func has_status_badge(badge_id: String) -> bool:
+	match badge_id:
+		"chokepoint", "choke", "vulnerable", "vuln":
+			return is_in_chokepoint() or _custom_status_badges.has(badge_id)
+		"burn", "fire":
+			return burn_duration > 0.0 or _custom_status_badges.has(badge_id)
+		"sleep", "stun":
+			return sleep_timer > 0.0 or _custom_status_badges.has(badge_id)
+		"boss":
+			return is_boss_enemy or _custom_status_badges.has(badge_id)
+		_:
+			return _custom_status_badges.has(badge_id)
+
+func get_active_status_badges() -> Array[String]:
+	var active: Array[String] = []
+	if is_in_chokepoint():
+		active.append("chokepoint")
+	if burn_duration > 0.0:
+		active.append("burn")
+	if sleep_timer > 0.0:
+		active.append("sleep")
+	if is_boss_enemy:
+		active.append("boss")
+	for id in _custom_status_badges.keys():
+		if not active.has(id):
+			active.append(str(id))
+	return active
+
+func is_health_bar_showing() -> bool:
+	return health_bar_container != null and health_bar_container.visible and health_bar_container.modulate.a > 0.05
+
+func get_health_bar_alpha() -> float:
+	return health_bar_container.modulate.a if health_bar_container else 0.0
+
+func get_damage_lag_value() -> float:
+	return damage_lag_bar.value if damage_lag_bar else 0.0
+
+func get_health_bar_value() -> float:
+	return health_bar.value if health_bar else 0.0
+
+func get_damage_lag_delay_remaining() -> float:
+	return damage_lag_delay_timer
 	hit_reaction_tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
 
 func _feedback_hit_direction() -> Vector2:

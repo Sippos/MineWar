@@ -807,6 +807,8 @@ func _physics_process(delta: float) -> void:
 			damage += anomaly_fire_damage
 			if enemy_hit.has_method("take_damage"):
 				enemy_hit.take_damage(damage)
+			if anomaly_fire_damage > 0 and enemy_hit.has_method("apply_burn"):
+				enemy_hit.apply_burn(2.5, maxi(2, int(anomaly_fire_damage * 0.25)))
 			attack_timer = 0.0
 		if current_hero_name == "Druid" and not druid_mole_active:
 			_maybe_shoot_magic_orb(enemy_hit.global_position + Vector2(0, 8), true)

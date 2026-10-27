@@ -43,9 +43,10 @@ static func ensure(parent: Node):
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-func play_enemy_hit(world_position: Vector2, hit_direction: Vector2, damage: int, lethal: bool = false) -> void:
+func play_enemy_hit(world_position: Vector2, hit_direction: Vector2, damage: int, lethal: bool = false, custom_tint: Color = Color.TRANSPARENT) -> void:
 	var power := clampf(0.82 + sqrt(float(maxi(damage, 1))) * 0.12, 0.85, 2.15)
-	var effect_was_spawned := _spawn_effect(world_position, hit_direction, power, lethal, Color(1.0, 0.55, 0.16, 1.0))
+	var tint := custom_tint if custom_tint.a > 0.01 else Color(1.0, 0.55, 0.16, 1.0)
+	var effect_was_spawned := _spawn_effect(world_position, hit_direction, power, lethal, tint)
 	if not _is_near_active_camera(world_position):
 		return
 
