@@ -198,7 +198,7 @@ var cave_reward_dig_mult := 1.0
 # points above the starting value adds another slot without changing pickup or
 # deposit rules.
 const BASE_FREE_CARRY_ALLOWANCE := 1
-const STRENGTH_CARRY_STEP := 2
+const STRENGTH_CARRY_STEP := 3
 const BOOTS_SPEED_BONUS := 28.0
 const PICKAXE_DIG_MULT := 0.82
 const PICKAXE_ATTACK_MULT := 0.88
@@ -538,10 +538,15 @@ func _physics_process(delta: float) -> void:
 	
 	if direction.length() > 0:
 		direction = direction.normalized()
-		velocity = direction * current_speed
+		# Dome Keeper carry drag: acceleration scales inversely with carried weight
+		var overload := float(get_carry_overload())
+		var accel_rate: float = 1400.0 / (1.0 + overload * 0.28)
+		velocity = velocity.move_toward(direction * current_speed, accel_rate * delta)
 		_update_direction_row(direction)
 	else:
-		velocity = velocity.move_toward(Vector2.ZERO, current_speed)
+		var overload := float(get_carry_overload())
+		var decel_rate: float = 1600.0 / (1.0 + overload * 0.2)
+		velocity = velocity.move_toward(Vector2.ZERO, decel_rate * delta)
 
 	var enemy_hit: Node = null
 	var closest_enemy_distance: float = INF
@@ -728,6 +733,9 @@ func _reset_action_animation() -> void:
 			$Sprite2D.frame = current_anim_row * walk_frames
 
 func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO) -> float:
+	var world := get_parent()
+	if world and world.has_method("get_block_hardness_multiplier"):
+		return float(world.call("get_block_hardness_multiplier", block_id, cell, mining_power_level))
 	var tier := clampi(mining_power_level, 0, 3)
 	var base_mult := 1.0
 	if block_id == 2:
@@ -736,7 +744,12 @@ func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO
 		base_mult = [14.0, 7.0, 3.4, 1.6][tier]
 		
 	var depth = max(0.0, float(cell.y))
-	var depth_mult = 1.0 + clamp(depth / 30.0, 0.0, 2.0)
+	# Dome Keeper exponential depth hardness: pow(depth, 1.5)
+	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
+	var depth_mult = 1.0 + clampf(depth_factor, 0.0, 3.5)
+	
+	if (world and world.has_method("has_gem") and world.has_gem(cell)) or block_id == 21:
+		base_mult *= 2.0
 	
 	return base_mult * depth_mult
 
@@ -963,6 +976,9 @@ func _emit_dig_impact(strong: bool, cell: Vector2i, block_id: int = 0, gem_revea
 			sound_fx.play_block_break(gem_reveal)
 		else:
 			sound_fx.play_dig_hit(block_id)
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("trigger_block_hit"):
+		juice_manager.trigger_block_hit(strong, gem_reveal)
 
 func _try_spawn_spider_minion() -> void:
 	if current_hero_name != "Nerubian" or is_dead:
@@ -1110,6 +1126,7 @@ func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
 		return
 	var spawn_pos = tile_map.to_global(tile_map.map_to_local(cell))
 	var depth = cell.y
+	var pop_direction := (global_position - spawn_pos).normalized()
 	for i in range(count):
 		var gem = GEM_SCENE.instantiate()
 		gem.global_position = spawn_pos + Vector2(randf_range(-12, 12), randf_range(-8, 8))
@@ -1128,6 +1145,8 @@ func _spawn_dug_gems(cell: Vector2i, count: int) -> void:
 		if get_parent().has_method("notify_tutorial_gem_spawned"):
 			get_parent().notify_tutorial_gem_spawned(gem)
 		get_parent().call_deferred("add_child", gem)
+		if gem.has_method("pop_from_mine"):
+			gem.call_deferred("pop_from_mine", spawn_pos, pop_direction)
 
 func _maybe_shoot_magic_orb(target_pos: Vector2, green_orb := false) -> void:
 	var settings = _get_hero_animation_settings()

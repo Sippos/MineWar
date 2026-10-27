@@ -111,6 +111,10 @@ func _is_near_active_camera(world_position: Vector2) -> bool:
 	return absf(delta.x) <= visible_size.x * 0.68 and absf(delta.y) <= visible_size.y * 0.68
 
 func _request_camera_shake(strength: float, duration: float) -> void:
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("add_camera_trauma"):
+		juice_manager.add_camera_trauma(clampf(strength / MAX_CAMERA_SHAKE_STRENGTH, 0.1, 0.85))
+		return
 	var camera := get_viewport().get_camera_2d()
 	if camera == null:
 		return
@@ -125,6 +129,10 @@ func _request_camera_shake(strength: float, duration: float) -> void:
 	_shake_end_msec = maxi(_shake_end_msec, requested_end)
 
 func _request_hit_stop(duration: float, slowed_time_scale: float, priority: bool) -> void:
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("hit_stop"):
+		juice_manager.hit_stop(duration, slowed_time_scale)
+		return
 	var now := Time.get_ticks_msec()
 	if not priority:
 		if _hit_stop_active or now < _hit_stop_cooldown_msec:

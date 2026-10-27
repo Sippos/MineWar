@@ -480,6 +480,10 @@ func _spawn_breach_dust(strength: float = 1.0) -> void:
 	get_tree().create_timer(0.9).timeout.connect(dust.queue_free)
 
 func _shake_camera(amount: float) -> void:
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("add_camera_trauma"):
+		juice_manager.add_camera_trauma(clampf(amount * 0.08, 0.15, 0.75))
+		return
 	var camera := player.get_node_or_null("Camera2D") as Camera2D
 	if camera == null:
 		return
@@ -608,8 +612,11 @@ func _sound_the_horn() -> void:
 		horn_marker.visible = false
 	mining_timer = 0.0
 	var sound_fx := get_node_or_null("/root/SoundFX")
-	if sound_fx and sound_fx.has_method("play_upgrade"):
-		sound_fx.play_upgrade()
+	if sound_fx and sound_fx.has_method("play_warning_horn"):
+		sound_fx.play_warning_horn()
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("trigger_war_horn_blast"):
+		juice_manager.trigger_war_horn_blast()
 	_spawn_base_signal(Color(1.0, 0.72, 0.26, 0.95), 3, 96.0)
 	_shake_camera(5.0)
 	if hud and hud.has_method("show_notice"):
@@ -882,9 +889,12 @@ func _complete_stage_objective() -> void:
 	world.set_meta("minewars_objective_complete", true)
 	_open_reward_caches()
 	_play_objective_completion_feedback()
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("trigger_motherlode_shatter"):
+		juice_manager.trigger_motherlode_shatter()
 	var sound_fx := get_node_or_null("/root/SoundFX")
-	if sound_fx and sound_fx.has_method("play_upgrade"):
-		sound_fx.play_upgrade()
+	if sound_fx and sound_fx.has_method("play_mine_awaken"):
+		sound_fx.play_mine_awaken()
 
 ## The stage reward is no longer handed over: three sealed caches open in the
 ## seam, each showing what it holds, and taking one collapses the rest. The
