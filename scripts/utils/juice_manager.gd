@@ -27,10 +27,19 @@ func _exit_tree() -> void:
 		Engine.time_scale = _saved_time_scale
 		_hit_stop_active = false
 
+func _is_mobile_or_touch_web() -> bool:
+	if not is_inside_tree():
+		return false
+	if bool(get_tree().root.get_meta("web_low_memory_mode", false)):
+		return true
+	return OS.has_feature("web") or OS.has_feature("mobile") or OS.has_feature("web_ios")
+
 ## Triggers a brief time-scale freeze to give weight to decisive impacts.
 ## Synchronous call using real-time (unscaled) timer with hit ID tracking.
+## Disabled on mobile / web touch browsers to preserve input responsiveness.
 func hit_stop(duration: float = 0.05, slow: float = 0.05) -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or _is_mobile_or_touch_web():
+		hit_stop_completed.emit()
 		return
 	_hit_stop_id += 1
 	var my_id := _hit_stop_id
@@ -56,7 +65,8 @@ func get_trauma() -> float:
 
 ## Adds decaying trauma (0.0 to 1.0) to drive smooth screen shake.
 func add_camera_trauma(amount: float) -> void:
-	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+	var scaled_amount: float = amount * 0.45 if _is_mobile_or_touch_web() else amount
+	_trauma = clampf(_trauma + scaled_amount, 0.0, 1.0)
 	var cam := _find_active_camera()
 	if cam != null and _tracked_camera != cam:
 		restore_camera_offset()

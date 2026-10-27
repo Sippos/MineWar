@@ -231,8 +231,7 @@ func _grant_multiplayer_hud_modules() -> void:
 	if not _is_multiplayer_session():
 		return
 	var hud = get_parent().get_node_or_null("HUD") if get_parent() else null
-	healthbar_unlocked = true
-	base_health_unlocked = true
+	healthbar_unlocked = true; base_health_unlocked = true
 	stats_unlocked = true
 	wave_timer_unlocked = true
 	xp_unlocked = true
@@ -358,7 +357,7 @@ func _build_upgrade_tree_ui() -> void:
 	upgrade_tree_shell = PanelContainer.new()
 	upgrade_tree_shell.name = "UpgradeTreeShell"
 	upgrade_tree_shell.mouse_filter = Control.MOUSE_FILTER_STOP
-	upgrade_tree_shell.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.08, 0.06, 0.14, 0.97), Color(0.95, 0.72, 0.35, 0.95), 3, 14))
+	upgrade_tree_shell.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.05, 0.04, 0.068, 0.98), Color(0.88, 0.68, 0.30, 0.98), 3, 14))
 	panel.add_child(upgrade_tree_shell)
 
 	var shell_box := VBoxContainer.new()
@@ -484,9 +483,13 @@ func _tree_panel_style(background: Color, border: Color, border_width: int = 2, 
 	style.bg_color = background
 	style.border_color = border
 	style.set_border_width_all(border_width)
+	style.border_width_top = border_width + 1
+	style.border_width_bottom = border_width + 1
 	style.set_corner_radius_all(radius)
-	style.shadow_color = Color(0, 0, 0, 0.45)
-	style.shadow_size = 4
+	style.corner_detail = 6
+	style.anti_aliasing = true
+	style.shadow_color = Color(0, 0, 0, 0.65)
+	style.shadow_size = 5
 	style.shadow_offset = Vector2(0, 2)
 	style.content_margin_left = 10.0
 	style.content_margin_right = 10.0
@@ -740,6 +743,17 @@ func _create_tree_connector(from_point: Vector2, to_point: Vector2) -> Array:
 		Vector2(to_point.x - 8.0, to_point.y),
 		to_point
 	])
+	# Under-groove conduit channel for authentic industrial physical depth
+	var trough := Line2D.new()
+	trough.name = "ConduitTrough"
+	trough.width = 4.8
+	trough.default_color = Color(0.02, 0.018, 0.03, 0.88)
+	trough.antialiased = true
+	trough.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	trough.end_cap_mode = Line2D.LINE_CAP_ROUND
+	trough.points = path
+	upgrade_tree_canvas.add_child(trough)
+
 	var dash_len := 6.0
 	var gap_len := 5.0
 	var line_width := 2.4
@@ -802,6 +816,15 @@ func _create_upgrade_tree_node(id: String, title_text: String, description: Stri
 	# Dome Keeper capsule: deep purple fill + warm gold border, high radius
 	card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.12, 0.09, 0.18, 0.97), Color(0.95, 0.72, 0.35, 0.95), 2, 18))
 	button.add_child(card_background)
+
+	# Dedicated recessed socket bay behind the icon
+	var icon_bay := Panel.new()
+	icon_bay.name = "IconBay"
+	icon_bay.position = Vector2(6, 4)
+	icon_bay.size = Vector2(38, 38)
+	icon_bay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_bay.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.04, 0.03, 0.055, 0.92), Color(0.60, 0.45, 0.22, 0.75), 1, 10))
+	button.add_child(icon_bay)
 
 	var icon := TextureRect.new()
 	icon.name = "Icon"
@@ -880,6 +903,9 @@ func _on_upgrade_tree_node_pressed(id: String, action: Callable) -> void:
 	if purchase_succeeded:
 		_spawn_purchase_currency_burst(tree_button, str(upgrade_tree_currency.get(id, "gold")), maxi(gems_before - int(hud.total_gems), gold_before - int(hud.total_gold)))
 		_light_child_connectors(id)
+		var juice := get_node_or_null("/root/JuiceManager")
+		if juice and juice.has_method("add_camera_trauma"):
+			juice.add_camera_trauma(0.06)
 	elif action.is_valid():
 		_refuse_upgrade_button(tree_button)
 	_refresh_upgrade_tree_cards()
@@ -1053,15 +1079,27 @@ func _refresh_upgrade_tree_cards() -> void:
 			else:
 				state_label.text = ""
 		var card_background := button.get_node_or_null("CardBackground") as PanelContainer
+		var card_icon := button.get_node_or_null("Icon") as TextureRect
 		if card_background:
 			if owned:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.08, 0.18, 0.12, 0.97), Color(0.45, 0.95, 0.60, 0.95), 2, 18))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.04, 0.16, 0.10, 0.98), Color(0.35, 0.94, 0.58, 1.0), 2, 18))
+				if card_icon: card_icon.modulate = Color(1.15, 1.25, 1.15, 1.0)
 			elif dependency_locked:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.10, 0.09, 0.14, 0.92), Color(0.35, 0.32, 0.42, 0.85), 2, 18))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.07, 0.06, 0.09, 0.90), Color(0.32, 0.29, 0.38, 0.8), 2, 18))
+				if card_icon: card_icon.modulate = Color(0.42, 0.42, 0.48, 0.55)
 			elif available_amount < cost:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.16, 0.07, 0.08, 0.97), Color(0.70, 0.30, 0.28, 0.95), 2, 18))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.13, 0.05, 0.06, 0.98), Color(0.72, 0.32, 0.28, 0.95), 2, 18))
+				if card_icon: card_icon.modulate = Color(0.9, 0.8, 0.8, 0.9)
 			else:
-				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.12, 0.09, 0.18, 0.97), Color(0.95, 0.72, 0.35, 0.95), 2, 18))
+				card_background.add_theme_stylebox_override("panel", _tree_panel_style(Color(0.09, 0.07, 0.13, 0.98), Color(0.96, 0.78, 0.34, 1.0), 2, 18))
+				if card_icon: card_icon.modulate = Color.WHITE
+		for child_id in upgrade_tree_children.get(id, []):
+			var child_dashes: Array = upgrade_tree_connectors.get(child_id, [])
+			var conduit_color: Color = Color(0.96, 0.78, 0.35, 0.95) if owned else Color(0.40, 0.34, 0.26, 0.55)
+			for dash_val in child_dashes:
+				var d := dash_val as Line2D
+				if d and is_instance_valid(d):
+					d.default_color = conduit_color
 	_hide_legacy_upgrade_nodes()
 
 func _set_upgrade_tree_card_highlight(id: String, highlighted: bool) -> void:

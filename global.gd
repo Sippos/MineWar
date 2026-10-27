@@ -219,6 +219,7 @@ var base_p2 := DEFAULT_BASE_ID
 var prototype_onboarding_completed := false
 var legacy_ore := 0
 var last_run_legacy_ore_earned := 0
+var last_run_summary: Dictionary = {}
 var pending_unlock_rewards: Array = []
 var last_unlock_rewards: Array = []
 var permanent_upgrade_levels := {
@@ -567,6 +568,15 @@ func get_next_hero() -> String:
 	var next_index = (index + 1) % unlocked_heroes.size()
 	return unlocked_heroes[next_index]
 
+func record_run_summary(summary_data: Variant) -> void:
+	if summary_data == null:
+		return
+	if summary_data is Dictionary:
+		last_run_summary = (summary_data as Dictionary).duplicate(true)
+	elif summary_data.has_method("to_dict"):
+		last_run_summary = summary_data.call("to_dict")
+	save_game()
+
 func save_game() -> void:
 	var file = FileAccess.open(get_save_path(), FileAccess.WRITE)
 	if file:
@@ -584,7 +594,8 @@ func save_game() -> void:
 			"prototype_onboarding_completed": prototype_onboarding_completed,
 			"legacy_ore": legacy_ore,
 			"permanent_upgrade_levels": permanent_upgrade_levels,
-			"pending_unlock_rewards": pending_unlock_rewards
+			"pending_unlock_rewards": pending_unlock_rewards,
+			"last_run_summary": last_run_summary
 		})
 		file.close()
 
@@ -631,6 +642,8 @@ func load_game() -> void:
 							permanent_upgrade_levels[upgrade_id] = mini(stored_level, int(PERMANENT_UPGRADE_MAX_LEVELS[upgrade_id]))
 				if loaded.has("pending_unlock_rewards") and typeof(loaded["pending_unlock_rewards"]) == TYPE_ARRAY:
 					pending_unlock_rewards = loaded["pending_unlock_rewards"]
+				if loaded.has("last_run_summary") and typeof(loaded["last_run_summary"]) == TYPE_DICTIONARY:
+					last_run_summary = loaded["last_run_summary"]
 			file.close()
 	if first_level_beaten and minewars_victories == 0:
 		minewars_victories = 1

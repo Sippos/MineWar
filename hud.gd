@@ -66,6 +66,10 @@ var base_warning_health := 100
 var base_warning_max_health := 100
 var base_hit_notice_cooldown := 0.0
 var stats_backdrop: PanelContainer
+var player_console_chassis: PanelContainer
+var base_console_chassis: PanelContainer
+var wave_chronometer_chassis: PanelContainer
+var xp_runic_chassis: PanelContainer
 
 const TOTEM_TYPES = ["dig", "heal", "radar", "gem"]
 const TOTEM_LABELS = {
@@ -169,12 +173,33 @@ func _ready():
 	_setup_totem_wheel_ui()
 	_setup_totem_status_ui()
 	_setup_nerubian_status_ui()
+	_setup_hud_chassis_elements()
 	get_tree().root.size_changed.connect(_relayout_unlocked_hud)
 	_relayout_unlocked_hud()
 	if _is_mobile_hud():
 		call_deferred("_hide_mobile_expedition_cards")
 
 func _setup_hero_portrait_ui() -> void:
+	if not player_console_chassis:
+		player_console_chassis = PanelContainer.new()
+		player_console_chassis.name = "PlayerConsoleChassis"
+		player_console_chassis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		player_console_chassis.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		var chassis_style := StyleBoxFlat.new()
+		chassis_style.bg_color = Color(0.038, 0.032, 0.05, 0.96)
+		chassis_style.border_color = Color(0.78, 0.60, 0.28, 0.95)
+		chassis_style.set_border_width_all(2)
+		chassis_style.border_width_top = 3
+		chassis_style.border_width_bottom = 3
+		chassis_style.set_corner_radius_all(12)
+		chassis_style.corner_detail = 6
+		chassis_style.anti_aliasing = true
+		chassis_style.shadow_color = Color(0, 0, 0, 0.72)
+		chassis_style.shadow_size = 6
+		chassis_style.shadow_offset = Vector2(0, 3)
+		player_console_chassis.add_theme_stylebox_override("panel", chassis_style)
+		add_child(player_console_chassis)
+
 	hero_portrait_container = PanelContainer.new()
 	hero_portrait_container.name = "HeroPortrait"
 	hero_portrait_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -185,7 +210,13 @@ func _setup_hero_portrait_ui() -> void:
 	hero_portrait_container.offset_right = HERO_PORTRAIT_RECT.end.x
 	hero_portrait_container.offset_bottom = HERO_PORTRAIT_RECT.end.y
 
-	var frame_style = StyleBoxEmpty.new()
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.05, 0.04, 0.065, 0.95)
+	frame_style.border_color = Color(0.85, 0.68, 0.30, 1.0)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(10)
+	frame_style.shadow_color = Color(0, 0, 0, 0.5)
+	frame_style.shadow_size = 3
 	hero_portrait_container.add_theme_stylebox_override("panel", frame_style)
 
 	var portrait_content = Control.new()
@@ -251,8 +282,76 @@ func _setup_hero_portrait_ui() -> void:
 	hero_level_badge.add_child(hero_level_label)
 
 	add_child(hero_portrait_container)
+	if player_console_chassis:
+		move_child(player_console_chassis, 0)
 	_shift_resource_row_for_portrait()
 	_refresh_hero_portrait(true)
+
+func _setup_hud_chassis_elements() -> void:
+	if not wave_chronometer_chassis:
+		wave_chronometer_chassis = PanelContainer.new()
+		wave_chronometer_chassis.name = "WaveChronometerChassis"
+		wave_chronometer_chassis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wave_chronometer_chassis.visible = false
+		wave_chronometer_chassis.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		var chrono_style := StyleBoxFlat.new()
+		chrono_style.bg_color = Color(0.035, 0.03, 0.045, 0.95)
+		chrono_style.border_color = Color(0.85, 0.65, 0.28, 0.95)
+		chrono_style.set_border_width_all(2)
+		chrono_style.border_width_top = 3
+		chrono_style.set_corner_radius_all(10)
+		chrono_style.corner_detail = 6
+		chrono_style.anti_aliasing = true
+		chrono_style.shadow_color = Color(0, 0, 0, 0.65)
+		chrono_style.shadow_size = 5
+		chrono_style.shadow_offset = Vector2(0, 2)
+		wave_chronometer_chassis.add_theme_stylebox_override("panel", chrono_style)
+		add_child(wave_chronometer_chassis)
+		if wave_label:
+			move_child(wave_chronometer_chassis, wave_label.get_index())
+
+	if not base_console_chassis:
+		base_console_chassis = PanelContainer.new()
+		base_console_chassis.name = "BaseConsoleChassis"
+		base_console_chassis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		base_console_chassis.visible = false
+		base_console_chassis.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		var base_chassis_style := StyleBoxFlat.new()
+		base_chassis_style.bg_color = Color(0.04, 0.035, 0.05, 0.95)
+		base_chassis_style.border_color = Color(0.72, 0.55, 0.30, 0.95)
+		base_chassis_style.set_border_width_all(2)
+		base_chassis_style.border_width_top = 3
+		base_chassis_style.set_corner_radius_all(12)
+		base_chassis_style.corner_detail = 6
+		base_chassis_style.anti_aliasing = true
+		base_chassis_style.shadow_color = Color(0, 0, 0, 0.68)
+		base_chassis_style.shadow_size = 6
+		base_chassis_style.shadow_offset = Vector2(0, 2)
+		base_console_chassis.add_theme_stylebox_override("panel", base_chassis_style)
+		add_child(base_console_chassis)
+		if base_status_panel:
+			move_child(base_console_chassis, base_status_panel.get_index())
+
+	if not xp_runic_chassis:
+		xp_runic_chassis = PanelContainer.new()
+		xp_runic_chassis.name = "XPRunicChassis"
+		xp_runic_chassis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		xp_runic_chassis.visible = false
+		xp_runic_chassis.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		var xp_chassis_style := StyleBoxFlat.new()
+		xp_chassis_style.bg_color = Color(0.03, 0.025, 0.045, 0.94)
+		xp_chassis_style.border_color = Color(0.55, 0.35, 0.85, 0.90)
+		xp_chassis_style.set_border_width_all(2)
+		xp_chassis_style.set_corner_radius_all(8)
+		xp_chassis_style.corner_detail = 6
+		xp_chassis_style.anti_aliasing = true
+		xp_chassis_style.shadow_color = Color(0, 0, 0, 0.65)
+		xp_chassis_style.shadow_size = 5
+		xp_chassis_style.shadow_offset = Vector2(0, 2)
+		xp_runic_chassis.add_theme_stylebox_override("panel", xp_chassis_style)
+		add_child(xp_runic_chassis)
+		if xp_bar:
+			move_child(xp_runic_chassis, xp_bar.get_index())
 
 func _shift_resource_row_for_portrait() -> void:
 	var gem_icon = get_node_or_null("GemIcon") as TextureRect
@@ -268,7 +367,14 @@ func _shift_resource_row_for_portrait() -> void:
 	resource_panel.offset_top = 20
 	resource_panel.offset_right = 272
 	resource_panel.offset_bottom = 58
-	var panel_style = StyleBoxEmpty.new()
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.02, 0.018, 0.03, 0.90)
+	panel_style.border_color = Color(0.62, 0.46, 0.22, 0.85)
+	panel_style.set_border_width_all(1)
+	panel_style.border_width_top = 2
+	panel_style.set_corner_radius_all(8)
+	panel_style.shadow_color = Color(0, 0, 0, 0.45)
+	panel_style.shadow_size = 2
 	resource_panel.add_theme_stylebox_override("panel", panel_style)
 	add_child(resource_panel)
 	move_child(resource_panel, hero_portrait_container.get_index())
@@ -909,6 +1015,17 @@ func _relayout_unlocked_hud() -> void:
 		stats_container.position = Vector2(edge + 8.0, player_y + 4.0)
 		stats_container.size = Vector2(player_width - 4.0, 28.0)
 
+	if player_console_chassis:
+		var has_stats: bool = bool(stats_container != null and stats_container.visible)
+		var has_hp: bool = bool(player_health_bar != null and player_health_bar.visible)
+		var cluster_bottom: float = (player_y + 36.0) if has_stats else (player_y if has_hp else 70.0)
+		player_console_chassis.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		player_console_chassis.offset_left = edge - 6.0
+		player_console_chassis.offset_top = 8.0
+		player_console_chassis.offset_right = edge + player_width + 12.0
+		player_console_chassis.offset_bottom = cluster_bottom + 6.0
+		player_console_chassis.visible = true
+
 	# Large run rewards stay out of the player cluster until compact item icons exist.
 	if cave_reward_container:
 		cave_reward_container.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -935,6 +1052,16 @@ func _relayout_unlocked_hud() -> void:
 		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_style_hud_progress_bar(xp_bar, Color(0.48, 0.26, 0.86, 1.0))
+	if xp_runic_chassis:
+		var xp_visible: bool = bool((xp_label != null and xp_label.visible) or (xp_bar != null and xp_bar.visible))
+		xp_runic_chassis.visible = xp_visible
+		if xp_visible:
+			var xp_w := 220.0 if compact else 260.0
+			xp_runic_chassis.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+			xp_runic_chassis.offset_left = -xp_w * 0.5 - 10.0
+			xp_runic_chassis.offset_top = -58.0
+			xp_runic_chassis.offset_right = xp_w * 0.5 + 10.0
+			xp_runic_chassis.offset_bottom = -52.0 + BAR_HEIGHT + 6.0
 
 	# Base cluster: sprite only at the top-right with exact health directly beneath.
 	if base_status_panel:
@@ -944,6 +1071,14 @@ func _relayout_unlocked_hud() -> void:
 		base_status_panel.offset_right = -edge
 		base_status_panel.offset_bottom = 104.0
 	_layout_health_hud_module("BaseLabel", base_health_bar, 108.0, true, edge, base_width)
+	if base_console_chassis:
+		var base_has_health: bool = bool(base_health_bar != null and base_health_bar.visible)
+		base_console_chassis.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		base_console_chassis.offset_left = -base_width - edge - 6.0
+		base_console_chassis.offset_top = 8.0
+		base_console_chassis.offset_right = -edge + 4.0
+		base_console_chassis.offset_bottom = 108.0 + (BAR_HEIGHT + MODULE_GAP if base_has_health else 0.0) + 4.0
+		base_console_chassis.visible = base_status_panel != null and base_status_panel.visible
 
 	# Purchased wave information is a true top-center module. Offsets are set
 	# explicitly instead of position/size so the label's own minimum size can
@@ -965,6 +1100,16 @@ func _relayout_unlocked_hud() -> void:
 		wave_bar.offset_right = wave_half
 		wave_bar.offset_bottom = 42.0 + BAR_HEIGHT
 		_style_hud_progress_bar(wave_bar, Color(0.95, 0.58, 0.14, 1.0))
+	if wave_chronometer_chassis:
+		var wave_bar_node := get_node_or_null("WaveBar") as Control
+		var wave_visible: bool = bool((wave_label != null and wave_label.visible) or (wave_bar_node != null and wave_bar_node.visible))
+		wave_chronometer_chassis.visible = wave_visible
+		if wave_visible:
+			wave_chronometer_chassis.set_anchors_preset(Control.PRESET_CENTER_TOP)
+			wave_chronometer_chassis.offset_left = -wave_half - 14.0
+			wave_chronometer_chassis.offset_top = 10.0
+			wave_chronometer_chassis.offset_right = wave_half + 14.0
+			wave_chronometer_chassis.offset_bottom = 42.0 + BAR_HEIGHT + 8.0
 	if minimap and minimap.visible:
 		minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		minimap.position = Vector2(viewport_size.x - edge - minimap.size.x, 148.0)
@@ -986,6 +1131,19 @@ func _relayout_mobile_hud(canvas_size: Vector2, _physical_size: Vector2) -> void
 		hero_portrait_container.offset_top = logical.call(8.0)
 		hero_portrait_container.offset_right = logical.call(62.0)
 		hero_portrait_container.offset_bottom = logical.call(62.0)
+	if player_console_chassis:
+		player_console_chassis.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		player_console_chassis.offset_left = edge - 4.0
+		player_console_chassis.offset_top = logical.call(4.0)
+		player_console_chassis.offset_right = logical.call(216.0)
+		player_console_chassis.offset_bottom = logical.call(66.0)
+		player_console_chassis.visible = true
+	if base_console_chassis:
+		base_console_chassis.visible = false
+	if wave_chronometer_chassis:
+		wave_chronometer_chassis.visible = false
+	if xp_runic_chassis:
+		xp_runic_chassis.visible = false
 	var resource_panel := get_node_or_null("ResourcePanel") as PanelContainer
 	if resource_panel:
 		resource_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -1346,18 +1504,30 @@ func update_stats(str_val: int, agi_val: int, int_val: int) -> void:
 	if agi_label: agi_label.text = str(agi_val)
 	if int_label: int_label.text = str(int_val)
 
+func _play_chassis_unlock_effect(notice_text: String, target_chassis: Control = null) -> void:
+	show_notice(notice_text, 2.2)
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_upgrade"):
+		sound_fx.play_upgrade()
+	if target_chassis and is_instance_valid(target_chassis):
+		var flare_tw := create_tween()
+		flare_tw.tween_property(target_chassis, "modulate", Color(1.35, 1.25, 1.0, 1.0), 0.10)
+		flare_tw.tween_property(target_chassis, "modulate", Color.WHITE, 0.35)
+
 func unlock_healthbar() -> void:
 	if player_health_bar:
 		player_health_bar.visible = true
 	var pl = get_node_or_null("PlayerLabel")
 	if pl: pl.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("HERO VITAL GAUGE BOLTED TO CHASSIS", player_console_chassis)
 
 func unlock_base_healthbar() -> void:
 	if base_health_bar: base_health_bar.visible = true
 	var bl = get_node_or_null("BaseLabel")
 	if bl: bl.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("BASTION SENSOR BOLTED TO CHASSIS", base_console_chassis)
 
 func unlock_stats() -> void:
 	var sc = get_node_or_null("StatsContainer")
@@ -1366,17 +1536,20 @@ func unlock_stats() -> void:
 	if stats_backdrop:
 		stats_backdrop.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("RUNE MATRIX CALIBRATED", player_console_chassis)
 
 func unlock_wave_timer() -> void:
 	if wave_label: wave_label.visible = true
 	var wb = get_node_or_null("WaveBar")
 	if wb: wb.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("SIEGE CHRONOMETER ONLINE", wave_chronometer_chassis)
 
 func unlock_xp() -> void:
 	if xp_bar: xp_bar.visible = true
 	if xp_label: xp_label.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("EXPERIENCE RUNE CORE ACTIVE", xp_runic_chassis)
 
 func update_player_health(current: int, max_hp: int) -> void:
 	player_health_bar.max_value = max_hp
@@ -1520,6 +1693,7 @@ func _update_status_slot(slot: Control, time_value: float, ratio: float, is_cool
 func unlock_minimap() -> void:
 	minimap.visible = true
 	_relayout_unlocked_hud()
+	_play_chassis_unlock_effect("CARTOGRAPHY SURVEYOR ENGAGED")
 
 func upgrade_minimap_enemies() -> void:
 	minimap_shows_enemies = true

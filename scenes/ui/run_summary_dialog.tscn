@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://b00gq78f4h0un"]
+
+[ext_resource type="Script" path="res://scripts/ui/run_summary_dialog.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/common/MenuPanel.png" id="2_panel"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
+texture = ExtResource("2_panel")
+
+[node name="RunSummaryDialog" type="Control"]
+process_mode = 3
+z_index = 500
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.784314)
+
+[node name="Panel" type="Panel" parent="."]
+process_mode = 3
+custom_minimum_size = Vector2(760, 520)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -440.0
+offset_top = -295.0
+offset_right = 440.0
+offset_bottom = 295.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxTexture_panel")
+
+[node name="Content" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 64.0
+offset_top = 40.0
+offset_right = -64.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "EXPEDITION VICTORY"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Panel/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "The subterranean assault has been broken. Your spoils fuel the Stronghold."
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/Content"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="ResultBody" type="HBoxContainer" parent="Panel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="HeroCard" type="PanelContainer" parent="Panel/Content/ResultBody"]
+custom_minimum_size = Vector2(238, 230)
+layout_mode = 2
+
+[node name="RunSummaryCard" type="PanelContainer" parent="Panel/Content/ResultBody"]
+custom_minimum_size = Vector2(485, 230)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Actions" type="GridContainer" parent="Panel/Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 7
+columns = 4
+
+[node name="RetryButton" type="Button" parent="Panel/Content/Actions"]
+process_mode = 3
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "Retry"
+
+[node name="ChangeLoadoutButton" type="Button" parent="Panel/Content/Actions"]
+process_mode = 3
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "Change Loadout"
+
+[node name="WorkshopButton" type="Button" parent="Panel/Content/Actions"]
+process_mode = 3
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "Stronghold"
+
+[node name="MainMenuButton" type="Button" parent="Panel/Content/Actions"]
+process_mode = 3
+custom_minimum_size = Vector2(176, 42)
+layout_mode = 2
+text = "Main Menu"

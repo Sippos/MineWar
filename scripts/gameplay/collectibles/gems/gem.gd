@@ -137,6 +137,7 @@ func _create_carry_line() -> void:
 	_cleanup_carry_line()
 	carry_line = Line2D.new()
 	carry_line.name = "GemCarryLine"
+	carry_line.add_to_group("polish_feedback")
 	carry_line.width = 1.75
 	# Dome Keeper signature warm golden energy tether
 	carry_line.default_color = Color(1.0, 0.83, 0.64, 0.8)
@@ -209,6 +210,8 @@ func _physics_process(delta: float) -> void:
 		untether()
 		return
 	
+	var sim_delta: float = minf(delta, 0.033)
+	
 	var player_position: Vector2 = tethered_to.global_position
 	var anchor_position := player_position
 	if tethered_to is CharacterBody2D:
@@ -241,10 +244,10 @@ func _physics_process(delta: float) -> void:
 		_spring_velocity = Vector2.ZERO
 	elif distance > 0.01:
 		var accel := to_target * SPRING_STIFFNESS - _spring_velocity * SPRING_DAMPING
-		_spring_velocity += accel * delta
+		_spring_velocity += accel * sim_delta
 		if _spring_velocity.length() > MAX_FOLLOW_SPEED:
 			_spring_velocity = _spring_velocity.normalized() * MAX_FOLLOW_SPEED
-		global_position += _spring_velocity * delta
+		global_position += _spring_velocity * sim_delta
 	else:
 		_spring_velocity = Vector2.ZERO
 	

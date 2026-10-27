@@ -42,7 +42,9 @@ func _is_mobile_or_touch_browser() -> bool:
 	return max_touch > 0 or ua.contains("Mobile") or ua.contains("iPhone") or ua.contains("iPad") or ua.contains("iPod") or ua.contains("Android") or (platform == "MacIntel" and max_touch > 1)
 
 func _on_node_added(node: Node) -> void:
-	if not enabled:
+	if not enabled or not is_instance_valid(node):
+		return
+	if node.is_in_group("polish_feedback") or node is AudioStreamPlayer or node is Line2D or node is Label:
 		return
 	call_deferred("_apply_to_subtree", node)
 

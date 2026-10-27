@@ -2,6 +2,8 @@ extends Node
 
 const FINAL_WAVE := 4
 const RESULT_OVERLAY_NAME := "MatchResultOverlay"
+const RUN_SUMMARY_SCENE: PackedScene = preload("res://scenes/ui/run_summary_dialog.tscn")
+const RUN_SUMMARY_DATA_SCRIPT: GDScript = preload("res://scripts/systems/gameplay/run_summary_data.gd")
 const PREPARATION_HUB_SCENE := "res://scenes/world/preparation/preparation_hub.tscn"
 const MAIN_MENU_SCENE := "res://scenes/menus/main/menu.tscn"
 const HERO_SELECTION_SCENE: PackedScene = preload("res://hero_selection_menu.tscn")
@@ -148,343 +150,75 @@ func _finish_match(victory: bool) -> void:
 	get_tree().paused = true
 
 func _build_result_overlay(victory: bool, hud: Node) -> Control:
-	var overlay := Control.new()
+	var data: RefCounted = _build_run_summary_data(victory, hud)
+	var overlay := RUN_SUMMARY_SCENE.instantiate() as Control
 	overlay.name = RESULT_OVERLAY_NAME
-	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
-	overlay.z_index = 500
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-
-	var dim := ColorRect.new()
-	dim.name = "Dim"
-	dim.color = Color(0.0, 0.0, 0.0, 0.78)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.add_child(dim)
-
-	var viewport_size := get_viewport().get_visible_rect().size
-	var compact := viewport_size.x < 820.0 or viewport_size.y < 570.0
-	var panel_width: float = min(viewport_size.x * 0.94, 900.0)
-	var panel_height: float = min(viewport_size.y * 0.94, 610.0)
-	var panel := Panel.new()
-	panel.name = "Panel"
-	panel.process_mode = Node.PROCESS_MODE_ALWAYS
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -panel_width * 0.5
-	panel.offset_top = -panel_height * 0.5
-	panel.offset_right = panel_width * 0.5
-	panel.offset_bottom = panel_height * 0.5
-	panel.add_theme_stylebox_override("panel", _make_texture_style(MENU_PANEL_TEXTURE))
-	overlay.add_child(panel)
-
-	var content := VBoxContainer.new()
-	content.name = "Content"
-	content.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content.offset_left = 60 if compact else 70
-	content.offset_top = 40 if compact else 55
-	content.offset_right = -60 if compact else -70
-	content.offset_bottom = -40 if compact else -55
-	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 7 if compact else 9)
-	panel.add_child(content)
-
-	var title := Label.new()
-	title.text = "VICTORY" if victory else "DEFEAT"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", DECORATIVE_FONT)
-	title.add_theme_font_size_override("font_size", 32 if compact else 38)
-	title.add_theme_color_override(
-		"font_color",
-		Color(0.96, 0.76, 0.22, 1.0) if victory else Color(1.0, 0.18, 0.12, 1.0)
-	)
-	content.add_child(title)
-
-	var subtitle := Label.new()
-	subtitle.text = "The final assault has been broken." if victory else "The bastion fell, but your legacy remains."
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_override("font", MENU_FONT)
-	subtitle.add_theme_font_size_override("font_size", 16 if compact else 19)
-	subtitle.add_theme_color_override("font_color", Color(1.0, 0.91, 0.72, 1.0))
-	content.add_child(subtitle)
-
-	var divider := HSeparator.new()
-	divider.custom_minimum_size = Vector2(0, 5)
-	content.add_child(divider)
-
-	var body := HBoxContainer.new()
-	body.name = "ResultBody"
-	body.alignment = BoxContainer.ALIGNMENT_CENTER
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 16 if compact else 24)
-	content.add_child(body)
-
-	body.add_child(_build_hero_result_card(victory, compact))
-	body.add_child(_build_run_summary_card(victory, hud, compact))
-
-	var reward_banner := _build_legacy_reward_banner(compact)
-	content.add_child(reward_banner)
-	var unlock_banner := _build_unlock_reward_banner(compact)
-	if unlock_banner != null:
-		content.add_child(unlock_banner)
-
-	var buttons := GridContainer.new()
-	buttons.name = "Actions"
-	buttons.columns = 2 if compact else 4
-	buttons.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	buttons.add_theme_constant_override("h_separation", 10)
-	buttons.add_theme_constant_override("v_separation", 7)
-	content.add_child(buttons)
-
-	var button_width := 220.0 if compact else 176.0
-	var retry := _make_result_button("Retry", Callable(self, "_rerun_same_loadout"), button_width)
-	retry.name = "RetryButton"
-	buttons.add_child(retry)
-	var loadout := _make_result_button("Change Loadout", Callable(self, "_open_retry_loadout"), button_width)
-	loadout.name = "ChangeLoadoutButton"
-	buttons.add_child(loadout)
-	var workshop_label := "Stronghold" if Global.is_legacy_workshop_unlocked() else "Return Home"
-	var workshop := _make_result_button(workshop_label, Callable(self, "_return_to_preparation"), button_width)
-	workshop.name = "WorkshopButton"
-	buttons.add_child(workshop)
-	var menu := _make_result_button("Main Menu", Callable(self, "_return_to_main_menu"), button_width)
-	menu.name = "MainMenuButton"
-	buttons.add_child(menu)
-	retry.call_deferred("grab_focus")
+	if overlay.has_method("setup"):
+		overlay.call(
+			"setup",
+			data,
+			Callable(self, "_rerun_same_loadout"),
+			Callable(self, "_open_retry_loadout"),
+			Callable(self, "_return_to_preparation"),
+			Callable(self, "_return_to_main_menu")
+		)
 	return overlay
 
-func _build_hero_result_card(victory: bool, compact: bool) -> PanelContainer:
-	var player := active_world.get_node_or_null("Player")
-	var hero_name := str(player.get("current_hero_name")) if player else "Hero"
-	var hero_level := int(player.get("level")) if player else 1
-	var card := PanelContainer.new()
-	card.name = "HeroCard"
-	card.custom_minimum_size = Vector2(210 if compact else 238, 230)
-	card.add_theme_stylebox_override(
-		"panel",
-		_make_flat_panel_style(Color(0.035, 0.028, 0.025, 0.88), Color(0.58, 0.38, 0.18, 0.9))
-	)
+func _build_run_summary_data(victory: bool, hud: Node) -> RefCounted:
+	var data: RefCounted = RUN_SUMMARY_DATA_SCRIPT.new()
+	data.set("victory", victory)
 
-	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 5)
-	card.add_child(box)
+	var base := active_world.get_node_or_null("Base") if active_world else null
+	var player := active_world.get_node_or_null("Player") if active_world else null
+	var controller := active_world.get_node_or_null("SiegeModeController") if active_world else null
 
-	var status := Label.new()
-	status.text = "EXPEDITION COMPLETE" if victory else "EXPEDITION LOST"
-	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status.add_theme_font_override("font", MENU_FONT)
-	status.add_theme_font_size_override("font_size", 11)
-	status.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28) if victory else Color(1.0, 0.32, 0.24))
-	box.add_child(status)
+	data.set("hero_name", str(player.get("current_hero_name")) if player else "Dwarf")
+	data.set("hero_level", int(player.get("level")) if player else 1)
+	data.set("strength", _get_player_stat(player, "strength", 1))
+	data.set("agility", _get_player_stat(player, "agility", 1))
+	data.set("intelligence", _get_player_stat(player, "intelligence", 1))
 
-	var portrait_frame := PanelContainer.new()
-	portrait_frame.custom_minimum_size = Vector2(96 if compact else 114, 96 if compact else 114)
-	portrait_frame.add_theme_stylebox_override(
-		"panel",
-		_make_flat_panel_style(Color(0.02, 0.024, 0.03, 0.96), Color(0.82, 0.66, 0.28, 0.92) if victory else Color(0.72, 0.18, 0.14, 0.92))
-	)
-	box.add_child(portrait_frame)
+	var wave_reached := FINAL_WAVE if victory else maxi(1, int(hud.get("last_wave_reached")))
+	data.set("waves_survived", wave_reached)
+	data.set("final_wave", FINAL_WAVE)
+	data.set("elapsed_time_string", _format_elapsed_time(hud))
 
-	var portrait := TextureRect.new()
-	portrait.name = "HeroPortrait"
-	portrait.texture = HERO_PORTRAIT_TEXTURES.get(hero_name, null) as Texture2D
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	portrait.modulate = Color.WHITE if victory else Color(0.72, 0.58, 0.58, 1.0)
-	portrait.set_anchors_preset(Control.PRESET_FULL_RECT)
-	portrait.offset_left = 8
-	portrait.offset_top = 8
-	portrait.offset_right = -8
-	portrait.offset_bottom = -8
-	portrait_frame.add_child(portrait)
-
-	var name_label := Label.new()
-	name_label.text = hero_name
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_override("font", MENU_FONT)
-	name_label.add_theme_font_size_override("font_size", 18 if compact else 21)
-	name_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.78, 1.0))
-	box.add_child(name_label)
-
-	var level_label := Label.new()
-	level_label.text = "LEVEL %d" % hero_level
-	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_label.add_theme_font_override("font", MENU_FONT)
-	level_label.add_theme_font_size_override("font_size", 11)
-	level_label.add_theme_color_override("font_color", Color(0.76, 0.72, 0.66, 1.0))
-	box.add_child(level_label)
-
-	var stat_row := HBoxContainer.new()
-	stat_row.name = "HeroStats"
-	stat_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	stat_row.add_theme_constant_override("separation", 7)
-	box.add_child(stat_row)
-	stat_row.add_child(_make_hero_stat_chip(STRENGTH_TEXTURE, "Strength", _get_player_stat(player, "strength", 1), Color(1.0, 0.45, 0.28)))
-	stat_row.add_child(_make_hero_stat_chip(AGILITY_TEXTURE, "Agility", _get_player_stat(player, "agility", 1), Color(0.42, 1.0, 0.48)))
-	stat_row.add_child(_make_hero_stat_chip(INTELLIGENCE_TEXTURE, "Intelligence", _get_player_stat(player, "intelligence", 1), Color(0.48, 0.72, 1.0)))
-	return card
-
-func _build_run_summary_card(victory: bool, hud: Node, compact: bool) -> PanelContainer:
-	var card := PanelContainer.new()
-	card.name = "RunSummaryCard"
-	card.custom_minimum_size = Vector2(430 if compact else 485, 230)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override(
-		"panel",
-		_make_flat_panel_style(Color(0.03, 0.025, 0.02, 0.84), Color(0.46, 0.34, 0.22, 0.82))
-	)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 5)
-	card.add_child(box)
-
-	var heading := Label.new()
-	heading.text = "RUN SUMMARY"
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", MENU_FONT)
-	heading.add_theme_font_size_override("font_size", 14)
-	heading.add_theme_color_override("font_color", Color(0.96, 0.79, 0.46, 1.0))
-	box.add_child(heading)
-
-	var stats := GridContainer.new()
-	stats.name = "SummaryRows"
-	stats.columns = 3
-	stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stats.add_theme_constant_override("h_separation", 12 if compact else 18)
-	stats.add_theme_constant_override("v_separation", 4)
-	box.add_child(stats)
-	_add_result_stats(stats, victory, hud)
-	return card
-
-func _build_unlock_reward_banner(compact: bool) -> PanelContainer:
-	if Global.last_unlock_rewards.is_empty():
-		return null
-	var reward: Dictionary = Global.last_unlock_rewards.back()
-	var banner := PanelContainer.new()
-	banner.name = "MilestoneReward"
-	banner.custom_minimum_size = Vector2(0, 48 if compact else 52)
-	banner.add_theme_stylebox_override("panel", _make_flat_panel_style(Color(0.035, 0.09, 0.12, 0.96), Color(0.28, 0.82, 1.0, 0.98)))
-	var label := Label.new()
-	label.text = "STRONGHOLD REWARD  •  %s" % str(reward.get("title", "NEW POWER AWAKENED"))
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", MENU_FONT)
-	label.add_theme_font_size_override("font_size", 14 if compact else 16)
-	label.add_theme_color_override("font_color", Color(0.72, 0.94, 1.0, 1.0))
-	banner.add_child(label)
-	return banner
-
-func _build_legacy_reward_banner(compact: bool) -> PanelContainer:
-	var banner := PanelContainer.new()
-	banner.name = "LegacyReward"
-	banner.custom_minimum_size = Vector2(0, 40 if compact else 44)
-	banner.add_theme_stylebox_override(
-		"panel",
-		_make_flat_panel_style(Color(0.16, 0.085, 0.02, 0.94), Color(1.0, 0.62, 0.15, 0.98))
-	)
-	var label := Label.new()
-	label.text = "LEGACY ORE  +%d     TOTAL  %d" % [Global.last_run_legacy_ore_earned, Global.legacy_ore]
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", MENU_FONT)
-	label.add_theme_font_size_override("font_size", 16 if compact else 18)
-	label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.4, 1.0))
-	banner.add_child(label)
-	return banner
-
-func _add_result_stats(stats: GridContainer, victory: bool, hud: Node) -> void:
-	var base := active_world.get_node_or_null("Base")
-	var player := active_world.get_node_or_null("Player")
-	var wave_reached := FINAL_WAVE if victory else int(hud.get("last_wave_reached"))
-	var base_integrity := 0
 	if base and base.get("health") != null and base.get("max_health") != null:
-		base_integrity = clampi(roundi(float(base.get("health")) / maxf(float(base.get("max_health")), 1.0) * 100.0), 0, 100)
-	var hero_name := str(player.get("current_hero_name")) if player else "Dwarf"
-	var base_icon := HERO_BASE_TEXTURES.get(hero_name, HERO_BASE_TEXTURES["Dwarf"]) as Texture2D
+		var integrity_ratio := float(base.get("health")) / maxf(float(base.get("max_health")), 1.0) * 100.0
+		data.set("base_integrity", clampi(roundi(integrity_ratio), 0, 100))
 
-	_add_result_row(stats, null, "TIME", "Run time", _format_elapsed_time(hud))
-	_add_result_row(stats, null, "STAGE", "Stage reached", "%d / %d" % [wave_reached, FINAL_WAVE])
-	_add_result_row(stats, base_icon, "", "Base integrity", "%d%%" % base_integrity)
-	_add_result_row(stats, GEM_TEXTURE, "", "Gems banked", str(int(hud.get("total_gems"))))
-	_add_result_row(stats, GOLD_TEXTURE, "", "Gold banked", str(int(hud.get("total_gold"))))
-	_add_result_row(stats, null, "ORE", "Legacy ore earned", "+%d" % Global.last_run_legacy_ore_earned, Color(1.0, 0.76, 0.25))
-	_add_result_row(stats, null, "ORE", "Legacy ore total", str(Global.legacy_ore), Color(1.0, 0.88, 0.48))
+	data.set("total_gems", int(hud.get("total_gems")))
+	data.set("total_gold", int(hud.get("total_gold")))
+	if player and player.has_method("get_total_blocks_mined"):
+		data.set("blocks_mined", int(player.call("get_total_blocks_mined")))
+	elif hud and hud.get("run_gems_collected") != null:
+		data.set("blocks_mined", int(hud.get("run_gems_collected")) * 3)
 
-func _add_result_row(stats: GridContainer, texture: Texture2D, marker: String, stat_name: String, stat_value: String, value_color: Color = Color(1.0, 0.94, 0.82, 1.0)) -> void:
-	var icon_cell := Control.new()
-	icon_cell.custom_minimum_size = Vector2(30, 30)
-	icon_cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if texture:
-		var icon := TextureRect.new()
-		icon.texture = texture
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-		icon.offset_left = 2
-		icon.offset_top = 2
-		icon.offset_right = -2
-		icon.offset_bottom = -2
-		icon_cell.add_child(icon)
-	else:
-		var marker_label := Label.new()
-		marker_label.text = marker
-		marker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		marker_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		marker_label.add_theme_font_override("font", MENU_FONT)
-		marker_label.add_theme_font_size_override("font_size", 8 if marker.length() > 3 else 10)
-		marker_label.add_theme_color_override("font_color", Color(0.95, 0.66, 0.28, 1.0))
-		marker_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		icon_cell.add_child(marker_label)
-	stats.add_child(icon_cell)
+	if controller and controller.has_method("get_caches_unlocked"):
+		data.set("caches_unlocked", int(controller.call("get_caches_unlocked")))
+	if controller and controller.has_method("get_horn_soundings"):
+		data.set("horn_soundings", int(controller.call("get_horn_soundings")))
+	if controller and controller.has_method("get_horn_greed_multiplier"):
+		data.set("horn_greed_multiplier", float(controller.call("get_horn_greed_multiplier")))
+	if controller and controller.has_method("get_total_horn_ore_bonus"):
+		data.set("horn_bonus_ore", int(controller.call("get_total_horn_ore_bonus")))
 
-	var name_label := Label.new()
-	name_label.text = stat_name
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_override("font", MENU_FONT)
-	name_label.add_theme_font_size_override("font_size", 15)
-	name_label.add_theme_color_override("font_color", Color(0.78, 0.7, 0.58, 1.0))
-	stats.add_child(name_label)
+	data.set("base_survival_ore", maxi(1, int(ceil(float(maxi(wave_reached, 1)) / 3.0))))
+	data.set("victory_bonus_ore", 3 if victory else 0)
+	data.set("legacy_ore_earned", Global.last_run_legacy_ore_earned)
+	data.set("total_legacy_ore", Global.legacy_ore)
 
-	var value_label := Label.new()
-	value_label.text = stat_value
-	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_override("font", MENU_FONT)
-	value_label.add_theme_font_size_override("font_size", 16)
-	value_label.add_theme_color_override("font_color", value_color)
-	stats.add_child(value_label)
+	if not Global.last_unlock_rewards.is_empty():
+		var reward: Dictionary = Global.last_unlock_rewards.back()
+		data.set("milestone_title", str(reward.get("title", "")))
 
-func _make_hero_stat_chip(texture: Texture2D, tooltip: String, value: int, accent: Color) -> PanelContainer:
-	var chip := PanelContainer.new()
-	chip.custom_minimum_size = Vector2(56, 58)
-	chip.tooltip_text = tooltip
-	chip.mouse_filter = Control.MOUSE_FILTER_PASS
-	chip.add_theme_stylebox_override("panel", _make_flat_panel_style(Color(0.02, 0.025, 0.03, 0.94), accent.darkened(0.28)))
-	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 0)
-	chip.add_child(box)
-	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(34, 34)
-	icon.texture = texture
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(icon)
-	var value_label := Label.new()
-	value_label.text = str(value)
-	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_override("font", MENU_FONT)
-	value_label.add_theme_font_size_override("font_size", 15)
-	value_label.add_theme_color_override("font_color", accent)
-	box.add_child(value_label)
-	return chip
+	# Retrospective ledger values reported to player:
+	# "Legacy ore earned": data.legacy_ore_earned
+	# "Legacy ore total": data.total_legacy_ore
+	if data.has_method("calculate_score"):
+		data.call("calculate_score")
+	Global.record_run_summary(data)
+	return data
 
 func _get_player_stat(player: Node, stat_name: String, fallback: int) -> int:
 	if player == null:

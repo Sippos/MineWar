@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c6uiverif001"]
+
+[ext_resource type="Script" path="res://tests/ui_verification_runner.gd" id="1_script"]
+
+[node name="UIVerificationRunner" type="Node"]
+script = ExtResource("1_script")
