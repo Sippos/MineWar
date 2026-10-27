@@ -93,6 +93,9 @@ func _on_body_entered(body: Node2D) -> void:
 	if not claimable or collapsing or body == null or body.name != "Player":
 		return
 	claimable = false
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_cache_open"):
+		sound_fx.play_cache_open()
 	claimed.emit(reward_id)
 	_burst(accent, 22)
 	var open := create_tween()
@@ -106,6 +109,9 @@ func collapse() -> void:
 		return
 	collapsing = true
 	claimable = false
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	if sound_fx and sound_fx.has_method("play_cache_collapse"):
+		sound_fx.play_cache_collapse()
 	_burst(Color(0.42, 0.36, 0.30, 1.0), 10)
 	var fall := create_tween()
 	fall.tween_property(self, "position:y", position.y + 10.0, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)

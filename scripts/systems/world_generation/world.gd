@@ -37,6 +37,7 @@ var preparation_active: bool = false
 
 var crack_overlay_manager: Node2D
 var light_occluder_manager: Node2D
+var juice_manager: Node
 var _border_rim_material: ShaderMaterial
 
 var astar: AStarGrid2D
@@ -194,6 +195,10 @@ func _ready() -> void:
 	crack_overlay_manager = preload("res://scripts/systems/world_generation/crack_overlay_manager.gd").new()
 	crack_overlay_manager.name = "CrackOverlayManager"
 	add_child(crack_overlay_manager)
+
+	juice_manager = preload("res://scripts/utils/juice_manager.gd").new()
+	juice_manager.name = "JuiceManager"
+	add_child(juice_manager)
 
 	light_occluder_manager = preload("res://scripts/systems/world_generation/mine_light_occluder_manager.gd").new()
 	light_occluder_manager.name = "MineLightOccluderManager"
@@ -951,6 +956,11 @@ func spawn_blocked_dig_feedback(world_position: Vector2) -> void:
 	tween.chain().tween_callback(blocked_label.queue_free)
 
 func has_gem(cell: Vector2i) -> bool:
+	if block_layer == null:
+		var layer = get_node_or_null("BlockLayer") as TileMapLayer
+		if layer != null:
+			return layer.get_cell_source_id(cell) == BLOCK_GEM
+		return false
 	return block_layer.get_cell_source_id(cell) == BLOCK_GEM
 
 func try_spawn_cave_reward(cell: Vector2i) -> bool:
@@ -1446,36 +1456,118 @@ func update_front_wall(cell: Vector2i) -> void:
 		# gem indicator refresh is handled by the block logic, but we can call it if it exists.
 		pass
 
+func get_tile_max_health(cell: Vector2i, block_id: int = -1) -> float:
+	if block_id == -1 and block_layer != null:
+		block_id = block_layer.get_cell_source_id(cell)
+	var depth := maxf(0.0, float(cell.y))
+	# Dome Keeper exponential formula: 2 + round(pow(coord.y, 1.5))
+	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
+	var depth_mult: float = 1.0 + clampf(depth_factor, 0.0, 3.5)
+	var base_health := 2.0
+	if block_id == 2:
+		base_health = 4.0
+	elif block_id == 3:
+		base_health = 8.0
+	elif block_id == 16:
+		return 9999.0
+	if has_gem(cell) or block_id == BLOCK_GEM:
+		base_health *= 2.0
+	return base_health * depth_mult
+
+func get_block_hardness_multiplier(block_id: int, cell: Vector2i = Vector2i.ZERO, tier: int = 0) -> float:
+	var base_mult := 1.0
+	tier = clampi(tier, 0, 3)
+	if block_id == 2:
+		base_mult = [4.0, 2.5, 1.55, 1.0][tier]
+	elif block_id == 3:
+		base_mult = [14.0, 7.0, 3.4, 1.6][tier]
+	var depth := maxf(0.0, float(cell.y))
+	var depth_factor: float = pow(depth / 12.0, 1.5) * 0.35
+	var depth_mult: float = 1.0 + clampf(depth_factor, 0.0, 3.5)
+	if has_gem(cell) or block_id == BLOCK_GEM:
+		base_mult *= 2.0
+	return base_mult * depth_mult
+
 func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal := false, impact_direction := Vector2.ZERO) -> void:
+	if juice_manager != null and is_instance_valid(juice_manager):
+		juice_manager.trigger_block_hit(strong, gem_reveal)
+
+	# Directional chip & debris burst flying away from the strike normal (Dome Keeper style)
 	var burst := CPUParticles2D.new()
 	burst.name = "MiningBreakFeedback" if strong else "MiningImpactFeedback"
 	burst.add_to_group("polish_feedback")
 	burst.one_shot = true
 	burst.emitting = false
-	burst.amount = 26 if strong else 9
-	burst.lifetime = 0.55 if strong else 0.24
+	burst.amount = 30 if strong else 12
+	burst.lifetime = 0.55 if strong else 0.26
 	burst.explosiveness = 0.95
 	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	burst.emission_sphere_radius = 7.0 if strong else 3.0
-	burst.gravity = Vector2(0, 160)
-	burst.initial_velocity_min = 80.0 if strong else 36.0
-	burst.initial_velocity_max = 190.0 if strong else 90.0
-	burst.damping_min = 90.0
-	burst.damping_max = 170.0
-	burst.scale_amount_min = 2.0 if strong else 1.2
-	burst.scale_amount_max = 5.5 if strong else 2.8
-	burst.color = Color(0.95, 0.82, 0.56, 0.95) if strong else Color(0.72, 0.58, 0.42, 0.82)
+	burst.emission_sphere_radius = 8.0 if strong else 4.0
+	burst.gravity = Vector2(0, 180)
+	burst.initial_velocity_min = 90.0 if strong else 45.0
+	burst.initial_velocity_max = 210.0 if strong else 110.0
+	burst.damping_min = 80.0
+	burst.damping_max = 160.0
+	burst.scale_amount_min = 2.2 if strong else 1.4
+	burst.scale_amount_max = 5.8 if strong else 3.2
+	burst.color = Color(0.98, 0.88, 0.65, 0.95) if strong else Color(0.82, 0.72, 0.55, 0.88)
 	if impact_direction.length_squared() > 0.01:
-		# Spawn from the edge of the block and throw chips away from the
-		# contact surface. This makes the dust read as a pick impact instead
-		# of a generic burst at the tile centre.
-		burst.direction = impact_direction.normalized()
-		burst.spread = 72.0 if not strong else 105.0
+		burst.direction = -impact_direction.normalized()
+		burst.spread = 75.0 if not strong else 110.0
 	burst.global_position = world_position
 	burst.z_index = 8
 	add_child(burst)
 	burst.emitting = true
-	get_tree().create_timer(burst.lifetime + 0.15).timeout.connect(burst.queue_free)
+	if is_inside_tree():
+		get_tree().create_timer(burst.lifetime + 0.15).timeout.connect(burst.queue_free)
+	else:
+		burst.queue_free()
+
+	# Tile Hit-Flash overlay (Dome Keeper hit response)
+	var flash := Node2D.new()
+	flash.name = "TileHitFlash"
+	flash.add_to_group("polish_feedback")
+	flash.z_index = 12
+	flash.global_position = world_position
+	
+	var flash_color := Color(2.0, 2.0, 2.0, 0.85) if not strong else Color(2.4, 2.2, 1.8, 0.95)
+	if gem_reveal:
+		flash_color = Color(0.8, 2.4, 2.5, 0.95)
+		
+	var flash_rect := ColorRect.new()
+	var rect_size := Vector2(36, 36) if not strong else Vector2(52, 52)
+	flash_rect.size = rect_size
+	flash_rect.position = -rect_size * 0.5
+	flash_rect.color = flash_color
+	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.add_child(flash_rect)
+	add_child(flash)
+	
+	if is_inside_tree():
+		var flash_tween := create_tween()
+		flash_tween.tween_property(flash_rect, "modulate:a", 0.0, 0.16 if not strong else 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		flash_tween.tween_callback(flash.queue_free)
+	else:
+		flash.queue_free()
+	
+	# Light spark flash
+	var spark := PointLight2D.new()
+	spark.name = "HitSparkFlash"
+	spark.add_to_group("polish_feedback")
+	spark.energy = 2.4 if strong else 1.3
+	spark.texture_scale = 0.45 if not strong else 0.75
+	spark.color = Color(1.0, 0.92, 0.78)
+	if player_light and player_light.texture:
+		spark.texture = player_light.texture
+	spark.global_position = world_position
+	add_child(spark)
+	if is_inside_tree():
+		var spark_tween := create_tween()
+		spark_tween.tween_property(spark, "energy", 0.0, 0.14 if not strong else 0.22)
+		spark_tween.tween_callback(spark.queue_free)
+	else:
+		spark.queue_free()
+
 	if gem_reveal:
 		_spawn_feedback_label(world_position + Vector2(0, -24), "GEM REVEALED", Color(0.3, 1.0, 0.95), 1.05)
 		var gem_flash := PointLight2D.new()
@@ -1484,11 +1576,13 @@ func spawn_mining_feedback(world_position: Vector2, strong := false, gem_reveal 
 		gem_flash.energy = 2.2
 		gem_flash.texture_scale = 0.45
 		gem_flash.color = Color(0.25, 1.0, 0.9)
+		if player_light and player_light.texture:
+			gem_flash.texture = player_light.texture
 		gem_flash.global_position = world_position
 		add_child(gem_flash)
-		var flash_tween := create_tween()
-		flash_tween.tween_property(gem_flash, "energy", 0.0, 0.32)
-		flash_tween.tween_callback(gem_flash.queue_free)
+		var g_flash_tween := create_tween()
+		g_flash_tween.tween_property(gem_flash, "energy", 0.0, 0.32)
+		g_flash_tween.tween_callback(gem_flash.queue_free)
 
 func spawn_gem_pickup_feedback(world_position: Vector2) -> void:
 	_spawn_resource_burst(world_position, Color(0.25, 0.95, 1.0, 0.95), "GemPickupFeedback")
@@ -1551,7 +1645,10 @@ func _spawn_resource_burst(world_position: Vector2, burst_color: Color, effect_n
 	burst.z_index = 9
 	add_child(burst)
 	burst.emitting = true
-	get_tree().create_timer(0.65).timeout.connect(burst.queue_free)
+	if is_inside_tree():
+		get_tree().create_timer(0.65).timeout.connect(burst.queue_free)
+	else:
+		burst.queue_free()
 
 func _spawn_feedback_label(world_position: Vector2, text: String, text_color: Color, duration: float) -> void:
 	var label := Label.new()

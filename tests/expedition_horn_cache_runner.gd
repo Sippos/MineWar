@@ -36,6 +36,7 @@ func _run() -> void:
 
 	await _test_sealed_cache_choice()
 	await _test_war_horn()
+	await _test_audio_baseline()
 	_finish()
 
 ## The reward is no longer handed over on the last crystal: three caches open,
@@ -113,6 +114,46 @@ func _test_war_horn() -> void:
 	controller.call("_begin_next_expedition")
 	await _wait_frames(2)
 	_expect(bool(controller.call("_horn_available")), "A new expedition should re-arm the horn")
+
+func _test_audio_baseline() -> void:
+	_expect(AudioServer.get_bus_index("Master") >= 0, "Master audio bus should exist")
+	_expect(AudioServer.get_bus_index("Music") >= 0, "Music audio bus should exist")
+	_expect(AudioServer.get_bus_index("SFX") >= 0, "SFX audio bus should exist")
+	_expect(AudioServer.get_bus_index("UI") >= 0, "UI audio bus should exist")
+	_expect(AudioServer.get_bus_index("Stingers") >= 0, "Stingers audio bus should exist")
+
+	var sound_fx := get_node_or_null("/root/SoundFX")
+	_expect(sound_fx != null, "SoundFX singleton should be available")
+	if sound_fx:
+		_expect(sound_fx.has_method("play_cache_open"), "SoundFX should implement play_cache_open")
+		_expect(sound_fx.has_method("play_cache_collapse"), "SoundFX should implement play_cache_collapse")
+		_expect(sound_fx.has_method("play_war_horn"), "SoundFX should implement play_war_horn")
+		_expect(sound_fx.has_method("play_warning_horn"), "SoundFX should implement play_warning_horn")
+
+		# Rapid fire voice starvation test (asserts no errors, voice exhaustion, or crashes)
+		for index in range(25):
+			sound_fx.call("play_dig_hit", 1)
+			sound_fx.call("play_block_break", false)
+		sound_fx.call("play_cache_open")
+		sound_fx.call("play_cache_collapse")
+		sound_fx.call("play_war_horn")
+
+	var music_mgr := get_node_or_null("/root/MusicManager")
+	_expect(music_mgr != null, "MusicManager singleton should be available")
+	if music_mgr:
+		_expect(music_mgr.has_method("duck"), "MusicManager should support dynamic ducking")
+		music_mgr.call("duck", 0.5, -10.0)
+
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	_expect(juice_mgr != null, "JuiceManager singleton should be available")
+	if juice_mgr:
+		_expect(juice_mgr.has_method("hit_stop"), "JuiceManager should implement hit_stop")
+		_expect(juice_mgr.has_method("add_camera_trauma"), "JuiceManager should implement add_camera_trauma")
+		_expect(juice_mgr.has_method("trigger_block_hit"), "JuiceManager should implement trigger_block_hit")
+		_expect(juice_mgr.has_method("trigger_war_horn_blast"), "JuiceManager should implement trigger_war_horn_blast")
+		_expect(juice_mgr.has_method("trigger_motherlode_shatter"), "JuiceManager should implement trigger_motherlode_shatter")
+
+	await _wait_frames(3)
 
 func _dig_objective_seam(stage: int) -> void:
 	var target: int = int(controller.call("_objective_target"))

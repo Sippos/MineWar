@@ -10,12 +10,23 @@ var _in_game_tracks: Array[AudioStream] = [
 
 var _is_playing_main_menu := false
 var _is_playing_in_game := false
+var _duck_tween: Tween
+
+func duck(duration: float = 2.0, target_db: float = -14.0) -> void:
+	if _player == null:
+		return
+	if _duck_tween and _duck_tween.is_valid():
+		_duck_tween.kill()
+	_duck_tween = create_tween()
+	_duck_tween.tween_property(_player, "volume_db", target_db, 0.15).set_trans(Tween.TRANS_SINE)
+	_duck_tween.tween_interval(duration)
+	_duck_tween.tween_property(_player, "volume_db", 0.0, 0.85).set_trans(Tween.TRANS_SINE)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
 	_player = AudioStreamPlayer.new()
-	_player.bus = "Master"
+	_player.bus = "Music"
 	add_child(_player)
 	_player.finished.connect(_on_track_finished)
 	

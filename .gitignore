@@ -48,3 +48,6 @@ background_generator.tscn
 
 # Local Godot check output
 godot_check.log
+
+# Agent local skills symlinks
+.agents/

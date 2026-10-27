@@ -36,3 +36,28 @@ MineWar is a Godot fantasy mining-defense game inspired by Warcraft III fun maps
 2. Document the workflow and architecture.
 3. Move UI files into `scenes/ui` and `scripts/ui` in small PRs.
 4. Split world generation/waves/input/save systems after the playtest loop is stable.
+
+## Installed Agent Skills & Frameworks
+
+Project-level and global agent skills are installed in `.agents/skills/` (mirrored from `~/.hermes/skills/game-development/` and `~/.gemini/config/skills/`):
+
+- **Player Motivation & Design Frameworks:**
+  - `quantic-foundry-motivation`: 12-factor player motivation model (Destruction, Excitement, Challenge, Strategy, Power, Completion, Discovery) to audit mechanics and score gameplay feel.
+  - `game-designer`: Systems & core loops consultant (nested loops, 3-tier feedback).
+  - `systems-designer` & `economy-designer`: Mathematical modeling, curve health, loot drop tables, dual-currency roguelite stability.
+  - `balance-check`: Outlier and dominant strategy detection across combat, loot, and progression curves.
+
+- **Godot 4 Engine & Quality Skills:**
+  - `godot-gdscript`, `godot-nodes-scenes`, `godot-animation`, `godot-audio`, `godot-shaders`, `godot-signals-groups`, `godot-ui-control`, `godot-tilemap`, `godot-resources`, `godot-2d-movement`.
+  - `godot-gdscript-headless-testing` & `smoke-check`: Headless CI test runner and verification gate (`godot --headless --path . --check-only`).
+  - `game-feel`: Screen shake, hit-stop, squash & stretch, impact frames, layered sensory juice.
+  - `audio-design`: Sound design, bus layering, priority ducking, and acoustic cues.
+  - `playtest-report`: Structured playtest observation, regression detection, and action extraction.
+
+## Verification Gate (Before Marking Any Task Done)
+
+Autonomous workers must execute:
+1. `godot --headless --path . --check-only` (Syntax & resource integrity check).
+2. Relevant test runner in `tests/` (e.g. `godot --headless --path . -s tests/minewars_complete_run_runner.gd`).
+3. If UI/visual changes: live smoke check via `godot-live-mcp` (assert nodes, grab `game_screenshot`, check `game_logs`).
+

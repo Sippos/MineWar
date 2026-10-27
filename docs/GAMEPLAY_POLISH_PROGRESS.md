@@ -692,4 +692,54 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ## Last queue update
 
-`POLISH-001` through `POLISH-025` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. No later polish task is selected yet.
+`POLISH-001` through `POLISH-026` are `COMPLETE`. POLISH-025 gives the dig window a player-owned exit, moves the stage reward back into the mine as a three-way route choice, and rebuilds the single-player upgrade board as a bottom command panel over a live world. POLISH-026 establishes a professional 5-bus audio architecture, categorized voice pooling, procedural stone-vault cache cracking/crumbling SFX, authentic resonant brass War Horn calls, and stinger-to-music dynamic ducking.
+
+---
+
+### Task ID: `POLISH-026`
+* **Title:** Audio Baseline & Acoustic Feedback
+* **Status:** `COMPLETE`
+* **Quantic Foundry Drivers:** Action: Destruction (Sensory Impact), Action: Excitement (Urgency cues)
+* **Relevant Skills:** `quantic-foundry-motivation`, `audio-design`, `godot-audio`, `game-feel`
+* **Changes Made:**
+  - Authored `default_bus_layout.tres` with `Master`, `Music` (-4.0 dB), `SFX` (-1.0 dB), `UI` (0.0 dB), and `Stingers` (+1.5 dB) buses; registered in `project.godot`.
+  - Upgraded `sound_fx.gd` to maintain partitioned pools (`_sfx_players`: 12, `_ui_players`: 4, `_stinger_players`: 3) with dynamic bus verification and high-frequency stream throttling (<32ms).
+  - Synthesized procedural 16-bit PCM WAV streams for `cache_open` (stone latch click + ascending 4-tone harmonic chime) and `cache_collapse` (subterranean rumble + falling grit).
+  - Designed resonant dual-harmonic brass war horn synthesis (185.0Hz + 277.5Hz with brass envelope & vibrato).
+  - Connected `MusicManager` to `Music` bus and added smooth tweened ducking (`duck(duration, target_db)`), triggered on War Horn, Breach, and Cache opening.
+  - Hooked audio triggers in `sealed_cache.gd` (`play_cache_open`, `play_cache_collapse`) and `siege_mode_controller.gd` (`play_warning_horn`).
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/expedition_horn_cache_runner.tscn`: All 12 audio assertions passed clean (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions and boss unlocks (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `default_bus_layout.tres` (new), `project.godot`, `sound_fx.gd`, `music_manager.gd`, `scripts/gameplay/collectibles/rewards/sealed_cache.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`, `tests/expedition_horn_cache_runner.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-027`
+* **Title:** Hit-Stop, Screen Trauma & Debris Juice
+* **Quantic Foundry Drivers:** Action: Destruction (Kinetic Weight), Mastery: Challenge
+* **Relevant Skills:** `game-feel`, `camera-systems`, `godot-shaders`, `smoke-check`
+* **Scope / Target:** `scripts/utils/juice_manager.gd`, `scripts/camera/`, melee strike handlers
+* **Change Definition:**
+  1. Add global micro-hitstop (3-4 frame timescale freeze) on heavy pickaxe strikes and enemy melee impacts.
+  2. Add camera trauma impulse to `Camera2D` when motherlodes shatter or the War Horn is blown.
+  3. Directional bounce on excavated gem shards and ore chunks toward the hero.
+* **Acceptance Criteria:**
+  - Automated runner asserts `Engine.time_scale` restores to 1.0 after freeze timeout.
+  - No camera desync or jitter in 60 FPS headless check.
+
+### Task ID: `POLISH-028`
+* **Title:** End-of-Run Retrospective & Score Breakdown
+* **Quantic Foundry Drivers:** Achievement: Power & Completion, Mastery: Strategy
+* **Relevant Skills:** `quantic-foundry-motivation`, `economy-designer`, `godot-ui-control`, `save-systems`
+* **Scope / Target:** `scenes/ui/run_summary_dialog.tscn`, `scripts/ui/run_summary_dialog.gd`, `scripts/systems/gameplay/`
+* **Change Definition:**
+  1. Build post-run summary screen displaying Total Ore Mined, Caches Unlocked, Waves Survived, and Horn Greed Multiplier.
+  2. Calculate and credit Legacy Ore conversion into stronghold persistence data.
+  3. Instant restart / Return to Bastion flow with zero unskippable downtime.
+* **Acceptance Criteria:**
+  - Full expedition test verifies data pass-through to summary dialog on death/victory.
+

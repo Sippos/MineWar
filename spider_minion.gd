@@ -248,8 +248,12 @@ func _dig_target(delta: float) -> void:
 
 func _spawn_gem(cell: Vector2i) -> void:
 	var gem = GEM_SCENE.instantiate()
-	gem.global_position = block_layer.to_global(block_layer.map_to_local(cell)) + Vector2(randf_range(-10, 10), randf_range(-8, 8))
+	var spawn_pos: Vector2 = block_layer.to_global(block_layer.map_to_local(cell))
+	gem.global_position = spawn_pos + Vector2(randf_range(-10, 10), randf_range(-8, 8))
 	world.call_deferred("add_child", gem)
+	if gem.has_method("pop_from_mine"):
+		var pop_dir := (global_position - spawn_pos).normalized()
+		gem.call_deferred("pop_from_mine", spawn_pos, pop_dir)
 
 func move_along_path(_delta: float) -> void:
 	if _path_finished():
