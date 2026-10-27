@@ -135,3 +135,37 @@ func trigger_melee_impact(damage: int, lethal: bool) -> void:
 	var strength := clampf(float(damage) / 25.0, 0.1, 1.0)
 	hit_stop(0.06 if lethal else 0.035, 0.05)
 	add_camera_trauma((0.38 if lethal else 0.18) * strength)
+
+## Tactical ability impact frames and camera punch (POLISH-032)
+func trigger_ability_punch(trauma: float = 0.35, hit_stop_duration: float = 0.04, hit_stop_slow: float = 0.05) -> void:
+	if hit_stop_duration > 0.001:
+		hit_stop(hit_stop_duration, hit_stop_slow)
+	add_camera_trauma(trauma)
+
+func trigger_stomp_impact(hit_enemies: int = 0, is_avatar: bool = false) -> void:
+	var base_trauma := 0.48 if not is_avatar else 0.62
+	var bonus_trauma := clampf(float(hit_enemies) * 0.04, 0.0, 0.20)
+	var stop_duration := 0.055 if hit_enemies <= 1 else 0.075
+	if is_avatar:
+		stop_duration = maxf(stop_duration, 0.08)
+	hit_stop(stop_duration, 0.04)
+	add_camera_trauma(clampf(base_trauma + bonus_trauma, 0.0, 1.0))
+
+func trigger_avatar_activation() -> void:
+	hit_stop(0.07, 0.04)
+	add_camera_trauma(0.52)
+
+func trigger_lightning_strike(chain_count: int = 1) -> void:
+	var trauma := clampf(0.28 + float(chain_count) * 0.05, 0.28, 0.65)
+	hit_stop(0.038, 0.06)
+	add_camera_trauma(trauma)
+
+func trigger_totem_placement() -> void:
+	hit_stop(0.025, 0.08)
+	add_camera_trauma(0.22)
+
+func trigger_burrow_pulse(hit_count: int = 0) -> void:
+	var trauma := 0.22 if hit_count <= 0 else clampf(0.25 + float(hit_count) * 0.04, 0.25, 0.50)
+	if hit_count > 0:
+		hit_stop(0.032, 0.06)
+	add_camera_trauma(trauma)

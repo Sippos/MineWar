@@ -383,6 +383,12 @@ func _try_activate_avatar() -> void:
 	player.set("health", int(player.get("health")) + avatar_health_bonus)
 	_spawn_avatar_aura()
 	_refresh_player_health_hud()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_avatar_activation"):
+		juice_mgr.trigger_avatar_activation()
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_hero_avatar"):
+		sound_mgr.play_hero_avatar()
 	_show_notice("AVATAR OF THE MOUNTAIN!")
 
 func _end_avatar() -> void:
@@ -453,6 +459,40 @@ func _track_stomp_cast() -> void:
 		var stomp_level = int(player.get("stomp_level"))
 		var base_radius = 100.0 + stomp_level * 20.0
 		var radius = base_radius + (55.0 if avatar_active else 0.0)
+		
+		# 1. Count hit enemies
+		var hit_count := 0
+		for enemy in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(enemy) and player.global_position.distance_to(enemy.global_position) <= radius:
+				hit_count += 1
+		
+		# 2. Camera punch and tactical hit-stop through JuiceManager
+		var juice_mgr := get_node_or_null("/root/JuiceManager")
+		if juice_mgr and juice_mgr.has_method("trigger_stomp_impact"):
+			juice_mgr.trigger_stomp_impact(hit_count, avatar_active)
+		
+		# 3. Procedural audio stinger
+		var sound_mgr := get_node_or_null("/root/SoundFX")
+		if sound_mgr and sound_mgr.has_method("play_hero_stomp"):
+			sound_mgr.play_hero_stomp()
+		
+		# 4. Visceral shockwave ring VFX
+		var feedback = world.get_node_or_null("CombatFeedback") if world else null
+		if feedback == null and player.get_parent():
+			feedback = player.get_parent().get_node_or_null("CombatFeedback")
+		if feedback and feedback.has_method("play_stomp_shockwave"):
+			feedback.play_stomp_shockwave(player.global_position, radius, avatar_active, hit_count)
+		else:
+			var shockwave_script = preload("res://hero_stomp_shockwave.gd")
+			var sw: Node2D = Node2D.new()
+			sw.set_script(shockwave_script)
+			sw.configure(radius, avatar_active)
+			if world:
+				world.add_child(sw)
+			elif player.get_parent():
+				player.get_parent().add_child(sw)
+			sw.global_position = player.global_position
+			
 		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if not is_instance_valid(enemy):
 				continue

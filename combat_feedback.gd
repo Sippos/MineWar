@@ -1,6 +1,7 @@
 extends Node
 
 const HIT_EFFECT_SCENE := preload("res://combat_hit_effect.tscn")
+const STOMP_SHOCKWAVE_SCENE := preload("res://hero_stomp_shockwave.tscn")
 const SERVICE_NAME := "CombatFeedback"
 const SCRIPT_PATH := "res://combat_feedback.gd"
 
@@ -66,6 +67,24 @@ func play_player_hit(world_position: Vector2, damage: int, lethal: bool = false)
 	_spawn_effect(world_position, Vector2.UP, power, lethal, Color(1.0, 0.18, 0.12, 1.0))
 	if _is_near_active_camera(world_position):
 		_request_camera_shake(6.0 if lethal else 3.1 * power, 0.20 if lethal else 0.13)
+
+func play_stomp_shockwave(world_position: Vector2, radius: float, is_avatar: bool = false, hit_count: int = 0) -> Node2D:
+	var shockwave: Node2D = STOMP_SHOCKWAVE_SCENE.instantiate() as Node2D
+	if shockwave:
+		if shockwave.has_method("configure"):
+			shockwave.configure(radius, is_avatar)
+		var world := get_parent()
+		if world:
+			world.add_child(shockwave)
+		else:
+			add_child(shockwave)
+		shockwave.global_position = world_position
+
+	var juice_manager := get_node_or_null("/root/JuiceManager")
+	if juice_manager and juice_manager.has_method("trigger_stomp_impact"):
+		juice_manager.trigger_stomp_impact(hit_count, is_avatar)
+
+	return shockwave
 
 func _spawn_effect(world_position: Vector2, hit_direction: Vector2, power: float, lethal: bool, tint: Color) -> bool:
 	_prune_effects()

@@ -192,7 +192,7 @@ func _physics_process(delta: float) -> void:
 	if hero != current_hud_hero or learned_signature != learned_hud_signature:
 		_initialize_starting_skill()
 		_rebuild_hud()
-	if bool(player.get("is_dead")):
+	if _player_stat_bool("is_dead"):
 		_cancel_temporary_forms()
 		_update_ability_hud()
 		return
@@ -211,11 +211,26 @@ func _physics_process(delta: float) -> void:
 			_process_mech(delta)
 	_update_ability_hud()
 
+func _player_stat_int(property_name: String, default_value: int = 0) -> int:
+	if not is_instance_valid(player):
+		return default_value
+	var val = player.get(property_name)
+	return int(val) if val != null else default_value
+
+func _player_stat_bool(property_name: String, default_value: bool = false) -> bool:
+	if not is_instance_valid(player):
+		return default_value
+	var val = player.get(property_name)
+	return bool(val) if val != null else default_value
+
 func _hero_name() -> String:
-	return str(player.get("current_hero_name"))
+	if not is_instance_valid(player):
+		return ""
+	var val = player.get("current_hero_name")
+	return str(val) if val != null else ""
 
 func _player_id() -> int:
-	return int(player.get("player_id"))
+	return _player_stat_int("player_id", 1)
 
 func _action(suffix: String) -> String:
 	return "p%d_%s" % [_player_id(), suffix]
@@ -372,7 +387,7 @@ func _ability_is_learned(ability_id: String) -> bool:
 
 func _learned_ability_signature() -> String:
 	return "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [
-		_hero_name(), int(player.get("stomp_level")), hammer_level, bash_level, avatar_level,
+		_hero_name(), _player_stat_int("stomp_level"), hammer_level, bash_level, avatar_level,
 		totem_level, chain_level, wisdom_level, ascendance_level,
 		brood_level, web_level, carapace_level, broodmother_level,
 		mole_level, tunnel_level, deep_roots_level, worldroot_level,
@@ -597,30 +612,38 @@ func _track_stomp_cast() -> void:
 		var base_radius := 100.0 + stomp_rank * 20.0
 		var radius := base_radius + (55.0 if avatar_active else 0.0)
 		
-		var camera = player.get_node_or_null("Camera2D")
-		if camera != null:
-			var rest = camera.offset
-			var shake = create_tween()
-			shake.tween_property(camera, "offset", rest + Vector2(6, -6), 0.05)
-			shake.tween_property(camera, "offset", rest + Vector2(-4, 4), 0.05)
-			shake.tween_property(camera, "offset", rest, 0.08)
+		# 1. Count hit enemies
+		var hit_count := 0
+		for enemy in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(enemy) and player.global_position.distance_to(enemy.global_position) <= radius:
+				hit_count += 1
 		
-		if world != null and is_instance_valid(world):
-			var ring := Line2D.new()
-			ring.default_color = Color(0.6, 0.4, 0.2, 0.8)
-			ring.width = 12.0
-			var points := PackedVector2Array()
-			for i in range(33):
-				points.append(Vector2.RIGHT.rotated(TAU * float(i) / 32.0) * radius)
-			ring.points = points
-			ring.global_position = player.global_position
-			ring.z_index = 20
-			world.add_child(ring)
-			var ring_tween = create_tween().set_parallel(true)
-			ring.scale = Vector2(0.3, 0.3)
-			ring_tween.tween_property(ring, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			ring_tween.tween_property(ring, "modulate:a", 0.0, 0.4)
-			ring_tween.chain().tween_callback(ring.queue_free)
+		# 2. Camera punch and tactical hit-stop through JuiceManager
+		var juice_mgr := get_node_or_null("/root/JuiceManager")
+		if juice_mgr and juice_mgr.has_method("trigger_stomp_impact"):
+			juice_mgr.trigger_stomp_impact(hit_count, avatar_active)
+		
+		# 3. Procedural audio stinger
+		var sound_mgr := get_node_or_null("/root/SoundFX")
+		if sound_mgr and sound_mgr.has_method("play_hero_stomp"):
+			sound_mgr.play_hero_stomp()
+		
+		# 4. Visceral shockwave ring VFX
+		var feedback = world.get_node_or_null("CombatFeedback") if world else null
+		if feedback == null and player.get_parent():
+			feedback = player.get_parent().get_node_or_null("CombatFeedback")
+		if feedback and feedback.has_method("play_stomp_shockwave"):
+			feedback.play_stomp_shockwave(player.global_position, radius, avatar_active, hit_count)
+		else:
+			var shockwave_script = preload("res://hero_stomp_shockwave.gd")
+			var sw: Node2D = Node2D.new()
+			sw.set_script(shockwave_script)
+			sw.configure(radius, avatar_active)
+			if world:
+				world.add_child(sw)
+			elif player.get_parent():
+				player.get_parent().add_child(sw)
+			sw.global_position = player.global_position
 			
 		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if not is_instance_valid(enemy):
@@ -634,7 +657,7 @@ func _track_stomp_cast() -> void:
 	last_stomp_cooldown = current_cooldown
 
 func _try_activate_avatar() -> void:
-	if avatar_level <= 0 or int(player.get("level")) < ULTIMATE_REQUIRED_LEVEL:
+	if avatar_level <= 0 or _player_stat_int("level") < ULTIMATE_REQUIRED_LEVEL:
 		_show_notice("Avatar unlocks at hero level 6")
 		return
 	if avatar_cooldown > 0.0:
@@ -645,15 +668,25 @@ func _try_activate_avatar() -> void:
 	avatar_active = true
 	avatar_duration = 12.0
 	avatar_cooldown = 60.0
-	avatar_strength_bonus = max(2, int(ceil(int(player.get("strength")) * 0.5)))
+	var strength := _player_stat_int("strength", 1)
+	avatar_strength_bonus = max(2, int(ceil(strength * 0.5)))
 	avatar_health_bonus = 50
 	avatar_speed_bonus = 45.0
-	player.set("strength", int(player.get("strength")) + avatar_strength_bonus)
-	player.set("base_speed", float(player.get("base_speed")) + avatar_speed_bonus)
-	player.set("max_health", int(player.get("max_health")) + avatar_health_bonus)
-	player.set("health", int(player.get("health")) + avatar_health_bonus)
+	player.set("strength", strength + avatar_strength_bonus)
+	var current_spd = player.get("base_speed")
+	player.set("base_speed", (float(current_spd) if current_spd != null else 100.0) + avatar_speed_bonus)
+	var cur_max_hp := _player_stat_int("max_health", 100)
+	var cur_hp := _player_stat_int("health", 100)
+	player.set("max_health", cur_max_hp + avatar_health_bonus)
+	player.set("health", cur_hp + avatar_health_bonus)
 	_spawn_avatar_aura()
 	_refresh_stats_hud()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_avatar_activation"):
+		juice_mgr.trigger_avatar_activation()
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_hero_avatar"):
+		sound_mgr.play_hero_avatar()
 	_show_notice("AVATAR OF THE MOUNTAIN!")
 
 func _end_avatar() -> void:
@@ -751,6 +784,12 @@ func _configure_shaman_totem(totem: Node) -> void:
 	totem.set("lifetime", lifetime_value)
 	totem.set("aura_radius", radius_value)
 	player.set("shaman_spell_cooldown_timer", _totem_max_cooldown())
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_shaman_totem"):
+		sound_mgr.play_shaman_totem()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_totem_placement"):
+		juice_mgr.trigger_totem_placement()
 
 func _process_shaman_support(delta: float) -> void:
 	shaman_support_tick -= delta
@@ -796,7 +835,7 @@ func _try_chain_lightning() -> void:
 		hit_enemies.append(next_enemy)
 		current = next_enemy
 	var points := PackedVector2Array([player.global_position + Vector2(0, -22)])
-	var damage_value: int = _rpg_spell_damage(35 + chain_level * 38 + int(player.get("intelligence")) * 12)
+	var damage_value: int = _rpg_spell_damage(35 + chain_level * 38 + _player_stat_int("intelligence", 1) * 12)
 	for i in range(hit_enemies.size()):
 		var enemy = hit_enemies[i]
 		points.append(enemy.global_position + Vector2(0, 4))
@@ -804,6 +843,12 @@ func _try_chain_lightning() -> void:
 			enemy.take_damage(int(damage_value * pow(0.82, i)))
 		_apply_enemy_stun(enemy, 0.12 + chain_level * 0.05, Vector2.ZERO)
 	_spawn_lightning_line(points)
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_shaman_lightning"):
+		sound_mgr.play_shaman_lightning()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_lightning_strike"):
+		juice_mgr.trigger_lightning_strike(hit_enemies.size())
 	_show_notice("Chain Lightning!")
 
 func _chain_max_cooldown() -> float:
@@ -1442,11 +1487,15 @@ func _enemy_status(enemy: Node) -> Node:
 	return status
 
 func _apply_enemy_stun(enemy: Node, duration: float, knockback: Vector2) -> void:
+	if enemy.has_method("apply_stun"):
+		enemy.call("apply_stun", duration, knockback)
 	var status := _enemy_status(enemy)
 	if status and status.has_method("apply_stun"):
 		status.apply_stun(duration, knockback)
 
 func _apply_enemy_slow(enemy: Node, duration: float, factor: float) -> void:
+	if enemy.has_method("apply_slow"):
+		enemy.call("apply_slow", duration, factor)
 	var status := _enemy_status(enemy)
 	if status and status.has_method("apply_slow"):
 		status.apply_slow(duration, factor)

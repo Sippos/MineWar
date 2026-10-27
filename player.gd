@@ -1282,6 +1282,12 @@ func _cast_selected_shaman_totem() -> void:
 	totem.global_position = global_position + Vector2(0, 8)
 	get_parent().add_child(totem)
 	shaman_spell_cooldown_timer = SHAMAN_TOTEM_COOLDOWN
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_shaman_totem"):
+		sound_mgr.play_shaman_totem()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_totem_placement"):
+		juice_mgr.trigger_totem_placement()
 	var hud = get_parent().get_node_or_null("HUD")
 	if hud and hud.has_method("show_notice"):
 		hud.show_notice("Summoned %s" % totem.get_display_name())
@@ -1543,6 +1549,27 @@ func perform_stomp() -> void:
 		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) <= radius:
 			if enemy.has_method("take_damage"):
 				enemy.take_damage(stomp_damage)
+
+	# Standalone fallback: If HeroAbilities is not attached, trigger punch & shockwave directly
+	var hero_abilities_node = get_node_or_null("HeroAbilities")
+	if hero_abilities_node == null:
+		var juice_mgr := get_node_or_null("/root/JuiceManager")
+		if juice_mgr and juice_mgr.has_method("trigger_stomp_impact"):
+			juice_mgr.trigger_stomp_impact(0, false)
+		var sound_mgr := get_node_or_null("/root/SoundFX")
+		if sound_mgr and sound_mgr.has_method("play_hero_stomp"):
+			sound_mgr.play_hero_stomp()
+		var feedback = get_parent().get_node_or_null("CombatFeedback") if get_parent() else null
+		if feedback and feedback.has_method("play_stomp_shockwave"):
+			feedback.play_stomp_shockwave(global_position, radius, false, 0)
+		else:
+			var shockwave_script = preload("res://hero_stomp_shockwave.gd")
+			var sw: Node2D = Node2D.new()
+			sw.set_script(shockwave_script)
+			sw.configure(radius, false)
+			if get_parent():
+				get_parent().add_child(sw)
+			sw.global_position = global_position
 
 func get_total_blocks_mined() -> int:
 	return total_blocks_mined

@@ -370,7 +370,9 @@ func _begin_druid_mole_bonus() -> void:
 	druid_mole_speed_bonus = 28.0 + mole_rank * 10.0
 	player.set("base_speed", float(player.get("base_speed")) + druid_mole_speed_bonus)
 	var radius := 90.0 + mole_rank * 24.0
-	var damage: int = _rpg_spell_damage(8 + mole_rank * 6 + int(player.get("intelligence")) * 4)
+	var intel_val = player.get("intelligence")
+	var intel: int = int(intel_val) if intel_val != null else 1
+	var damage: int = _rpg_spell_damage(8 + mole_rank * 6 + intel * 4)
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or player.global_position.distance_to(enemy.global_position) > radius:
 			continue
@@ -379,12 +381,20 @@ func _begin_druid_mole_bonus() -> void:
 		_apply_enemy_stun(enemy, 0.35 + mole_rank * 0.12)
 		_apply_enemy_slow(enemy, 2.0 + mole_rank * 0.3, 0.55)
 	_spawn_burst(player.global_position, Color(0.28, 0.82, 0.36, 0.9), 30)
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_druid_burrow_pulse"):
+		sound_mgr.play_druid_burrow_pulse()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_burrow_pulse"):
+		juice_mgr.trigger_burrow_pulse(1)
 	_show_notice("Verdant Burrow!", 0.9)
 
 func _druid_burrow_pulse() -> void:
 	var mole_rank := int(hero_abilities.get("mole_level")) if hero_abilities else 1
 	var radius := 62.0 + float(mole_rank) * 12.0
-	var damage: int = _rpg_spell_damage(4 + mole_rank * 4 + int(player.get("intelligence")) * 2)
+	var intel_val = player.get("intelligence")
+	var intel: int = int(intel_val) if intel_val != null else 1
+	var damage: int = _rpg_spell_damage(4 + mole_rank * 4 + intel * 2)
 	var hit_any := false
 	for enemy: Node in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or not (enemy is Node2D):
@@ -398,6 +408,12 @@ func _druid_burrow_pulse() -> void:
 		_apply_enemy_slow(enemy, 1.0 + float(mole_rank) * 0.2, 0.68)
 	if hit_any:
 		_spawn_burst(player.global_position, Color(0.42, 0.78, 0.28, 0.72), 14)
+	var sound_mgr := get_node_or_null("/root/SoundFX")
+	if sound_mgr and sound_mgr.has_method("play_druid_burrow_pulse"):
+		sound_mgr.play_druid_burrow_pulse()
+	var juice_mgr := get_node_or_null("/root/JuiceManager")
+	if juice_mgr and juice_mgr.has_method("trigger_burrow_pulse"):
+		juice_mgr.trigger_burrow_pulse(1 if hit_any else 0)
 
 func _end_druid_mole_bonus() -> void:
 	if druid_mole_speed_bonus <= 0.0 or not is_instance_valid(player):
@@ -560,11 +576,15 @@ func _enemy_status(enemy: Node) -> Node:
 	return status
 
 func _apply_enemy_stun(enemy: Node, duration: float) -> void:
+	if enemy.has_method("apply_stun"):
+		enemy.call("apply_stun", duration, Vector2.ZERO)
 	var status := _enemy_status(enemy)
 	if status and status.has_method("apply_stun"):
 		status.call("apply_stun", duration, Vector2.ZERO)
 
 func _apply_enemy_slow(enemy: Node, duration: float, factor: float) -> void:
+	if enemy.has_method("apply_slow"):
+		enemy.call("apply_slow", duration, factor)
 	var status := _enemy_status(enemy)
 	if status and status.has_method("apply_slow"):
 		status.call("apply_slow", duration, factor)

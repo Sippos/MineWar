@@ -860,14 +860,62 @@ Click feedback: currency sprites arc from the resource counter into the purchase
 
 ### Task ID: `POLISH-032`
 * **Title:** Hero Ability Kinetic VFX & Audio Climax Feedback
+* **Status:** `COMPLETE`
 * **Quantic Foundry Drivers:** Action: Excitement, Mastery: Challenge & Flow
 * **Relevant Skills:** `game-feel`, `audio-design`, `godot-shaders`, `smoke-check`
-* **Scope / Target:** `hero_abilities.gd`, `dwarf_abilities.gd`, `sound_fx.gd`, `combat_feedback.gd`
+* **Scope / Target:** `hero_abilities.gd`, `dwarf_abilities.gd`, `sound_fx.gd`, `combat_feedback.gd`, `scripts/utils/juice_manager.gd`, `hero_stomp_shockwave.gd`, `tests/test_hero_abilities_juice_runner.tscn`
+* **Changes Made:**
+  - Authored `hero_stomp_shockwave.gd` and `hero_stomp_shockwave.tscn` rendering a multi-layered visceral shockwave ring:
+    - Expanding outer shockwave ring with stroke width tapering from 18px down to 2.5px via cubic deceleration.
+    - High-intensity inner energy ring expanding ahead of the wavefront.
+    - Jagged seismic fissure lines etched radially into the cavern floor.
+    - Flying radial rock debris diamond particles cast outward matching wavefront expansion.
+    - Dynamic color palettes: dense earthen ochre & stone dust for standard Dwarf, and molten magma gold for Avatar mode.
+  - Extended `combat_feedback.gd` with `play_stomp_shockwave(pos, radius, is_avatar, hit_count)` managing shockwave instantiation, position, and juice hooks.
+  - Synthesized 5 distinct procedural 16-bit 22.05kHz PCM audio stingers in `sound_fx.gd`:
+    - `hero_stomp`: Heavy sub-bass pitch drop (125Hz to 36Hz) with rock fracturing transient and cavernous rumble.
+    - `hero_avatar`: Heroic mountain brass chord swell (D2, A2, D3, F#3) with slow dramatic vibrato and rising runic shimmer.
+    - `shaman_lightning`: Frequency-modulated electric arc buzz (520Hz carrier, 130Hz mod) with high-voltage static crackle and sharp transient snap.
+    - `shaman_totem`: Solid wooden/earth ground thud with mystical spiritual fifth harmonic resonance (432Hz & 648Hz).
+    - `druid_burrow_pulse`: Low subterranean surge (60Hz to 95Hz) with soil and root crunch friction.
+  - Added dedicated tactical ability impact methods to `scripts/utils/juice_manager.gd`:
+    - `trigger_stomp_impact(hit_enemies, is_avatar)`: Camera trauma (0.48-0.78) and hit-stop freeze frames (0.055-0.08s).
+    - `trigger_avatar_activation()`: Heroic trauma (0.52) and climax freeze frame (0.07s).
+    - `trigger_lightning_strike(chain_count)`: Sharp electrical trauma (0.28-0.65) and hit-stop (0.038s).
+    - `trigger_totem_placement()`: Solid placement thud trauma (0.22) and hit-stop (0.025s).
+    - `trigger_burrow_pulse(hit_count)`: Subterranean pulse trauma (0.25-0.50) and hit-stop.
+    - `trigger_ability_punch(trauma, duration, slow)`: General ability camera punch helper.
+  - Wired juice and audio triggers into `hero_abilities.gd` (`_track_stomp_cast`, `_try_activate_avatar`, `_try_chain_lightning`, `_configure_shaman_totem`), `dwarf_abilities.gd`, `hero_balance_controller.gd` (`_druid_burrow_pulse`, `_begin_druid_mole_bonus`), and `player.gd` (`perform_stomp`, `_cast_selected_shaman_totem`).
+  - Added `_player_stat_int()` and `_player_stat_bool()` guards in `hero_abilities.gd` resolving null property evaluation errors during mock runs.
+  - Created automated test suite `tests/test_hero_abilities_juice_runner.tscn` verifying procedural audio synthesis, sound hooks, JuiceManager trauma & hit-stop, shockwave VFX instantiation and rendering, and ability execution across Dwarf, Shaman, and Druid.
+* **Verification:**
+  - `godot --headless --path . --check-only --quit`: Passed clean (exit code 0).
+  - `tests/test_hero_abilities_juice_runner.tscn`: Passed all 36 assertions (`HERO_ABILITIES_JUICE_PASS`).
+  - `tests/test_dynamic_health_bars_runner.tscn`: Passed all 49 assertions (`DYNAMIC_HEALTH_BARS_PASS`).
+  - `tests/test_terrain_defense_runner.tscn`: Passed all 20 assertions (`TERRAIN_DEFENSE_PASS`).
+  - `tests/test_biome_anomalies_runner.tscn`: Passed all 37 assertions (`BIOME_ANOMALIES_PASS`).
+  - `tests/test_run_summary_runner.tscn`: Passed all 30 assertions (`RUN_SUMMARY_PASS`).
+  - `tests/test_corner_assist_runner.tscn`: Passed all 25 assertions (`CORNER_ASSIST_PASS`).
+  - `tests/test_juice_system_runner.tscn`: Passed all 14 assertions (`JUICE_SYSTEM_PASS`).
+  - `tests/expedition_horn_cache_runner.tscn`: Passed all 48 assertions (`EXPEDITION_HORN_CACHE_PASS`).
+  - `tests/minewars_complete_run_runner.tscn`: Passed all 4 expeditions and Mech boss victory (`MINEWARS_COMPLETE_RUN_PASS`).
+* **Files:** `hero_stomp_shockwave.gd` (new), `hero_stomp_shockwave.tscn` (new), `tests/test_hero_abilities_juice_runner.gd`/`.tscn` (new), `sound_fx.gd`, `scripts/utils/juice_manager.gd`, `combat_feedback.gd`, `hero_abilities.gd`, `dwarf_abilities.gd`, `hero_balance_controller.gd`, `player.gd`, `tests/hero_dummy_enemy.gd`, `docs/GAMEPLAY_POLISH_PROGRESS.md`.
+
+---
+
+## Active Polish Queue (Guided by Quantic Foundry & Game Dev Skills)
+
+### Task ID: `POLISH-033`
+* **Title:** Interactive Combat Telegraphs & Boss Attack Anticipation Cues
+* **Quantic Foundry Drivers:** Mastery: Strategy (Tactical Positioning), Action: Excitement (Threat Telegraphing)
+* **Relevant Skills:** `game-designer`, `game-feel`, `level-design`, `smoke-check`
+* **Scope / Target:** `enemy.gd`, `goblin_pilot.gd`, `enemy_combat_behavior.gd`, `scripts/systems/world_generation/siege_mode_controller.gd`
 * **Change Definition:**
-  1. Add visceral ground-pound shockwave ring and camera trauma on Dwarf War Stomp.
-  2. Implement distinct procedural audio stingers for high-impact hero abilities (Avatar activation, Shaman lightning/totem drop, Druid burrow pulse).
-  3. Wire tactical ability impact frames and camera punch into `JuiceManager`.
+  1. Add red telegraph danger zones (expanding conic/radial indicators) before heavy enemy attacks (Orc overhead slam, Mech missile volley, Trogg charge).
+  2. Implement audio-visual windup anticipation cues (sprite flash, charge sound stinger, pre-attack hit-pause).
+  3. Provide crisp dodge/parry window for high-damage abilities.
 * **Acceptance Criteria:**
-  - Headless test verifies ability execution, shockwave / VFX instantiation, and audio hook triggering without errors.
+  - Headless test verifies attack anticipation phases, telegraph zone instantiation, and evasion detection without errors.
+
 
 

@@ -80,6 +80,11 @@ func _build_streams() -> void:
 	_streams["cache_collapse"] = _make_cache_collapse_stream(0.42)
 	_streams["anomaly_reveal"] = _make_anomaly_reveal_stream(0.68)
 	_streams["relic_activated"] = _make_relic_activated_stream(0.85)
+	_streams["hero_stomp"] = _make_stomp_stream(0.42)
+	_streams["hero_avatar"] = _make_avatar_stream(0.95)
+	_streams["shaman_lightning"] = _make_lightning_stream(0.36)
+	_streams["shaman_totem"] = _make_totem_stream(0.48)
+	_streams["druid_burrow_pulse"] = _make_burrow_pulse_stream(0.42)
 
 # --- Public API ---
 
@@ -148,6 +153,23 @@ func play_anomaly_reveal() -> void:
 func play_relic_activated() -> void:
 	_play_stinger("relic_activated", 1.0, 0.01)
 	_duck_music(2.0, -10.0)
+
+func play_hero_stomp() -> void:
+	_play_stinger("hero_stomp", 1.5, 0.02)
+	_duck_music(1.4, -6.0)
+
+func play_hero_avatar() -> void:
+	_play_stinger("hero_avatar", 2.0, 0.01)
+	_duck_music(2.5, -12.0)
+
+func play_shaman_lightning() -> void:
+	_play_sfx("shaman_lightning", 0.5, 0.03)
+
+func play_shaman_totem() -> void:
+	_play_sfx("shaman_totem", -1.0, 0.02)
+
+func play_druid_burrow_pulse() -> void:
+	_play_sfx("druid_burrow_pulse", -2.0, 0.025)
 
 # --- Routing & Pooling ---
 
@@ -372,6 +394,123 @@ func _make_error_stream(duration: float) -> AudioStreamWAV:
 		var envelope := pow(maxf(0.0, 1.0 - progress), 1.5)
 		var square_wave := 1.0 if sin(TAU * frequency * t) >= 0.0 else -1.0
 		samples[index] = square_wave * envelope * 0.24
+	return _make_wav(samples)
+
+func _make_stomp_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var local_rng := RandomNumberGenerator.new()
+	local_rng.seed = 999
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.008, 0.0, 1.0)
+		var envelope := attack * pow(maxf(0.0, 1.0 - progress), 2.6)
+		# Deep pitch drop from 125 Hz down to 36 Hz
+		var current_freq := 36.0 + 89.0 * exp(-progress * 8.5)
+		var sub_bass := sin(TAU * current_freq * t) + 0.42 * sin(TAU * current_freq * 2.0 * t)
+		# Initial rock fracturing transient and ground crunch
+		var crunch_env := exp(-pow(progress * 18.0, 2.0))
+		var crunch := local_rng.randf_range(-1.0, 1.0) * crunch_env * 0.75
+		var rumble := sin(TAU * 42.0 * t) * (1.0 - progress) * 0.35
+		var mix := (sub_bass * 0.68 + crunch + rumble) * envelope * 0.88
+		samples[index] = clampf(mix, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_avatar_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var roots := [73.42, 110.0, 146.83, 220.0]
+	var chimes := [587.33, 880.0, 1174.66]
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.16, 0.0, 1.0)
+		var release := pow(clampf((1.0 - progress) / 0.65, 0.0, 1.0), 1.8)
+		var env := attack * release
+		var vibrato := 1.0 + 0.007 * sin(TAU * 4.8 * t)
+		var brass := 0.0
+		for r in roots:
+			var freq: float = r * vibrato
+			brass += (sin(TAU * freq * t) + 0.5 * sin(TAU * freq * 2.0 * t) + 0.25 * sin(TAU * freq * 3.0 * t))
+		var shimmer := 0.0
+		for c_idx in range(chimes.size()):
+			var start := 0.12 + float(c_idx) * 0.08
+			var local_t := t - start
+			if local_t > 0.0:
+				var c_env := pow(maxf(0.0, 1.0 - local_t / (duration - start)), 2.5)
+				var cf: float = chimes[c_idx]
+				shimmer += sin(TAU * cf * local_t) * c_env * 0.4
+		var mix := (brass * 0.22 + shimmer) * env * 0.92
+		samples[index] = clampf(mix, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_lightning_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var local_rng := RandomNumberGenerator.new()
+	local_rng.seed = 444
+	var filtered_noise := 0.0
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.005, 0.0, 1.0)
+		var env := attack * pow(maxf(0.0, 1.0 - progress), 2.2)
+		# FM synthesis for electric arc buzz
+		var mod := sin(TAU * 130.0 * t)
+		var carrier := sin(TAU * (520.0 + mod * 280.0) * t)
+		# Static air-gap snapping flutter
+		filtered_noise = lerpf(filtered_noise, local_rng.randf_range(-1.0, 1.0), 0.45)
+		var static_burst := filtered_noise * (1.0 if sin(TAU * 65.0 * t) > 0.0 else 0.2)
+		var snap := local_rng.randf_range(-1.0, 1.0) * exp(-pow(progress * 35.0, 2.0))
+		var mix := (carrier * 0.48 + static_burst * 0.42 + snap * 0.6) * env * 0.82
+		samples[index] = clampf(mix, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_totem_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var local_rng := RandomNumberGenerator.new()
+	local_rng.seed = 333
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.006, 0.0, 1.0)
+		var env := attack * pow(maxf(0.0, 1.0 - progress), 2.5)
+		# Hollow resonant wood/earth thud
+		var f := 145.0 * (1.0 - progress * 0.5)
+		var thud := sin(TAU * f * t) + 0.4 * sin(TAU * f * 2.1 * t)
+		var dirt_thump := local_rng.randf_range(-1.0, 1.0) * exp(-pow(progress * 24.0, 2.0)) * 0.5
+		# Spiritual fifth harmonic resonance
+		var bell := (sin(TAU * 432.0 * t) + 0.3 * sin(TAU * 648.0 * t)) * pow(maxf(0.0, 1.0 - progress), 2.0) * 0.35
+		var mix := (thud * 0.6 + dirt_thump + bell) * env * 0.85
+		samples[index] = clampf(mix, -1.0, 1.0)
+	return _make_wav(samples)
+
+func _make_burrow_pulse_stream(duration: float) -> AudioStreamWAV:
+	var sample_count := maxi(1, int(SAMPLE_RATE * duration))
+	var samples := PackedFloat32Array()
+	samples.resize(sample_count)
+	var local_rng := RandomNumberGenerator.new()
+	local_rng.seed = 555
+	var filtered_grit := 0.0
+	for index in range(sample_count):
+		var t := float(index) / float(SAMPLE_RATE)
+		var progress := t / duration
+		var attack := clampf(progress / 0.06, 0.0, 1.0)
+		var env := attack * pow(maxf(0.0, 1.0 - progress), 2.0)
+		# Subterranean surge: 60 Hz to 95 Hz
+		var pulse_freq := 60.0 + 35.0 * sin(PI * progress)
+		var surge := sin(TAU * pulse_freq * t) + 0.3 * sin(TAU * pulse_freq * 1.8 * t)
+		# Soil and root crunch
+		filtered_grit = lerpf(filtered_grit, local_rng.randf_range(-1.0, 1.0), 0.25)
+		var crunch := filtered_grit * (0.6 + 0.4 * sin(TAU * 28.0 * t))
+		var mix := (surge * 0.65 + crunch * 0.45) * env * 0.85
+		samples[index] = clampf(mix, -1.0, 1.0)
 	return _make_wav(samples)
 
 func _make_wav(samples: PackedFloat32Array) -> AudioStreamWAV:
