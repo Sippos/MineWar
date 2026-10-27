@@ -71,7 +71,8 @@ func setup(
 	_on_loadout_callback = loadout_cb
 	_on_workshop_callback = workshop_cb
 	_on_menu_callback = menu_cb
-	_render_summary()
+	if is_inside_tree() and content != null:
+		_render_summary()
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
